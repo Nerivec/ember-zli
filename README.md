@@ -72,7 +72,8 @@ USAGE
 
 FLAGS
   -a, --ask           Ask conf questions, even if conf file present (override file with new answers).
-  -f, --file=<value>  Path to a firmware file. If not provided, will be set via interactive prompt when entering relevant menu.
+  -f, --file=<value>  Path to a firmware file. If not provided, will be set via interactive prompt when entering
+                      relevant menu.
 
 DESCRIPTION
   Interact with the Gecko bootloader in the adapter via serial.
