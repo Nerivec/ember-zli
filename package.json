@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "author": "Nerivec",
   "bin": {
-    "ember-zli": "./bin/run.js"
+    "ember-zli": "bin/run.js"
   },
   "bugs": "https://github.com/Nerivec/ember-zli/issues",
   "dependencies": {
@@ -72,7 +72,10 @@
     "topicSeparator": " ",
     "topics": {}
   },
-  "repository": "Nerivec/ember-zli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nerivec/ember-zli.git"
+  },
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",
     "lint": "eslint . --ext .ts",
