@@ -1,0 +1,11 @@
+{
+  "extends": ["oclif", "oclif-typescript", "prettier"],
+  "rules": {
+    "unicorn/numeric-separators-style": "off",
+    "unicorn/prefer-event-target": "off",
+    "no-bitwise": "off",
+    "no-await-in-loop": "off",
+    "no-undef-init": "off",
+    "perfectionist/sort-enums": "off"
+  }
+}
