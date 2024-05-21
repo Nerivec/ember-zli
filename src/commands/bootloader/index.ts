@@ -251,15 +251,17 @@ export default class Bootloader extends Command {
 
         switch (firmwareSource) {
             case FirmwareSource.PRE_DEFINED: {
+                // valid adapterModel since select option disabled if not
+                const recommended = FIRMWARE_LINKS.recommended[gecko.adapterModel!]
+                const latest = FIRMWARE_LINKS.latest[gecko.adapterModel!]
                 const firmwareVersion = await select<FirmwareVersion>({
                     choices: [
-                        { name: 'Recommended', value: 'recommended'/* keyof FIRMWARE_LINKS */ },
-                        { name: 'Latest', value: 'latest'/* keyof FIRMWARE_LINKS */ },
+                        { name: `Recommended (${recommended.version})`, value: 'recommended' },
+                        { name: `Latest (${latest.version})`, value: 'latest' },
                     ],
                     message: 'Firmware version',
                 })
 
-                // valid adapterModel since select option disabled if not
                 return this.downloadFirmware(FIRMWARE_LINKS[firmwareVersion][gecko.adapterModel!].url)
             }
 
