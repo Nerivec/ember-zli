@@ -48,7 +48,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/1.0.0 win32-x64 node-v20.10.0
+ember-zli/1.0.1 win32-x64 node-v20.10.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
@@ -82,7 +82,7 @@ EXAMPLES
   $ ember-zli bootloader
 ```
 
-_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.0/src/commands/bootloader/index.ts)_
+_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.1/src/commands/bootloader/index.ts)_
 
 ## `ember-zli help [COMMAND]`
 
@@ -122,7 +122,7 @@ EXAMPLES
   $ ember-zli stack
 ```
 
-_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.0/src/commands/stack/index.ts)_
+_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.1/src/commands/stack/index.ts)_
 
 ## `ember-zli version`
 
