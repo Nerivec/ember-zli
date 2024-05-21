@@ -415,8 +415,8 @@ export default class Stack extends Command {
         // WiFi beacon frames at standard interval: 102.4msec
         const duration = await select<number>({
             choices: [
-                { name: '3,948 msec', value: 8 },
-                { name: '1,981 msec', value: 7 },
+                { name: '3948 msec', value: 8 },
+                { name: '1981 msec', value: 7 },
                 { name: '998 msec', value: 6 },
                 { name: '507 msec', value: 5 },
                 { name: '261 msec', value: 4 },
@@ -448,7 +448,7 @@ export default class Stack extends Command {
             logger.debug(`ezspEnergyScanResultHandler: ${JSON.stringify({ channel, maxRssiValue })}`)
             const full = 90 + maxRssiValue
             const empty = 90 - full
-            reportedValues.push(`Channel ${channel}: ${BULLET_FULL.repeat(full)}${BULLET_EMPTY.repeat(empty)}`)
+            reportedValues.push(`Channel ${channel}: ${BULLET_FULL.repeat(full)}${BULLET_EMPTY.repeat(empty)} [${maxRssiValue} dBm]`)
         }
 
         ezsp.ezspNetworkFoundHandler = (networkFound: EmberZigbeeNetwork, lastHopLqi: number, lastHopRssi: number): void => {

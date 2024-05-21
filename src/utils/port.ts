@@ -6,8 +6,8 @@ import { CONF_PORT_PATH, logger } from '../index.js'
 import { BAUDRATES, TCP_REGEX } from './consts.js'
 import { BaudRate, PortConf, PortType } from './types.js'
 
-export const getPortConf = async(useFile: boolean = true, bootloader: boolean = false): Promise<PortConf> => {
-    if (!bootloader && useFile) {
+export const getPortConf = async(useFile: boolean = true): Promise<PortConf> => {
+    if (useFile) {
         try {
             const conf = readFileSync(CONF_PORT_PATH, 'utf8')
 
@@ -22,21 +22,17 @@ export const getPortConf = async(useFile: boolean = true, bootloader: boolean = 
     }
 
     const baudRate = await select<BaudRate>({
-        choices: bootloader ? baudrateChoices.slice(0, 1) : baudrateChoices,
+        choices: baudrateChoices,
         message: 'Adapter firmware baudrate',
     })
 
-    let type: PortType = 'serial'
-
-    if (!bootloader) {
-        type = await select<PortType>({
-            choices: [
-                { name: 'Serial', value: 'serial' },
-                { name: 'TCP', value: 'tcp' },
-            ],
-            message: 'Adapter connection type',
-        })
-    }
+    const type = await select<PortType>({
+        choices: [
+            { name: 'Serial', value: 'serial' },
+            { name: 'TCP', value: 'tcp' },
+        ],
+        message: 'Adapter connection type',
+    })
 
     let path = null
     let rtscts = false
@@ -60,7 +56,7 @@ export const getPortConf = async(useFile: boolean = true, bootloader: boolean = 
                 { name: 'Hardware Flow Control (rtscts=true)', value: true },
             ]
             rtscts = await select<boolean>({
-                choices: bootloader ? fcChoices.slice(0, 1) : fcChoices,
+                choices: fcChoices,
                 message: 'Flow control'
             })
             break
@@ -81,12 +77,10 @@ export const getPortConf = async(useFile: boolean = true, bootloader: boolean = 
 
     const conf = {baudRate, path, rtscts}
 
-    if (!bootloader) {
-        try {
-            writeFileSync(CONF_PORT_PATH, JSON.stringify(conf, null, 2), 'utf8')
-        } catch {
-            logger.error(`Could not write port conf to ${CONF_PORT_PATH}.`)
-        }
+    try {
+        writeFileSync(CONF_PORT_PATH, JSON.stringify(conf, null, 2), 'utf8')
+    } catch {
+        logger.error(`Could not write port conf to ${CONF_PORT_PATH}.`)
     }
 
     return conf

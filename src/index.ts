@@ -43,4 +43,6 @@ zhSetLogger({
     warning(message, namespace) { logger.warn(`${message}`, { namespace }) },
 })
 
+logger.info(`Data folder: ${DATA_FOLDER}.`)
+
 export {run} from '@oclif/core'
