@@ -407,7 +407,7 @@ export default class Stack extends Command {
         const scanType = await select<EzspNetworkScanType>({
             choices: [
                 { name: 'Scan each channel for its RSSI value', value: EzspNetworkScanType.ENERGY_SCAN },
-                { name: 'Scan each channel for available networks', value: EzspNetworkScanType.ACTIVE_SCAN },
+                { name: 'Scan each channel for existing networks', value: EzspNetworkScanType.ACTIVE_SCAN },
             ],
             message: 'Type of scan',
         })
