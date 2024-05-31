@@ -51,7 +51,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/1.0.3 win32-x64 node-v20.10.0
+ember-zli/1.0.4 win32-x64 node-v20.10.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
@@ -71,12 +71,13 @@ Interact with the Gecko bootloader in the adapter via serial.
 
 ```
 USAGE
-  $ ember-zli bootloader [-a] [-f <value>]
+  $ ember-zli bootloader [-a] [-f <value>] [-r]
 
 FLAGS
   -a, --ask           Ask conf questions, even if conf file present (override file with new answers).
   -f, --file=<value>  Path to a firmware file. If not provided, will be set via interactive prompt when entering
                       relevant menu.
+  -r, --forceReset    Try to force reset into bootloader.
 
 DESCRIPTION
   Interact with the Gecko bootloader in the adapter via serial.
@@ -85,7 +86,7 @@ EXAMPLES
   $ ember-zli bootloader
 ```
 
-_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.3/src/commands/bootloader/index.ts)_
+_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.4/src/commands/bootloader/index.ts)_
 
 ## `ember-zli help [COMMAND]`
 
@@ -125,7 +126,7 @@ EXAMPLES
   $ ember-zli stack
 ```
 
-_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.3/src/commands/stack/index.ts)_
+_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.4/src/commands/stack/index.ts)_
 
 ## `ember-zli version`
 

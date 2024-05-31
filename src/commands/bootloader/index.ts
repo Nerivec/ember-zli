@@ -123,6 +123,7 @@ export default class Bootloader extends Command {
     static override flags = {
         ask: Flags.boolean({ char: 'a', description: 'Ask conf questions, even if conf file present (override file with new answers).' }),
         file: Flags.file({ char: 'f', description: 'Path to a firmware file. If not provided, will be set via interactive prompt when entering relevant menu.', exists: true }),
+        forceReset: Flags.boolean({ char: 'r', default: false, description: 'Try to force reset into bootloader.' }),
     }
 
     public async run(): Promise<void> {
@@ -173,7 +174,7 @@ export default class Bootloader extends Command {
             progressBar.update(percent)
         })
 
-        await gecko.connect(this)
+        await gecko.connect(this, flags.forceReset)
 
         let exit: boolean = false
 

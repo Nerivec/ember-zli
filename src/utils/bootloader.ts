@@ -144,7 +144,7 @@ export class GeckoBootloader extends EventEmitter {
         }
     }
 
-    public async connect(callingCommand: Command): Promise<void> {
+    public async connect(callingCommand: Command, forceReset: boolean): Promise<void> {
         if (this.state !== BootloaderState.NOT_CONNECTED) {
             logger.debug(`Already connected to bootloader. Skipping connect attempt.`, NS)
             return
@@ -152,16 +152,17 @@ export class GeckoBootloader extends EventEmitter {
 
         logger.info(`Connecting to bootloader...`, NS)
 
-        // check if already in bootloader
-        await this.knock(false/* don't fail */)
+        // check if already in bootloader, or try to force into it if requested, don't fail if not successful
+        await this.knock(false, forceReset)
 
-        // @ts-expect-error changed in called fn
+        // @ts-expect-error changed by received serial data
         if (this.state !== BootloaderState.IDLE) {
-            // not already in bootloader, so launch it, knock again
+            // not already in bootloader, so launch it, then knock again
             await this.launch(callingCommand)
-            await this.knock()
+            // this time will fail if not successful since exhausted all possible ways
+            await this.knock(true)
 
-            // @ts-expect-error changed in called fn
+            // @ts-expect-error changed by received serial data
             if (this.state !== BootloaderState.IDLE) {
                 logger.error(`Failed to enter bootloader menu.`, NS)
                 this.emit(BootloaderEvent.FAILED)
@@ -224,7 +225,9 @@ export class GeckoBootloader extends EventEmitter {
 
     public async resetByPattern(): Promise<void> {
         switch (this.adapterModel) {
-            default: {
+            // TODO: support per adapter
+            case 'Sonoff ZBDongle-E':
+            case undefined: {
                 await this.setSerialOpt({ dtr: false, rts: true })
                 await new Promise((resolve) => { setTimeout(resolve, 100) })
                 await this.setSerialOpt({ dtr: true, rts: false })
@@ -309,13 +312,22 @@ export class GeckoBootloader extends EventEmitter {
         return FirmwareValidation.VALID
     }
 
-    private async knock(fail: boolean = true): Promise<void> {
+    private async knock(fail: boolean, forceReset: boolean = false): Promise<void> {
         logger.debug(`Knocking...`, NS)
 
         try {
             await this.serial.asyncOpen()
+
+            if (forceReset) {
+                await this.resetByPattern()
+
+                if (this.state === BootloaderState.IDLE) {
+                    logger.debug(`Entered bootloader via pattern reset.`, NS)
+                    return
+                }
+            }
         } catch (error) {
-            logger.error(`Failed to open port: ${error}`, NS)
+            logger.error(`Failed to open port: ${error}.`, NS)
             this.emit(BootloaderEvent.FAILED)
             return
         }
@@ -326,6 +338,12 @@ export class GeckoBootloader extends EventEmitter {
 
         if (!res) {
             await this.close(fail/* emit closed */)
+
+            if (fail) {
+                logger.error(`Unable to enter bootloader.`, NS)
+            } else {
+                logger.info(`Unable to enter bootloader.`, NS)
+            }
         }
     }
 
