@@ -6,7 +6,6 @@ import { join } from 'node:path'
 
 import { DATA_FOLDER, logger } from '../../index.js'
 import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from '../../utils/bootloader.js'
-import { TCP_REGEX } from '../../utils/consts.js'
 import { FirmwareSource, FirmwareValidation } from '../../utils/enums.js'
 import { getPortConf } from '../../utils/port.js'
 import { AdapterModel, FirmwareMetadata, FirmwareVersion } from '../../utils/types.js'
@@ -121,20 +120,13 @@ export default class Bootloader extends Command {
     ]
 
     static override flags = {
-        ask: Flags.boolean({ char: 'a', description: 'Ask conf questions, even if conf file present (override file with new answers).' }),
         file: Flags.file({ char: 'f', description: 'Path to a firmware file. If not provided, will be set via interactive prompt when entering relevant menu.', exists: true }),
         forceReset: Flags.boolean({ char: 'r', default: false, description: 'Try to force reset into bootloader.' }),
     }
 
     public async run(): Promise<void> {
         const {flags} = await this.parse(Bootloader)
-        const portConf = await getPortConf(!flags.ask)
-
-        if (TCP_REGEX.test(portConf.path)) {
-            logger.error(`Interacting with bootloader over TCP is not supported.`)
-            return this.exit(1)
-        }
-
+        const portConf = await getPortConf(true/* no TCP */)
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`)
 
         const adapterModelChoices: { name: string, value: AdapterModel | undefined }[] = [{ name: 'Not in this list', value: undefined }]

@@ -1,18 +1,67 @@
-import { input, select } from '@inquirer/prompts'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { confirm, input, select } from '@inquirer/prompts'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
 import { CONF_PORT_PATH, logger } from '../index.js'
 import { BAUDRATES, TCP_REGEX } from './consts.js'
 import { BaudRate, PortConf, PortType } from './types.js'
 
-export const getPortConf = async(useFile: boolean = true): Promise<PortConf> => {
-    if (useFile) {
-        try {
-            const conf = readFileSync(CONF_PORT_PATH, 'utf8')
+export const getPortConfFile = async (noTCP: boolean = false): Promise<PortConf | undefined> => {
+    if (!existsSync(CONF_PORT_PATH)) {
+        return undefined
+    }
 
-            return JSON.parse(conf)
-        } catch {}
+    const file = readFileSync(CONF_PORT_PATH, 'utf8')
+
+    const conf: PortConf = JSON.parse(file)
+
+    if (!conf.baudRate || !BAUDRATES.includes(conf.baudRate)) {
+        logger.error(`Cached config does not include a valid baudrate value.`)
+        return undefined
+    }
+
+    if (!conf.path) {
+        logger.error(`Cached config does not include a valid path value.`)
+        return undefined
+    }
+
+    if (TCP_REGEX.test(conf.path)) {
+        if (noTCP) {
+            throw new Error(`Interacting with bootloader over TCP is not supported.`)
+        }
+    } else {
+        const portList = await SerialPort.list()
+
+        if (portList.length === 0) {
+            throw new Error('No serial device found.')
+        }
+
+        if (!portList.some((p) => p.path === conf.path)) {
+            logger.error(`Cached config path does not match a currently connected serial device.`)
+            return undefined
+        }
+    }
+
+    if (conf.rtscts !== true && conf.rtscts !== false) {
+        logger.error(`Cached config does not include a valid rtscts value.`)
+        return undefined
+    }
+
+    return conf
+}
+
+export const getPortConf = async (noTCP: boolean = false): Promise<PortConf> => {
+    const portConfFile = await getPortConfFile(noTCP)
+
+    if (portConfFile !== undefined) {
+        const usePortConfFile = await confirm({
+            default: true,
+            message: `Baudrate: ${portConfFile.baudRate}, Path: ${portConfFile.path}, RTS/CTS: ${portConfFile.rtscts}. Use this config?`,
+        })
+
+        if (usePortConfFile) {
+            return portConfFile
+        }
     }
 
     const baudrateChoices = []

@@ -1,5 +1,5 @@
 import { checkbox, confirm, input, select } from '@inquirer/prompts'
-import { Command, Flags } from '@oclif/core'
+import { Command } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
 import { existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
@@ -56,12 +56,11 @@ export default class Stack extends Command {
     ]
 
     static override flags = {
-        ask: Flags.boolean({ char: 'a', description: 'Ask conf questions, even if conf file present (override file with new answers).' }),
     }
 
     public async run(): Promise<void> {
-        const {flags} = await this.parse(Stack)
-        const portConf = await getPortConf(!flags.ask)
+        // const {flags} = await this.parse(Stack)
+        const portConf = await getPortConf()
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`)
 
         let ezsp = await emberStart(this, portConf)

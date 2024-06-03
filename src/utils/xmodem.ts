@@ -81,7 +81,7 @@ export class XModemCRC extends EventEmitter {
         if (this.waitForBlock !== this.blockNum) {
             logger.warning(`Received out of sequence data: ${recdData.toString('hex')} (blockNum=${this.blockNum}, expected=${this.waitForBlock}).`, NS)
             this.retries--
-            
+
             if (this.retries === 0) {
                 logger.error(`Maximum retries ${MAX_RETRIES} reached. Giving up.`, NS)
                 this.emit(XEvent.STOP, XExitStatus.FAIL)
