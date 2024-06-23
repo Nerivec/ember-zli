@@ -5,7 +5,7 @@ import { existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from
 import { dirname, extname, join } from 'node:path'
 import { ZSpec } from 'zigbee-herdsman'
 import { EmberTokensManager } from 'zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js'
-import { EmberExtendedSecurityBitmask, EmberInitialSecurityBitmask, EmberJoinMethod, EmberNodeType, EmberStatus, EzspNetworkScanType, EzspStatus, SLStatus, SecManKeyType } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
+import { EmberExtendedSecurityBitmask, EmberInitialSecurityBitmask, EmberJoinMethod, EmberNodeType, EzspNetworkScanType, SLStatus, SecManKeyType } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
 import { EmberInitialSecurityState, EmberNetworkParameters, EmberZigbeeNetwork, SecManContext } from 'zigbee-herdsman/dist/adapter/ember/types.js'
 import { initSecurityManagerContext } from 'zigbee-herdsman/dist/adapter/ember/utils/initters.js'
@@ -162,17 +162,17 @@ export default class Stack extends Command {
 
         const initStatus = await emberNetworkInit(this, ezsp)
 
-        if (initStatus === EmberStatus.NOT_JOINED) {
+        if (initStatus === SLStatus.NOT_JOINED) {
             logger.error(`No network present.`)
             return true
         }
 
-        if (initStatus !== EmberStatus.SUCCESS) {
-            logger.error(`Failed network init request with status=${EmberStatus[initStatus]}.`)
+        if (initStatus !== SLStatus.OK) {
+            logger.error(`Failed network init request with status=${SLStatus[initStatus]}.`)
             return true
         }
 
-        await waitForStackStatus(this, ezsp, EmberStatus.NETWORK_UP)
+        await waitForStackStatus(this, ezsp, SLStatus.NETWORK_UP)
 
         const backup = await backupNetwork(this, ezsp)
         const unifiedBackup = await toUnifiedBackup(backup)
@@ -187,21 +187,21 @@ export default class Stack extends Command {
     private async menuNetworkInfo(ezsp: Ezsp): Promise<boolean> {
         const initStatus = await emberNetworkInit(this, ezsp)
 
-        if (initStatus === EmberStatus.NOT_JOINED) {
+        if (initStatus === SLStatus.NOT_JOINED) {
             logger.error(`No network present.`)
             return true
         }
 
-        if (initStatus !== EmberStatus.SUCCESS) {
-            logger.error(`Failed network init request with status=${EmberStatus[initStatus]}.`)
+        if (initStatus !== SLStatus.OK) {
+            logger.error(`Failed network init request with status=${SLStatus[initStatus]}.`)
             return true
         }
 
-        await waitForStackStatus(this, ezsp, EmberStatus.NETWORK_UP)
+        await waitForStackStatus(this, ezsp, SLStatus.NETWORK_UP)
 
         const [netStatus, nodeType, netParams] = await ezsp.ezspGetNetworkParameters()
 
-        if (netStatus !== EmberStatus.SUCCESS) {
+        if (netStatus !== SLStatus.OK) {
             logger.error(`Failed to get network parameters.`)
             return true
         }
@@ -229,26 +229,26 @@ export default class Stack extends Command {
 
         const initStatus = await emberNetworkInit(this, ezsp)
 
-        if (initStatus === EmberStatus.NOT_JOINED) {
+        if (initStatus === SLStatus.NOT_JOINED) {
             logger.info(`No network present.`)
             return true
         }
 
-        if (initStatus !== EmberStatus.SUCCESS) {
-            logger.error(`Failed network init request with status=${EmberStatus[initStatus]}.`)
+        if (initStatus !== SLStatus.OK) {
+            logger.error(`Failed network init request with status=${SLStatus[initStatus]}.`)
             return true
         }
 
-        await waitForStackStatus(this, ezsp, EmberStatus.NETWORK_UP)
+        await waitForStackStatus(this, ezsp, SLStatus.NETWORK_UP)
 
         const leaveStatus = await ezsp.ezspLeaveNetwork()
 
-        if (leaveStatus !== EmberStatus.SUCCESS) {
-            logger.error(`Failed to leave network with status=${EmberStatus[leaveStatus]}.`)
+        if (leaveStatus !== SLStatus.OK) {
+            logger.error(`Failed to leave network with status=${SLStatus[leaveStatus]}.`)
             return true
         }
 
-        await waitForStackStatus(this, ezsp, EmberStatus.NETWORK_DOWN)
+        await waitForStackStatus(this, ezsp, SLStatus.NETWORK_DOWN)
 
         logger.info(`Left network.`)
 
@@ -282,11 +282,11 @@ export default class Stack extends Command {
             }
         }), 10)
 
-        const initStatus = await emberNetworkInit(this, ezsp)
-        const noNetwork = (initStatus === EmberStatus.NOT_JOINED)
+        let status = await emberNetworkInit(this, ezsp)
+        const noNetwork = (status === SLStatus.NOT_JOINED)
 
-        if (!noNetwork && initStatus !== EmberStatus.SUCCESS) {
-            logger.error(`Failed network init request with status=${EmberStatus[initStatus]}.`)
+        if (!noNetwork && status !== SLStatus.OK) {
+            logger.error(`Failed network init request with status=${SLStatus[status]}.`)
             return true
         }
 
@@ -298,14 +298,14 @@ export default class Stack extends Command {
                 return true
             }
 
-            const leaveStatus = await ezsp.ezspLeaveNetwork()
+            status = await ezsp.ezspLeaveNetwork()
 
-            if (leaveStatus !== EmberStatus.SUCCESS) {
-                logger.error(`Failed to leave network with status=${EmberStatus[leaveStatus]}.`)
+            if (status !== SLStatus.OK) {
+                logger.error(`Failed to leave network with status=${SLStatus[status]}.`)
                 return true
             }
 
-            await waitForStackStatus(this, ezsp, EmberStatus.NETWORK_DOWN)
+            await waitForStackStatus(this, ezsp, SLStatus.NETWORK_DOWN)
         }
 
         const state: EmberInitialSecurityState = {
@@ -320,20 +320,20 @@ export default class Stack extends Command {
             preconfiguredTrustCenterEui64: ZSpec.BLANK_EUI64,
         }
 
-        let emberStatus = (await ezsp.ezspSetInitialSecurityState(state))
+        status = (await ezsp.ezspSetInitialSecurityState(state))
 
-        if (emberStatus !== EmberStatus.SUCCESS) {
-            logger.error(`Failed to set initial security state with status=${EmberStatus[emberStatus]}.`)
+        if (status !== SLStatus.OK) {
+            logger.error(`Failed to set initial security state with status=${SLStatus[status]}.`)
             return true
         }
 
         const extended: EmberExtendedSecurityBitmask = (
             EmberExtendedSecurityBitmask.JOINER_GLOBAL_LINK_KEY | EmberExtendedSecurityBitmask.NWK_LEAVE_REQUEST_NOT_ALLOWED
         )
-        const extSecStatus = (await ezsp.ezspSetExtendedSecurityBitmask(extended))
+        status = (await ezsp.ezspSetExtendedSecurityBitmask(extended))
 
-        if (extSecStatus !== EzspStatus.SUCCESS) {
-            logger.error(`Failed to set extended security bitmask to ${extended} with status=${EzspStatus[extSecStatus]}.`)
+        if (status !== SLStatus.OK) {
+            logger.error(`Failed to set extended security bitmask to ${extended} with status=${SLStatus[status]}.`)
             return true
         }
 
@@ -350,25 +350,25 @@ export default class Stack extends Command {
 
         logger.info(`Forming new network with: ${JSON.stringify(netParams)}`)
 
-        emberStatus = (await ezsp.ezspFormNetwork(netParams))
+        status = (await ezsp.ezspFormNetwork(netParams))
 
-        if (emberStatus !== EmberStatus.SUCCESS) {
-            logger.error(`Failed form network request with status=${EmberStatus[emberStatus]}.`)
+        if (status !== SLStatus.OK) {
+            logger.error(`Failed form network request with status=${SLStatus[status]}.`)
             return true
         }
 
-        await waitForStackStatus(this, ezsp, EmberStatus.NETWORK_UP)
+        await waitForStackStatus(this, ezsp, SLStatus.NETWORK_UP)
 
         const stStatus = await ezsp.ezspStartWritingStackTokens()
 
-        logger.debug(`Start writing stack tokens status=${EzspStatus[stStatus]}.`)
+        logger.debug(`Start writing stack tokens status=${SLStatus[stStatus]}.`)
 
         logger.info(`New network formed!`)
 
-        const [status, , parameters] = await ezsp.ezspGetNetworkParameters()
+        const [netStatus, , parameters] = await ezsp.ezspGetNetworkParameters()
 
-        if (status !== EmberStatus.SUCCESS) {
-            logger.error(`Failed to get network parameters with status=${EmberStatus[status]}.`)
+        if (netStatus !== SLStatus.OK) {
+            logger.error(`Failed to get network parameters with status=${SLStatus[netStatus]}.`)
             return true
         }
 
@@ -398,8 +398,8 @@ export default class Stack extends Command {
 
         const status = await ezsp.ezspSetRadioPower(radioTxPower)
 
-        if (status !== EmberStatus.SUCCESS) {
-            logger.error(`Failed to set transmit power to ${radioTxPower} status=${EmberStatus[status]}.`)
+        if (status !== SLStatus.OK) {
+            logger.error(`Failed to set transmit power to ${radioTxPower} status=${SLStatus[status]}.`)
             return true
         }
 
@@ -456,15 +456,15 @@ export default class Stack extends Command {
             reportedValues.push(`Found network: PAN ID: ${networkFound.panId}, channel: ${networkFound.channel}, Node RSSI: ${lastHopRssi} dBm, LQI: ${lastHopLqi}.`)
         }
 
-        ezsp.ezspScanCompleteHandler = (channel: number, status: EmberStatus): void => {
+        ezsp.ezspScanCompleteHandler = (channel: number, status: SLStatus): void => {
             logger.debug(`ezspScanCompleteHandler: ${JSON.stringify({ channel, status })}`)
             progressBar.stop()
             clearInterval(progressInterval)
 
-            if (status === EmberStatus.SUCCESS) {
+            if (status === SLStatus.OK) {
                 scanCompleted && scanCompleted()
             } else {
-                logger.error(`Failed to scan ${channel} with status=${EmberStatus[status]}.`)
+                logger.error(`Failed to scan ${channel} with status=${SLStatus[status]}.`)
             }
         }
 
@@ -510,20 +510,20 @@ export default class Stack extends Command {
             case RepairId.EUI64_MISMATCH: {
                 const initStatus = await emberNetworkInit(this, ezsp)
 
-                if (initStatus === EmberStatus.NOT_JOINED) {
+                if (initStatus === SLStatus.NOT_JOINED) {
                     logger.info(`No network present.`)
                     return true
                 }
 
-                if (initStatus !== EmberStatus.SUCCESS) {
-                    logger.error(`Failed network init request with status=${EmberStatus[initStatus]}.`)
+                if (initStatus !== SLStatus.OK) {
+                    logger.error(`Failed network init request with status=${SLStatus[initStatus]}.`)
                     return true
                 }
 
                 const [status, securityState] = await ezsp.ezspGetCurrentSecurityState()
 
-                if (status !== EmberStatus.SUCCESS) {
-                    logger.error(`Failed get current security state request with status=${EmberStatus[status]}.`)
+                if (status !== SLStatus.OK) {
+                    logger.error(`Failed get current security state request with status=${SLStatus[status]}.`)
                     return true
                 }
 
@@ -540,8 +540,8 @@ export default class Stack extends Command {
 
                 const [gtkStatus, tokenData] = await ezsp.ezspGetTokenData(NVM3KEY_STACK_TRUST_CENTER, 0)
 
-                if (gtkStatus !== EmberStatus.SUCCESS) {
-                    logger.error(`Failed get token data request with status=${EmberStatus[gtkStatus]}.`)
+                if (gtkStatus !== SLStatus.OK) {
+                    logger.error(`Failed get token data request with status=${SLStatus[gtkStatus]}.`)
                     return true
                 }
 
@@ -553,8 +553,8 @@ export default class Stack extends Command {
 
                     const stkStatus = await ezsp.ezspSetTokenData(NVM3KEY_STACK_TRUST_CENTER, 0, tokenData)
 
-                    if (stkStatus !== EmberStatus.SUCCESS) {
-                        logger.error(`Failed set token data request with status=${EmberStatus[stkStatus]}.`)
+                    if (stkStatus !== SLStatus.OK) {
+                        logger.error(`Failed set token data request with status=${SLStatus[stkStatus]}.`)
                         return true
                     }
                 } else {
@@ -573,7 +573,7 @@ export default class Stack extends Command {
         {
             const context: SecManContext = initSecurityManagerContext()
             context.coreKeyType = SecManKeyType.TC_LINK
-            const [key, status] = (await ezsp.ezspExportKey(context))
+            const [status, key] = (await ezsp.ezspExportKey(context))
 
             if (status === SLStatus.OK) {
                 logger.info(`Trust Center Link Key: ${key.contents.toString('hex')}`)
@@ -585,7 +585,7 @@ export default class Stack extends Command {
         {
             const context: SecManContext = initSecurityManagerContext()
             context.coreKeyType = SecManKeyType.APP_LINK
-            const [key, status] = (await ezsp.ezspExportKey(context))
+            const [status, key] = (await ezsp.ezspExportKey(context))
 
             if (status === SLStatus.OK) {
                 logger.info(`App Link Key: ${key.contents.toString('hex')}`)
@@ -598,7 +598,7 @@ export default class Stack extends Command {
             const context: SecManContext = initSecurityManagerContext()
             context.coreKeyType = SecManKeyType.NETWORK
             context.keyIndex = 0
-            const [key, status] = (await ezsp.ezspExportKey(context))
+            const [status, key] = (await ezsp.ezspExportKey(context))
 
             if (status === SLStatus.OK) {
                 logger.info(`Network Key: ${key.contents.toString('hex')}`)
@@ -610,7 +610,7 @@ export default class Stack extends Command {
         {
             const context: SecManContext = initSecurityManagerContext()
             context.coreKeyType = SecManKeyType.ZLL_ENCRYPTION_KEY
-            const [key, status] = (await ezsp.ezspExportKey(context))
+            const [status, key] = (await ezsp.ezspExportKey(context))
 
             if (status === SLStatus.OK) {
                 logger.info(`ZLL Encryption Key: ${key.contents.toString('hex')}`)
@@ -622,7 +622,7 @@ export default class Stack extends Command {
         {
             const context: SecManContext = initSecurityManagerContext()
             context.coreKeyType = SecManKeyType.ZLL_PRECONFIGURED_KEY
-            const [key, status] = (await ezsp.ezspExportKey(context))
+            const [status, key] = (await ezsp.ezspExportKey(context))
 
             if (status === SLStatus.OK) {
                 logger.info(`ZLL Preconfigured Key: ${key.contents.toString('hex')}`)
@@ -634,7 +634,7 @@ export default class Stack extends Command {
         {
             const context: SecManContext = initSecurityManagerContext()
             context.coreKeyType = SecManKeyType.GREEN_POWER_PROXY_TABLE_KEY
-            const [key, status] = (await ezsp.ezspExportKey(context))
+            const [status, key] = (await ezsp.ezspExportKey(context))
 
             if (status === SLStatus.OK) {
                 logger.info(`Green Power Proxy Table Key: ${key.contents.toString('hex')}`)
@@ -646,7 +646,7 @@ export default class Stack extends Command {
         {
             const context: SecManContext = initSecurityManagerContext()
             context.coreKeyType = SecManKeyType.GREEN_POWER_SINK_TABLE_KEY
-            const [key, status] = (await ezsp.ezspExportKey(context))
+            const [status, key] = (await ezsp.ezspExportKey(context))
 
             if (status === SLStatus.OK) {
                 logger.info(`Green Power Sink Table Key: ${key.contents.toString('hex')}`)
@@ -729,7 +729,7 @@ export default class Stack extends Command {
         const tokensBuf = Buffer.from(readFileSync(backupFile, 'utf8'), 'hex')
         const status = await EmberTokensManager.restoreTokens(ezsp, tokensBuf)
 
-        if (status === EmberStatus.SUCCESS) {
+        if (status === SLStatus.OK) {
             logger.info(`Restored tokens backup.`)
         } else {
             logger.error(`Failed to restore tokens.`)

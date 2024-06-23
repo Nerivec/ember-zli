@@ -5,13 +5,11 @@ import {
     EmberLibraryId,
     EmberLibraryStatus,
     EmberNetworkInitBitmask,
-    EmberStatus,
     EmberVersionType,
-    EzspStatus,
     SLStatus,
     SecManKeyType
 } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
-import { EZSP_PROTOCOL_VERSION, EZSP_STACK_TYPE_MESH } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
+import { EZSP_MIN_PROTOCOL_VERSION, EZSP_PROTOCOL_VERSION, EZSP_STACK_TYPE_MESH } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
 import { EzspConfigId, EzspDecisionBitmask, EzspDecisionId, EzspMfgTokenId, EzspPolicyId } from 'zigbee-herdsman/dist/adapter/ember/ezsp/enums.js'
 import { Ezsp, EzspEvents } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
 import { EmberNetworkInitStruct, SecManContext } from 'zigbee-herdsman/dist/adapter/ember/types.js'
@@ -27,13 +25,13 @@ const NS = { namespace: 'ember' }
 const STACK_PROFILE_ZIGBEE_PRO = 2
 export let emberFullVersion: EmberFullVersion
 
-export const waitForStackStatus = async (cmd: Command, ezsp: Ezsp, status: EmberStatus, timeout: number = 10000): Promise<void> => new Promise<void>((resolve) => {
+export const waitForStackStatus = async (cmd: Command, ezsp: Ezsp, status: SLStatus, timeout: number = 10000): Promise<void> => new Promise<void>((resolve) => {
     const timeoutHandle = setTimeout(() => {
-        logger.error(`Timed out waiting for stack status '${EmberStatus[status]}'.`, NS)
+        logger.error(`Timed out waiting for stack status '${SLStatus[status]}'.`, NS)
         return cmd.exit(1)
     }, timeout)
 
-    ezsp.on(EzspEvents.STACK_STATUS, (receivedStatus: EmberStatus) => {
+    ezsp.on(EzspEvents.STACK_STATUS, (receivedStatus: SLStatus) => {
         logger.debug(`Received stack status ${receivedStatus} while waiting for ${status}.`, NS)
         if (status === receivedStatus) {
             clearTimeout(timeoutHandle)
@@ -78,20 +76,23 @@ export const emberVersion = async (cmd: Command, ezsp: Ezsp): Promise<EmberFullV
         return cmd.exit(1)
     }
 
-    if (ncpEzspProtocolVer < EZSP_PROTOCOL_VERSION) {
-        [ncpEzspProtocolVer, ncpStackType, ncpStackVer] = await ezsp.ezspVersion(ncpEzspProtocolVer)
+    if (ncpEzspProtocolVer === EZSP_PROTOCOL_VERSION) {
+        logger.debug(`NCP EZSP protocol version (${ncpEzspProtocolVer}) matches Host.`, NS);
+    } else if (ncpEzspProtocolVer < EZSP_PROTOCOL_VERSION && ncpEzspProtocolVer >= EZSP_MIN_PROTOCOL_VERSION) {
+        [ncpEzspProtocolVer, ncpStackType, ncpStackVer] = await ezsp.ezspVersion(ncpEzspProtocolVer);
 
-        logger.warning(`NCP EZSP version (${ncpEzspProtocolVer}) is lower than host (${EZSP_PROTOCOL_VERSION}). Switched host to version ${ncpEzspProtocolVer}.`, NS)
-    } else if (ncpEzspProtocolVer > EZSP_PROTOCOL_VERSION) {
-        logger.error(`NCP EZSP version (${ncpEzspProtocolVer}) is not supported by host (max ${EZSP_PROTOCOL_VERSION}).`)
-        return cmd.exit(1)
+        logger.info(`NCP EZSP protocol version (${ncpEzspProtocolVer}) lower than Host. Switched.`, NS);
+    } else {
+        throw new Error(
+            `NCP EZSP protocol version (${ncpEzspProtocolVer}) is not supported by Host [${EZSP_MIN_PROTOCOL_VERSION}-${EZSP_PROTOCOL_VERSION}].`
+        );
     }
 
     logger.debug(`NCP info: EZSPVersion=${ncpEzspProtocolVer} StackType=${ncpStackType} StackVersion=${ncpStackVer}`, NS)
 
     const [status, versionStruct] = await ezsp.ezspGetVersionStruct()
 
-    if (status !== EzspStatus.SUCCESS) {
+    if (status !== SLStatus.OK) {
         // Should never happen with support of only EZSP v13+
         logger.error(`NCP has old-style version number. Not supported.`, NS)
         return cmd.exit(1)
@@ -112,12 +113,12 @@ export const emberVersion = async (cmd: Command, ezsp: Ezsp): Promise<EmberFullV
     return version
 }
 
-export const emberNetworkInit = async (cmd: Command, ezsp: Ezsp): Promise<EmberStatus> => {
+export const emberNetworkInit = async (cmd: Command, ezsp: Ezsp): Promise<SLStatus> => {
     // required for proper network init
     const status = await ezsp.ezspSetConfigurationValue(EzspConfigId.STACK_PROFILE, STACK_PROFILE_ZIGBEE_PRO)
 
-    if (status !== EzspStatus.SUCCESS) {
-        logger.error(`Failed to set stack profile with status=${EzspStatus[status]}.`, NS)
+    if (status !== SLStatus.OK) {
+        logger.error(`Failed to set stack profile with status=${SLStatus[status]}.`, NS)
         return cmd.exit(1)
     }
 
@@ -174,7 +175,7 @@ export const getStackConfig = async (cmd: Command, ezsp: Ezsp): Promise<ConfigVa
 
         const [status, value] = await ezsp.ezspGetConfigurationValue(configId)
 
-        config[`CONFIG.${key}`] = (status === EzspStatus.SUCCESS) ? `${value}` : EzspStatus[status]
+        config[`CONFIG.${key}`] = (status === SLStatus.OK) ? `${value}` : SLStatus[status]
     }
 
     {
@@ -195,7 +196,7 @@ export const getStackConfig = async (cmd: Command, ezsp: Ezsp): Promise<ConfigVa
             }
         }
 
-        config[`POLICY.TRUST_CENTER_POLICY`] = (status === EzspStatus.SUCCESS) ? tcDecisions.join(',') : EzspStatus[status]
+        config[`POLICY.TRUST_CENTER_POLICY`] = (status === SLStatus.OK) ? tcDecisions.join(',') : SLStatus[status]
     }
 
     for (const key of Object.keys(EzspPolicyId)) {
@@ -208,7 +209,7 @@ export const getStackConfig = async (cmd: Command, ezsp: Ezsp): Promise<ConfigVa
 
         const [status, value] = await ezsp.ezspGetPolicy(policyId)
 
-        config[`CONFIG.${key}`] = (status === EzspStatus.SUCCESS) ? EzspDecisionId[value] : EzspStatus[status]
+        config[`CONFIG.${key}`] = (status === SLStatus.OK) ? EzspDecisionId[value] : SLStatus[status]
     }
 
     {
@@ -241,7 +242,7 @@ export const getStackConfig = async (cmd: Command, ezsp: Ezsp): Promise<ConfigVa
 export const backupNetwork = async(cmd: Command, ezsp: Ezsp): Promise<Backup> => {
     const [netStatus, , netParams] = await ezsp.ezspGetNetworkParameters()
 
-    if (netStatus !== EmberStatus.SUCCESS) {
+    if (netStatus !== SLStatus.OK) {
         logger.error(`Failed to get network parameters.`, NS)
         return cmd.exit(1)
     }
@@ -261,7 +262,7 @@ export const backupNetwork = async(cmd: Command, ezsp: Ezsp): Promise<Backup> =>
 
     let context: SecManContext = initSecurityManagerContext()
     context.coreKeyType = SecManKeyType.TC_LINK
-    const [tcLinkKey, tclkStatus] = (await ezsp.ezspExportKey(context))
+    const [tclkStatus, tcLinkKey] = (await ezsp.ezspExportKey(context))
 
     if (tclkStatus !== SLStatus.OK) {
         logger.error(`Failed to export TC Link Key with status=${SLStatus[tclkStatus]}.`, NS)
@@ -271,7 +272,7 @@ export const backupNetwork = async(cmd: Command, ezsp: Ezsp): Promise<Backup> =>
     context = initSecurityManagerContext()// make sure it's back to zeroes
     context.coreKeyType = SecManKeyType.NETWORK
     context.keyIndex = 0
-    const [networkKey, nkStatus] = (await ezsp.ezspExportKey(context))
+    const [nkStatus, networkKey] = (await ezsp.ezspExportKey(context))
 
     if (nkStatus !== SLStatus.OK) {
         logger.error(`Failed to export Network Key with status=${SLStatus[nkStatus]}.`, NS)

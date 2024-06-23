@@ -3,7 +3,7 @@ import { Command } from "@oclif/core"
 // eslint-disable-next-line import/default
 import CRC32 from "crc-32"
 import EventEmitter from "node:events"
-import { EmberStatus } from "zigbee-herdsman/dist/adapter/ember/enums.js"
+import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { SerialPort } from "zigbee-herdsman/dist/adapter/serialPort.js"
 
 import { logger } from "../index.js"
@@ -355,8 +355,8 @@ export class GeckoBootloader extends EventEmitter {
         try {
             const status = await ezsp.ezspLaunchStandaloneBootloader(BootloaderMode.STANDALONE_BOOTLOADER_NORMAL)
 
-            if (status !== EmberStatus.SUCCESS) {
-                throw new Error(EmberStatus[status])
+            if (status !== SLStatus.OK) {
+                throw new Error(SLStatus[status])
             }
         } catch (error) {
             logger.error(`Unable to launch bootloader: ${JSON.stringify(error)}`, NS)
