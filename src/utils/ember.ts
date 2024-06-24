@@ -209,7 +209,7 @@ export const getStackConfig = async (cmd: Command, ezsp: Ezsp): Promise<ConfigVa
 
         const [status, value] = await ezsp.ezspGetPolicy(policyId)
 
-        config[`CONFIG.${key}`] = (status === SLStatus.OK) ? EzspDecisionId[value] : SLStatus[status]
+        config[`POLICY.${key}`] = (status === SLStatus.OK) ? EzspDecisionId[value] : SLStatus[status]
     }
 
     {
