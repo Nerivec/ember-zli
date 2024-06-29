@@ -1,23 +1,22 @@
 import { confirm } from '@inquirer/prompts'
-import { Command } from "@oclif/core"
 // eslint-disable-next-line import/default
-import CRC32 from "crc-32"
-import EventEmitter from "node:events"
+import CRC32 from 'crc-32'
+import EventEmitter from 'node:events'
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
-import { SerialPort } from "zigbee-herdsman/dist/adapter/serialPort.js"
+import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
-import { logger } from "../index.js"
-import { emberStart, emberStop } from "./ember.js"
+import { logger } from '../index.js'
+import { emberStart, emberStop } from './ember.js'
 import { FirmwareValidation } from './enums.js'
 import { AdapterModel, FirmwareFileMetadata, PortConf } from './types.js'
-import { XEvent, XExitStatus, XModemCRC } from "./xmodem.js"
+import { XEvent, XExitStatus, XModemCRC } from './xmodem.js'
 
 const NS = { namespace: 'gecko' }
 
 enum BootloaderMode {
     /** The bootloader should not be run. */
-    NO_BOOTLOADER                  = 0xFF,
-    STANDALONE_BOOTLOADER_NORMAL   = 1,
+    NO_BOOTLOADER = 0xff,
+    STANDALONE_BOOTLOADER_NORMAL = 1,
     STANDALONE_BOOTLOADER_RECOVERY = 0,
 }
 
@@ -52,33 +51,38 @@ export enum BootloaderMenu {
     UPLOAD_GBL = 0x31,
     RUN = 0x32,
     INFO = 0x33,
-    CLEAR_NVM3 = 0xFF,
+    CLEAR_NVM3 = 0xff,
 }
 
-const CARRIAGE_RETURN = 0x0D
-const NEWLINE = 0x0A
+const CARRIAGE_RETURN = 0x0d
+const NEWLINE = 0x0a
 const BOOTLOADER_KNOCK = Buffer.from([NEWLINE])
 /** "BL >" ascii */
-const BOOTLOADER_PROMPT = Buffer.from([0x42, 0x4C, 0x20, 0x3E])
+const BOOTLOADER_PROMPT = Buffer.from([0x42, 0x4c, 0x20, 0x3e])
 /** "Bootloader v" ascii */
-const BOOTLOADER_INFO = Buffer.from([0x42, 0x6F, 0x6F, 0x74, 0x6C, 0x6F, 0x61, 0x64, 0x65, 0x72, 0x20, 0x76])
+const BOOTLOADER_INFO = Buffer.from([0x42, 0x6f, 0x6f, 0x74, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x20, 0x76])
 /** "Serial upload complete" ascii */
-const BOOTLOADER_UPLOAD_COMPLETE = Buffer.from([0x53, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x20, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x20, 0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65])
+const BOOTLOADER_UPLOAD_COMPLETE = Buffer.from([
+    0x53, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x20, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x20, 0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65,
+])
 /** "Serial upload aborted" ascii */
-const BOOTLOADER_UPLOAD_ABORTED = Buffer.from([0x53, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x20, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x20, 0x61, 0x62, 0x6f, 0x72, 0x74, 0x65, 0x64])
+const BOOTLOADER_UPLOAD_ABORTED = Buffer.from([
+    0x53, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x20, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x20, 0x61, 0x62, 0x6f, 0x72, 0x74, 0x65, 0x64,
+])
 
 const BOOTLOADER_KNOCK_TIMEOUT = 2000
 const BOOTLOADER_UPLOAD_TIMEOUT = 120000
 const BOOTLOADER_UPLOAD_EXIT_TIMEOUT = 500
 const BOOTLOADER_CMD_EXEC_TIMEOUT = 200
 
-const GBL_START_TAG = Buffer.from([0xEB, 0x17, 0xA6, 0x03])
+const GBL_START_TAG = Buffer.from([0xeb, 0x17, 0xa6, 0x03])
 /** Contains length+CRC32 and possibly padding after this. */
-const GBL_END_TAG = Buffer.from([0xFC, 0x04, 0x04, 0xFC])
-const GBL_METADATA_TAG = Buffer.from([0xF6, 0x08, 0x08, 0xF6])
+const GBL_END_TAG = Buffer.from([0xfc, 0x04, 0x04, 0xfc])
+const GBL_METADATA_TAG = Buffer.from([0xf6, 0x08, 0x08, 0xf6])
 const VALID_FIRMWARE_CRC32 = 558161692
 
-const NVM3_INIT_START = 'eb17a603080000000000000300000000f40a0af41c00000000000000000000000000000000000000000000000000000000000000fd0303fd0480000000600b00'
+const NVM3_INIT_START =
+    'eb17a603080000000000000300000000f40a0af41c00000000000000000000000000000000000000000000000000000000000000fd0303fd0480000000600b00'
 const NVM3_INIT_BLANK_CHUNK_START = '01009ab2010000d0feffff0fffffffff0098'
 const NVM3_INIT_BLANK_CHUNK_LENGTH = 8174
 const NVM3_INIT_END = 'fc0404fc040000004b83c4aa'
@@ -89,12 +93,14 @@ export class GeckoBootloader extends EventEmitter {
     public readonly serial: SerialPort
     public readonly xmodem: XModemCRC
     private state: BootloaderState
-    private waiter: {
-        /** Expected to return true if properly resolved, false if timed out and timeout not considered hard-fail */
-        resolve: (value: PromiseLike<boolean> | boolean) => void,
-        state: BootloaderState,
-        timeout: NodeJS.Timeout
-    } | undefined
+    private waiter:
+        | {
+              /** Expected to return true if properly resolved, false if timed out and timeout not considered hard-fail */
+              resolve: (value: PromiseLike<boolean> | boolean) => void
+              state: BootloaderState
+              timeout: NodeJS.Timeout
+          }
+        | undefined
 
     constructor(portConf: PortConf, adapter?: AdapterModel) {
         super()
@@ -144,7 +150,7 @@ export class GeckoBootloader extends EventEmitter {
         }
     }
 
-    public async connect(callingCommand: Command, forceReset: boolean): Promise<void> {
+    public async connect(forceReset: boolean): Promise<void> {
         if (this.state !== BootloaderState.NOT_CONNECTED) {
             logger.debug(`Already connected to bootloader. Skipping connect attempt.`, NS)
             return
@@ -158,7 +164,7 @@ export class GeckoBootloader extends EventEmitter {
         // @ts-expect-error changed by received serial data
         if (this.state !== BootloaderState.IDLE) {
             // not already in bootloader, so launch it, then knock again
-            await this.launch(callingCommand)
+            await this.launch()
             // this time will fail if not successful since exhausted all possible ways
             await this.knock(true)
 
@@ -207,18 +213,20 @@ export class GeckoBootloader extends EventEmitter {
                     return false
                 }
 
-                return this.menuUploadGBL(Buffer.concat([
-                    Buffer.from(NVM3_INIT_START, 'hex'),
-                    Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
-                    Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xFF),
-                    Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
-                    Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xFF),
-                    Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
-                    Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xFF),
-                    Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
-                    Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xFF),
-                    Buffer.from(NVM3_INIT_END, 'hex'),
-                ]))
+                return this.menuUploadGBL(
+                    Buffer.concat([
+                        Buffer.from(NVM3_INIT_START, 'hex'),
+                        Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
+                        Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xff),
+                        Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
+                        Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xff),
+                        Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
+                        Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xff),
+                        Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
+                        Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xff),
+                        Buffer.from(NVM3_INIT_END, 'hex'),
+                    ]),
+                )
             }
         }
     }
@@ -229,9 +237,13 @@ export class GeckoBootloader extends EventEmitter {
             case 'Sonoff ZBDongle-E':
             case undefined: {
                 await this.setSerialOpt({ dtr: false, rts: true })
-                await new Promise((resolve) => { setTimeout(resolve, 100) })
+                await new Promise((resolve) => {
+                    setTimeout(resolve, 100)
+                })
                 await this.setSerialOpt({ dtr: true, rts: false })
-                await new Promise((resolve) => { setTimeout(resolve, 500) })
+                await new Promise((resolve) => {
+                    setTimeout(resolve, 500)
+                })
                 await this.setSerialOpt({ dtr: false })
 
                 break
@@ -253,7 +265,7 @@ export class GeckoBootloader extends EventEmitter {
         }
 
         // eslint-disable-next-line import/no-named-as-default-member
-        const computedCRC32 = CRC32.buf(firmware.subarray(0, endTagStart + 12), 0)// tag+length+crc32 (4+4+4)
+        const computedCRC32 = CRC32.buf(firmware.subarray(0, endTagStart + 12), 0) // tag+length+crc32 (4+4+4)
 
         if (computedCRC32 !== VALID_FIRMWARE_CRC32) {
             logger.error(`Firmware file invalid. Failed CRC validation (got ${computedCRC32}, expected ${VALID_FIRMWARE_CRC32}).`, NS)
@@ -280,15 +292,24 @@ export class GeckoBootloader extends EventEmitter {
         const metaStart = metaTagStart + GBL_METADATA_TAG.length + 4
         const metaEnd = metaStart + metaTagLength
         const metaBuf = firmware.subarray(metaStart, metaEnd)
-        logger.debug(`Metadata: tagStart=${metaTagStart}, tagLength=${metaTagLength}, start=${metaStart}, end=${metaEnd}, data=${metaBuf.toString('hex')}`, NS)
+        logger.debug(
+            `Metadata: tagStart=${metaTagStart}, tagLength=${metaTagLength}, start=${metaStart}, end=${metaEnd}, data=${metaBuf.toString('hex')}`,
+            NS,
+        )
 
         try {
             const recdMetadata: FirmwareFileMetadata = JSON.parse(metaBuf.toString('utf8'))
 
-            logger.info(`Firmware file metadata: SDK version: ${recdMetadata.sdk_version}, EZSP version: ${recdMetadata.ezsp_version}, baudrate: ${recdMetadata.baudrate}, type: ${recdMetadata.fw_type}`, NS)
+            logger.info(
+                `Firmware file metadata: SDK version: ${recdMetadata.sdk_version}, EZSP version: ${recdMetadata.ezsp_version}, baudrate: ${recdMetadata.baudrate}, type: ${recdMetadata.fw_type}`,
+                NS,
+            )
 
             if (recdMetadata.baudrate !== expectedBaudRate) {
-                logger.warning(`Firmware file baudrate ${recdMetadata.baudrate} differs from your current port configuration of ${expectedBaudRate}.`, NS)
+                logger.warning(
+                    `Firmware file baudrate ${recdMetadata.baudrate} differs from your current port configuration of ${expectedBaudRate}.`,
+                    NS,
+                )
             }
 
             if (!supportedVersionsRegex.test(recdMetadata.ezsp_version)) {
@@ -337,7 +358,7 @@ export class GeckoBootloader extends EventEmitter {
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail)
 
         if (!res) {
-            await this.close(fail/* emit closed */)
+            await this.close(fail /* emit closed */)
 
             if (fail) {
                 logger.error(`Unable to enter bootloader.`, NS)
@@ -347,10 +368,10 @@ export class GeckoBootloader extends EventEmitter {
         }
     }
 
-    private async launch(callingCommand: Command): Promise<void> {
+    private async launch(): Promise<void> {
         logger.debug(`Launching bootloader...`, NS)
 
-        const ezsp = await emberStart(callingCommand, this.portConf)
+        const ezsp = await emberStart(this.portConf)
 
         try {
             const status = await ezsp.ezspLaunchStandaloneBootloader(BootloaderMode.STANDALONE_BOOTLOADER_NORMAL)
@@ -365,7 +386,7 @@ export class GeckoBootloader extends EventEmitter {
         }
 
         // free serial
-        await emberStop(callingCommand, ezsp)
+        await emberStop(ezsp)
     }
 
     private async menuGetInfo(): Promise<boolean> {
@@ -406,7 +427,7 @@ export class GeckoBootloader extends EventEmitter {
 
         this.state = BootloaderState.UPLOADING
 
-        await this.write(Buffer.from([BootloaderMenu.UPLOAD_GBL]))// start upload
+        await this.write(Buffer.from([BootloaderMenu.UPLOAD_GBL])) // start upload
         await this.waitForState(BootloaderState.UPLOADED, BOOTLOADER_UPLOAD_TIMEOUT)
 
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_UPLOAD_EXIT_TIMEOUT, false)
@@ -433,7 +454,6 @@ export class GeckoBootloader extends EventEmitter {
             }
 
             case BootloaderState.IDLE: {
-
                 break
             }
 
@@ -458,7 +478,7 @@ export class GeckoBootloader extends EventEmitter {
                 const blv = received.indexOf(BOOTLOADER_INFO)
 
                 if (blv !== -1) {
-                    const [blInfo, ] = this.readBootloaderInfo(received, blv)
+                    const [blInfo] = this.readBootloaderInfo(received, blv)
 
                     logger.info(`Received bootloader info while trying to exit: ${blInfo}.`, NS)
                 } else if (received.includes(BOOTLOADER_PROMPT)) {
@@ -475,7 +495,7 @@ export class GeckoBootloader extends EventEmitter {
                 if (blv !== -1) {
                     this.resolveState(BootloaderState.GOT_INFO)
 
-                    const [blInfo, ] = this.readBootloaderInfo(received, blv)
+                    const [blInfo] = this.readBootloaderInfo(received, blv)
 
                     logger.info(`${blInfo}.`, NS)
                 }
@@ -534,7 +554,7 @@ export class GeckoBootloader extends EventEmitter {
             if (newlineEnd === -1) {
                 hasNewline = false
             } else {
-                const newline: Buffer = infoBuf.subarray(newlineStart, newlineEnd - (infoBuf[newlineEnd - 1] === CARRIAGE_RETURN ?  1 : 0))
+                const newline: Buffer = infoBuf.subarray(newlineStart, newlineEnd - (infoBuf[newlineEnd - 1] === CARRIAGE_RETURN ? 1 : 0))
                 newlineStart = newlineEnd + 1
 
                 if (newline.length > 2) {
@@ -543,7 +563,7 @@ export class GeckoBootloader extends EventEmitter {
             }
         }
 
-        return [lines.join('. '), lines.length > 1]// regular only has the bootloader version line, if more, means extra
+        return [lines.join('. '), lines.length > 1] // regular only has the bootloader version line, if more, means extra
     }
 
     private resolveState(state: BootloaderState): void {
@@ -559,9 +579,9 @@ export class GeckoBootloader extends EventEmitter {
         this.state = state
     }
 
-    private async setSerialOpt(options: { dtr: boolean, rts?: boolean }): Promise<void> {
+    private async setSerialOpt(options: { dtr: boolean; rts?: boolean }): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.serial.set(options, (error) => error ? reject(error) : resolve())
+            this.serial.set(options, (error) => (error ? reject(error) : resolve()))
         })
     }
 
@@ -582,7 +602,7 @@ export class GeckoBootloader extends EventEmitter {
                     logger.debug(msg, NS)
                     resolve(false)
                     this.waiter = undefined
-                }, timeout)
+                }, timeout),
             }
         })
     }
@@ -602,7 +622,7 @@ export class GeckoBootloader extends EventEmitter {
                         this.emit(BootloaderEvent.FAILED)
                         return
                     }
-                
+
                     logger.debug(`Wrote: ${buffer.toString('hex')}`, NS)
 
                     resolve()

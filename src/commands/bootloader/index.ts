@@ -1,5 +1,5 @@
 import { input, select } from '@inquirer/prompts'
-import {Command, Flags} from '@oclif/core'
+import { Command, Flags } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -110,26 +110,27 @@ const FIRMWARE_LINKS: Record<FirmwareVersion, Record<AdapterModel, FirmwareMetad
 }
 
 export default class Bootloader extends Command {
-    static override args = {
-    }
+    static override args = {}
 
     static override description = 'Interact with the Gecko bootloader in the adapter via serial.'
 
-    static override examples = [
-        '<%= config.bin %> <%= command.id %>',
-    ]
+    static override examples = ['<%= config.bin %> <%= command.id %>']
 
     static override flags = {
-        file: Flags.file({ char: 'f', description: 'Path to a firmware file. If not provided, will be set via interactive prompt when entering relevant menu.', exists: true }),
+        file: Flags.file({
+            char: 'f',
+            description: 'Path to a firmware file. If not provided, will be set via interactive prompt when entering relevant menu.',
+            exists: true,
+        }),
         forceReset: Flags.boolean({ char: 'r', default: false, description: 'Try to force reset into bootloader.' }),
     }
 
     public async run(): Promise<void> {
-        const {flags} = await this.parse(Bootloader)
-        const portConf = await getPortConf(true/* no TCP */)
+        const { flags } = await this.parse(Bootloader)
+        const portConf = await getPortConf(true /* no TCP */)
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`)
 
-        const adapterModelChoices: { name: string, value: AdapterModel | undefined }[] = [{ name: 'Not in this list', value: undefined }]
+        const adapterModelChoices: { name: string; value: AdapterModel | undefined }[] = [{ name: 'Not in this list', value: undefined }]
 
         for (const k of Object.keys(FIRMWARE_LINKS.recommended)) {
             adapterModelChoices.push({ name: k, value: k as AdapterModel })
@@ -141,10 +142,7 @@ export default class Bootloader extends Command {
         })
 
         const gecko = new GeckoBootloader(portConf, adapterModel)
-        const progressBar = new SingleBar(
-            { clearOnComplete: true, format: '{bar} {percentage}%' },
-            Presets.shades_classic
-        )
+        const progressBar = new SingleBar({ clearOnComplete: true, format: '{bar} {percentage}%' }, Presets.shades_classic)
 
         gecko.on(BootloaderEvent.FAILED, () => {
             this.exit(1)
@@ -166,7 +164,7 @@ export default class Bootloader extends Command {
             progressBar.update(percent)
         })
 
-        await gecko.connect(this, flags.forceReset)
+        await gecko.connect(flags.forceReset)
 
         let exit: boolean = false
 
@@ -219,7 +217,7 @@ export default class Bootloader extends Command {
             let validFirmware: FirmwareValidation = FirmwareValidation.INVALID
 
             while (validFirmware !== FirmwareValidation.VALID) {
-                firmware = (firmwareFile === undefined) ? (await this.selectFirmware(gecko)) : readFileSync(firmwareFile)
+                firmware = firmwareFile === undefined ? await this.selectFirmware(gecko) : readFileSync(firmwareFile)
 
                 validFirmware = await gecko.validateFirmware(firmware, SUPPORTED_VERSIONS_REGEX, expectedBaudRate)
 
@@ -235,7 +233,11 @@ export default class Bootloader extends Command {
     private async selectFirmware(gecko: GeckoBootloader): Promise<Buffer> {
         const firmwareSource = await select<FirmwareSource>({
             choices: [
-                { name: 'Use pre-defined firmware (recommended or latest based on your adapter)', value: FirmwareSource.PRE_DEFINED, disabled: (gecko.adapterModel === undefined)},
+                {
+                    name: 'Use pre-defined firmware (recommended or latest based on your adapter)',
+                    value: FirmwareSource.PRE_DEFINED,
+                    disabled: gecko.adapterModel === undefined,
+                },
                 { name: 'Provide URL', value: FirmwareSource.URL },
                 { name: `Select file in data folder (${DATA_FOLDER})`, value: FirmwareSource.DATA_FOLDER },
             ],

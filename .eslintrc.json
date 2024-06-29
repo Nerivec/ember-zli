@@ -1,6 +1,10 @@
 {
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
   "extends": ["oclif", "oclif-typescript", "prettier"],
   "rules": {
+    "complexity": ["warn", 25],
     "unicorn/numeric-separators-style": "off",
     "unicorn/prefer-event-target": "off",
     "no-bitwise": "off",

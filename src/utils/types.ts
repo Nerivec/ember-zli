@@ -1,13 +1,21 @@
-import { EmberKeyData, EmberVersion } from "zigbee-herdsman/dist/adapter/ember/types.js"
-import { EUI64 } from "zigbee-herdsman/dist/zspec/tstypes.js"
+import { EmberKeyData, EmberVersion } from 'zigbee-herdsman/dist/adapter/ember/types.js'
+import { EUI64 } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 
-import { BAUDRATES } from "./consts.js"
+import { BAUDRATES } from './consts.js'
 
-export type AdapterModel = 'Aeotec Zi-Stick (ZGA008)' | 'EasyIOT ZB-GW04 v1.1' | 'EasyIOT ZB-GW04 v1.2' | 'Home Assistant SkyConnect' |
-    'Home Assistant Yellow' | 'SMLight SLZB06-M' | 'SMLight SLZB07' | 'Sonoff ZBDongle-E' | 'TubeZB MGM24'
+export type AdapterModel =
+    | 'Aeotec Zi-Stick (ZGA008)'
+    | 'EasyIOT ZB-GW04 v1.1'
+    | 'EasyIOT ZB-GW04 v1.2'
+    | 'Home Assistant SkyConnect'
+    | 'Home Assistant Yellow'
+    | 'SMLight SLZB06-M'
+    | 'SMLight SLZB07'
+    | 'Sonoff ZBDongle-E'
+    | 'TubeZB MGM24'
 
 export type PortType = 'serial' | 'tcp'
-export type BaudRate = typeof BAUDRATES[number]
+export type BaudRate = (typeof BAUDRATES)[number]
 
 export type PortConf = {
     baudRate: number
@@ -15,7 +23,7 @@ export type PortConf = {
     rtscts: boolean
 }
 
-export type EmberFullVersion = {ezsp: number, revision: string} & EmberVersion
+export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion
 export type ConfigValue = { [key: string]: string }
 
 export type FirmwareVersion = 'latest' | 'recommended'
@@ -39,7 +47,7 @@ export type FirmwareFileMetadata = {
 }
 
 export type TokensInfo = {
-    nvm3Key: string// keyof typeof NVM3ObjectKey
+    nvm3Key: string // keyof typeof NVM3ObjectKey
     size: number
     arraySize: number
     data: string[]
@@ -52,8 +60,8 @@ export type TokensInfo = {
  *   This key may be hashed and not the actual link key currently in use.
  */
 export type LinkKeyBackupData = {
-    deviceEui64: EUI64,
-    key: EmberKeyData,
-    outgoingFrameCounter: number,
-    incomingFrameCounter: number,
+    deviceEui64: EUI64
+    key: EmberKeyData
+    outgoingFrameCounter: number
+    incomingFrameCounter: number
 }

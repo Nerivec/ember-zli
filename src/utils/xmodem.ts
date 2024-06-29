@@ -1,10 +1,10 @@
-import EventEmitter from "node:events"
-import { halCommonCrc16, highByte, lowByte } from "zigbee-herdsman/dist/adapter/ember/utils/math.js"
+import EventEmitter from 'node:events'
+import { halCommonCrc16, highByte, lowByte } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
 
-import { logger } from "../index.js"
+import { logger } from '../index.js'
 
 const NS = { namespace: 'xmodemcrc' }
-const FILLER = 0xFF
+const FILLER = 0xff
 
 /** First block number. */
 const XMODEM_START_BLOCK = 1
@@ -72,14 +72,17 @@ export class XModemCRC extends EventEmitter {
             currentBlock = Buffer.alloc(BLOCK_SIZE)
         }
 
-        const blocksCount = (this.blocks.length - XMODEM_START_BLOCK)
+        const blocksCount = this.blocks.length - XMODEM_START_BLOCK
 
         logger.debug(`Outgoing blocks count=${blocksCount}, size=${blocksCount * BLOCK_SIZE}.`, NS)
     }
 
     public process(recdData: Buffer): void {
         if (this.waitForBlock !== this.blockNum) {
-            logger.warning(`Received out of sequence data: ${recdData.toString('hex')} (blockNum=${this.blockNum}, expected=${this.waitForBlock}).`, NS)
+            logger.warning(
+                `Received out of sequence data: ${recdData.toString('hex')} (blockNum=${this.blockNum}, expected=${this.waitForBlock}).`,
+                NS,
+            )
             this.retries--
 
             if (this.retries === 0) {
@@ -96,11 +99,11 @@ export class XModemCRC extends EventEmitter {
             case XSignal.CRC: {
                 if (this.blockNum === XMODEM_START_BLOCK) {
                     logger.debug(`Received C byte, starting transfer...`, NS)
-        
+
                     if (this.blocks.length > this.blockNum) {
                         this.emit(XEvent.START)
                         this.emitBlock(this.blockNum, this.blocks[this.blockNum])
-        
+
                         this.blockNum++
                     }
                 }
@@ -111,17 +114,17 @@ export class XModemCRC extends EventEmitter {
             case XSignal.ACK: {
                 if (this.blockNum > XMODEM_START_BLOCK) {
                     this.retries = MAX_RETRIES
-        
+
                     logger.debug('ACK received.', NS)
-        
+
                     if (this.blocks.length > this.blockNum) {
                         this.emitBlock(this.blockNum, this.blocks[this.blockNum])
-        
+
                         this.blockNum++
                     } else if (this.blocks.length === this.blockNum) {
                         if (this.sentEOF === false) {
                             this.sentEOF = true
-        
+
                             logger.debug(`Sending End of Transmission.`, NS)
                             this.emit(XEvent.DATA, Buffer.from([XSignal.EOT]))
                         } else {
@@ -178,15 +181,10 @@ export class XModemCRC extends EventEmitter {
     }
 
     private emitBlock(blockNum: number, blockData: Buffer): void {
-        const progressPc = Math.round(blockNum / (this.blocks.length - XMODEM_START_BLOCK) * 100)
+        const progressPc = Math.round((blockNum / (this.blocks.length - XMODEM_START_BLOCK)) * 100)
         this.waitForBlock = blockNum + 1
-        blockNum &= 0xFF // starts at 1, goes to 255, then wraps back to 0 (XModem spec)
-        let buffer = Buffer.concat([
-            Buffer.from([XSignal.SOH]),
-            Buffer.from([blockNum]),
-            Buffer.from([(0xFF - blockNum)]),
-            blockData
-        ])
+        blockNum &= 0xff // starts at 1, goes to 255, then wraps back to 0 (XModem spec)
+        let buffer = Buffer.concat([Buffer.from([XSignal.SOH]), Buffer.from([blockNum]), Buffer.from([0xff - blockNum]), blockData])
         let crc = 0
 
         for (const blockDatum of blockData) {

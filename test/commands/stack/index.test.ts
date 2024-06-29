@@ -1,4 +1,1 @@
-
-describe('stack', () => {
-
-})
+describe('stack', () => {})

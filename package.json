@@ -30,6 +30,7 @@
     "eslint-config-prettier": "^9",
     "mocha": "^10",
     "oclif": "^4",
+    "prettier": "^3.3.2",
     "shx": "^0.3.3",
     "ts-node": "^10",
     "typescript": "^5"
