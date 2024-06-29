@@ -6,7 +6,16 @@ import { CONF_PORT_PATH, logger } from '../index.js'
 import { BAUDRATES, TCP_REGEX } from './consts.js'
 import { BaudRate, PortConf, PortType } from './types.js'
 
-export const getPortConfFile = async (noTCP: boolean = false): Promise<PortConf | undefined> => {
+export const parseTcpPath = (path: string): {host: string; port: number} => {
+    const str = path.replace("tcp://", "")
+
+    return {
+        host: str.slice(0, Math.max(0, str.indexOf(":"))),
+        port: Number(str.slice(Math.max(0, str.indexOf(":") + 1))),
+    }
+}
+
+export const getPortConfFile = async (): Promise<PortConf | undefined> => {
     if (!existsSync(CONF_PORT_PATH)) {
         return undefined
     }
@@ -24,12 +33,7 @@ export const getPortConfFile = async (noTCP: boolean = false): Promise<PortConf 
         return undefined
     }
 
-    if (TCP_REGEX.test(conf.path)) {
-        if (noTCP) {
-            logger.error(`Cached config is using TCP, interacting with bootloader not supported.`)
-            return undefined
-        }
-    } else {
+    if (!TCP_REGEX.test(conf.path)) {
         const portList = await SerialPort.list()
 
         if (portList.length === 0) {
@@ -51,8 +55,8 @@ export const getPortConfFile = async (noTCP: boolean = false): Promise<PortConf 
     return conf
 }
 
-export const getPortConf = async (noTCP: boolean = false): Promise<PortConf> => {
-    const portConfFile = await getPortConfFile(noTCP)
+export const getPortConf = async (): Promise<PortConf> => {
+    const portConfFile = await getPortConfFile()
 
     if (portConfFile !== undefined) {
         const usePortConfFile = await confirm({

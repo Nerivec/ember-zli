@@ -2,16 +2,29 @@ import { confirm } from '@inquirer/prompts'
 // eslint-disable-next-line import/default
 import CRC32 from 'crc-32'
 import EventEmitter from 'node:events'
+import { Socket } from 'node:net'
+import { Readable } from "node:stream"
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
 import { logger } from '../index.js'
+import { CONFIG_HIGHWATER_MARK, TCP_REGEX } from './consts.js'
 import { emberStart, emberStop } from './ember.js'
 import { FirmwareValidation } from './enums.js'
+import { parseTcpPath } from './port.js'
 import { AdapterModel, FirmwareFileMetadata, PortConf } from './types.js'
 import { XEvent, XExitStatus, XModemCRC } from './xmodem.js'
 
 const NS = { namespace: 'gecko' }
+
+class BootloaderWriter extends Readable {
+    public writeBytes(bytesToWrite: Buffer): void {
+        this.emit('data', bytesToWrite)
+    }
+
+    public _read(): void {
+    }
+}
 
 enum BootloaderMode {
     /** The bootloader should not be run. */
@@ -20,31 +33,23 @@ enum BootloaderMode {
     STANDALONE_BOOTLOADER_RECOVERY = 0,
 }
 
-export enum BootloaderEvent {
-    FAILED = 'failed',
-    CLOSED = 'closed',
-    UPLOAD_START = 'uploadStart',
-    /** (XExitStatus) */
-    UPLOAD_STOP = 'uploadStop',
-    /** (percent) */
-    UPLOAD_PROGRESS = 'uploadProgress',
-}
-
 export enum BootloaderState {
     /** Not connected to bootloader (i.e. not any of below) */
     NOT_CONNECTED = 0,
     /** Waiting in menu */
     IDLE = 1,
     /** Triggered 'Upload GBL' menu */
-    UPLOADING = 2,
+    BEGIN_UPLOAD = 2,
+    /** Received 'begin upload' */
+    UPLOADING = 3,
     /** GBL upload completed */
-    UPLOADED = 3,
+    UPLOADED = 4,
     /** Triggered 'Run' menu */
-    RUNNING = 4,
+    RUNNING = 5,
     /** Triggered 'EBL Info' menu */
-    GETTING_INFO = 5,
+    GETTING_INFO = 6,
     /** Received response for 'EBL Info' menu */
-    GOT_INFO = 6,
+    GOT_INFO = 7,
 }
 
 export enum BootloaderMenu {
@@ -61,6 +66,8 @@ const BOOTLOADER_KNOCK = Buffer.from([NEWLINE])
 const BOOTLOADER_PROMPT = Buffer.from([0x42, 0x4c, 0x20, 0x3e])
 /** "Bootloader v" ascii */
 const BOOTLOADER_INFO = Buffer.from([0x42, 0x6f, 0x6f, 0x74, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x20, 0x76])
+/** "begin upload" acsii */
+const BOOTLOADER_BEGIN_UPLOAD = Buffer.from([0x62, 0x65, 0x67, 0x69, 0x6e, 0x20, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64])
 /** "Serial upload complete" ascii */
 const BOOTLOADER_UPLOAD_COMPLETE = Buffer.from([
     0x53, 0x65, 0x72, 0x69, 0x61, 0x6c, 0x20, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x20, 0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65,
@@ -87,12 +94,32 @@ const NVM3_INIT_BLANK_CHUNK_START = '01009ab2010000d0feffff0fffffffff0098'
 const NVM3_INIT_BLANK_CHUNK_LENGTH = 8174
 const NVM3_INIT_END = 'fc0404fc040000004b83c4aa'
 
-export class GeckoBootloader extends EventEmitter {
+
+export enum BootloaderEvent {
+    FAILED = 'failed',
+    CLOSED = 'closed',
+    UPLOAD_START = 'uploadStart',
+    UPLOAD_STOP = 'uploadStop',
+    UPLOAD_PROGRESS = 'uploadProgress',
+}
+
+interface GeckoBootloaderEventMap {
+    [BootloaderEvent.CLOSED]: []
+    [BootloaderEvent.FAILED]: []
+    [BootloaderEvent.UPLOAD_PROGRESS]: [percent: number]
+    [BootloaderEvent.UPLOAD_START]: []
+    [BootloaderEvent.UPLOAD_STOP]: [status: XExitStatus]
+}
+
+export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
     public readonly adapterModel?: AdapterModel
     public readonly portConf: PortConf
-    public readonly serial: SerialPort
+    public portWriter: BootloaderWriter | undefined
     public readonly xmodem: XModemCRC
+    private portSerial: SerialPort | undefined
+    private portSocket: Socket | undefined
     private state: BootloaderState
+
     private waiter:
         | {
               /** Expected to return true if properly resolved, false if timed out and timeout not considered hard-fail */
@@ -109,40 +136,37 @@ export class GeckoBootloader extends EventEmitter {
         this.waiter = undefined
         this.portConf = portConf
         this.adapterModel = adapter
-        // settings specific to gecko bootloader (non-custom)
-        this.serial = new SerialPort({
-            autoOpen: false,
-            baudRate: 115200,
-            dataBits: 8,
-            parity: 'none' as const,
-            path: this.portConf.path,
-            rtscts: false,
-            stopBits: 1 as const,
-            xoff: false,
-            xon: false,
-        })
         this.xmodem = new XModemCRC()
 
-        this.serial.once('close', (error: Error) => {
-            logger.info(`Port closed. Error? ${error ?? 'no'}`, NS)
-        })
-        this.serial.on('data', this.onSerialData.bind(this))
         this.xmodem.on(XEvent.START, this.onXModemStart.bind(this))
         this.xmodem.on(XEvent.STOP, this.onXModemStop.bind(this))
         this.xmodem.on(XEvent.DATA, this.onXModemData.bind(this))
     }
 
-    public async close(emitClosed: boolean = true): Promise<void> {
-        logger.info(`Closing connection...`, NS)
-
+    public async close(emitClosed: boolean, emitFailed: boolean = true): Promise<void> {
         this.state = BootloaderState.NOT_CONNECTED
 
-        try {
-            await this.serial.asyncFlushAndClose()
-        } catch (error) {
-            logger.error(`Failed to close serial port: ${error}.`, NS)
-            this.emit(BootloaderEvent.FAILED)
-            return
+        if (this.portSerial?.isOpen) {
+            logger.info(`Closing serial connection...`, NS)
+
+            try {
+                await this.portSerial.asyncFlushAndClose()
+            } catch (error) {
+                logger.error(`Failed to close port: ${error}.`, NS)
+                this.portSerial.removeAllListeners()
+
+                if (emitFailed) {
+                    this.emit(BootloaderEvent.FAILED)
+                }
+
+                return
+            }
+
+            this.portSerial.removeAllListeners()
+        } else if (this.portSocket !== undefined && !this.portSocket.closed) {
+            logger.info(`Closing socket connection...`, NS)
+            this.portSocket.destroy()
+            this.portSocket.removeAllListeners()
         }
 
         if (emitClosed) {
@@ -187,8 +211,9 @@ export class GeckoBootloader extends EventEmitter {
             case BootloaderMenu.UPLOAD_GBL: {
                 if (firmware === undefined) {
                     logger.error(`Navigating to upload GBL requires a valid firmware.`, NS)
-                    await this.close()
-                    return false
+                    await this.close(false)// don't emit closed since we're returning true which will close anyway
+
+                    return true
                 }
 
                 return this.menuUploadGBL(firmware)
@@ -232,6 +257,11 @@ export class GeckoBootloader extends EventEmitter {
     }
 
     public async resetByPattern(): Promise<void> {
+        if (this.portSerial === undefined) {
+            logger.error(`Reset by pattern unavailable for TCP.`)
+            return
+        }
+
         switch (this.adapterModel) {
             // TODO: support per adapter
             case 'Sonoff ZBDongle-E':
@@ -247,6 +277,10 @@ export class GeckoBootloader extends EventEmitter {
                 await this.setSerialOpt({ dtr: false })
 
                 break
+            }
+
+            default: {
+                logger.error(`Reset by pattern unavailable on ${this.adapterModel}.`)
             }
         }
     }
@@ -333,11 +367,89 @@ export class GeckoBootloader extends EventEmitter {
         return FirmwareValidation.VALID
     }
 
+    private async initPort(): Promise<void> {
+        // will do nothing if nothing's open
+        await this.close(false)
+
+        if (TCP_REGEX.test(this.portConf.path)) {
+            const info = parseTcpPath(this.portConf.path)
+            logger.debug(`Opening TCP socket with ${info.host}:${info.port}`, NS)
+
+            this.portSocket = new Socket()
+
+            this.portSocket.setNoDelay(true)
+            this.portSocket.setKeepAlive(true, 15000)
+
+            this.portWriter = new BootloaderWriter({ highWaterMark: CONFIG_HIGHWATER_MARK })
+
+            this.portWriter.pipe(this.portSocket)
+            this.portSocket.on('data', this.onReceivedData.bind(this))
+
+            return new Promise((resolve, reject): void => {
+                const openError = async (err: Error): Promise<void> => {
+                    reject(err)
+                }
+
+                if (this.portSocket === undefined) {
+                    reject(new Error(`Invalid socket`))
+                    return
+                }
+
+                this.portSocket.on('connect', () => {
+                    logger.debug(`Socket connected`, NS)
+                })
+                this.portSocket.on('ready', (): void => {
+                    logger.info(`Socket ready`, NS)
+                    this.portSocket!.removeListener('error', openError)
+                    this.portSocket!.once('close', this.onPortClose.bind(this))
+                    this.portSocket!.on('error', this.onPortError.bind(this))
+
+                    resolve()
+                })
+                this.portSocket.once('error', openError)
+                this.portSocket.connect(info.port, info.host)
+            })
+        }
+
+        const serialOpts = {
+            autoOpen: false,
+            baudRate: 115200,
+            dataBits: 8 as const,
+            parity: 'none' as const,
+            path: this.portConf.path,
+            rtscts: false,
+            stopBits: 1 as const,
+            xoff: false,
+            xon: false,
+        }
+
+        // enable software flow control if RTS/CTS not enabled in config
+        if (!serialOpts.rtscts) {
+            logger.info(`RTS/CTS config is off, enabling software flow control.`, NS)
+            serialOpts.xon = true
+            serialOpts.xoff = true
+        }
+
+        logger.debug(`Opening serial port with ${JSON.stringify(serialOpts)}`, NS)
+
+        this.portSerial = new SerialPort(serialOpts)
+        this.portWriter = new BootloaderWriter({ highWaterMark: CONFIG_HIGHWATER_MARK })
+
+        this.portWriter.pipe(this.portSerial)
+        this.portSerial.on('data', this.onReceivedData.bind(this))
+
+        await this.portSerial.asyncOpen()
+        logger.info(`Serial port opened`, NS)
+
+        this.portSerial.once('close', this.onPortClose.bind(this))
+        this.portSerial.on('error', this.onPortError.bind(this))
+    }
+
     private async knock(fail: boolean, forceReset: boolean = false): Promise<void> {
         logger.debug(`Knocking...`, NS)
 
         try {
-            await this.serial.asyncOpen()
+            await this.initPort()
 
             if (forceReset) {
                 await this.resetByPattern()
@@ -349,7 +461,9 @@ export class GeckoBootloader extends EventEmitter {
             }
         } catch (error) {
             logger.error(`Failed to open port: ${error}.`, NS)
+            await this.close(false, false)// force failed below
             this.emit(BootloaderEvent.FAILED)
+
             return
         }
 
@@ -358,7 +472,7 @@ export class GeckoBootloader extends EventEmitter {
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail)
 
         if (!res) {
-            await this.close(fail /* emit closed */)
+            await this.close(fail)// emit closed based on if we want to fail on unsuccessful knock
 
             if (fail) {
                 logger.error(`Unable to enter bootloader.`, NS)
@@ -425,9 +539,10 @@ export class GeckoBootloader extends EventEmitter {
 
         this.xmodem.init(firmware)
 
-        this.state = BootloaderState.UPLOADING
+        this.state = BootloaderState.BEGIN_UPLOAD
 
         await this.write(Buffer.from([BootloaderMenu.UPLOAD_GBL])) // start upload
+        await this.waitForState(BootloaderState.UPLOADING, BOOTLOADER_CMD_EXEC_TIMEOUT)
         await this.waitForState(BootloaderState.UPLOADED, BOOTLOADER_UPLOAD_TIMEOUT)
 
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_UPLOAD_EXIT_TIMEOUT, false)
@@ -441,7 +556,25 @@ export class GeckoBootloader extends EventEmitter {
         return false
     }
 
-    private async onSerialData(received: Buffer): Promise<void> {
+    private onPortClose(error: Error): void {
+        logger.info(`Port closed.`, NS)
+
+        if (error && this.state !== BootloaderState.NOT_CONNECTED) {
+            this.state = BootloaderState.NOT_CONNECTED
+
+            logger.info(`Port close ${error}`, NS)
+            this.emit(BootloaderEvent.FAILED)
+        }
+    }
+
+    private onPortError(error: Error): void {
+        this.state = BootloaderState.NOT_CONNECTED
+
+        logger.info(`Port ${error}`, NS)
+        this.emit(BootloaderEvent.FAILED)
+    }
+
+    private async onReceivedData(received: Buffer): Promise<void> {
         logger.debug(`Received serial data: ${received.toString('hex')} while in state ${BootloaderState[this.state]}.`, NS)
 
         switch (this.state) {
@@ -454,6 +587,14 @@ export class GeckoBootloader extends EventEmitter {
             }
 
             case BootloaderState.IDLE: {
+                break
+            }
+
+            case BootloaderState.BEGIN_UPLOAD: {
+                if (received.includes(BOOTLOADER_BEGIN_UPLOAD)) {
+                    this.resolveState(BootloaderState.UPLOADING)
+                }
+
                 break
             }
 
@@ -581,7 +722,7 @@ export class GeckoBootloader extends EventEmitter {
 
     private async setSerialOpt(options: { dtr: boolean; rts?: boolean }): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.serial.set(options, (error) => (error ? reject(error) : resolve()))
+            this.portSerial!.set(options, (error) => (error ? reject(error) : resolve()))
         })
     }
 
@@ -608,26 +749,11 @@ export class GeckoBootloader extends EventEmitter {
     }
 
     private async write(buffer: Buffer): Promise<void> {
-        return new Promise<void>((resolve) => {
-            this.serial.write(buffer, undefined, (error) => {
-                if (error) {
-                    logger.error(`Failed to write: ${error}.`, NS)
-                    this.emit(BootloaderEvent.FAILED)
-                    return
-                }
-
-                this.serial.drain((error) => {
-                    if (error) {
-                        logger.error(`Failed to write: ${error}.`, NS)
-                        this.emit(BootloaderEvent.FAILED)
-                        return
-                    }
-
-                    logger.debug(`Wrote: ${buffer.toString('hex')}`, NS)
-
-                    resolve()
-                })
-            })
-        })
+        if (this.portWriter === undefined) {
+            logger.error(`No port available to write.`, NS)
+            this.emit(BootloaderEvent.FAILED)
+        } else {
+            this.portWriter.writeBytes(buffer)
+        }
     }
 }

@@ -127,7 +127,7 @@ export default class Bootloader extends Command {
 
     public async run(): Promise<void> {
         const { flags } = await this.parse(Bootloader)
-        const portConf = await getPortConf(true /* no TCP */)
+        const portConf = await getPortConf()
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`)
 
         const adapterModelChoices: { name: string; value: AdapterModel | undefined }[] = [{ name: 'Not in this list', value: undefined }]
@@ -172,7 +172,7 @@ export default class Bootloader extends Command {
             exit = await this.navigateMenu(gecko, flags.file, portConf.baudRate)
         }
 
-        await gecko.close()
+        await gecko.close(false)
 
         return this.exit(0)
     }

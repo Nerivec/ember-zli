@@ -39,15 +39,20 @@ export enum XExitStatus {
 }
 
 export enum XEvent {
-    /** Processing started, C byte received */
+    /** C byte received */
     START = 'start',
-    /** Processing stopped: (XExitStatus) */
     STOP = 'stop',
-    /** Data to write: (Buffer, progressPc) */
+    /** Data to write */
     DATA = 'data',
 }
 
-export class XModemCRC extends EventEmitter {
+interface XModemCRCEventMap {
+    [XEvent.DATA]: [buffer: Buffer, progressPc: number]
+    [XEvent.START]: []
+    [XEvent.STOP]: [status: XExitStatus]
+}
+
+export class XModemCRC extends EventEmitter<XModemCRCEventMap> {
     private blockNum: number = XMODEM_START_BLOCK
     private blocks: Buffer[] = []
     private retries: number = MAX_RETRIES
@@ -126,7 +131,7 @@ export class XModemCRC extends EventEmitter {
                             this.sentEOF = true
 
                             logger.debug(`Sending End of Transmission.`, NS)
-                            this.emit(XEvent.DATA, Buffer.from([XSignal.EOT]))
+                            this.emit(XEvent.DATA, Buffer.from([XSignal.EOT]), 100)
                         } else {
                             logger.debug('Done.', NS)
                             this.emit(XEvent.STOP, XExitStatus.SUCCESS)
@@ -148,7 +153,7 @@ export class XModemCRC extends EventEmitter {
                         this.emit(XEvent.STOP, XExitStatus.FAIL)
                     } else if (this.blockNum === this.blocks.length && this.sentEOF) {
                         logger.warning('Received NAK, resending EOT.', NS)
-                        this.emit(XEvent.DATA, Buffer.from([XSignal.EOT]))
+                        this.emit(XEvent.DATA, Buffer.from([XSignal.EOT]), 0)
                     } else {
                         logger.warning('Packet corrupted, resending previous block.', NS)
 
