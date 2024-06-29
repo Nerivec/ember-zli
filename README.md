@@ -23,9 +23,10 @@ Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
 - Backup network
 - Restore network
 - Leave network
-- Backup tokens (NVM3)
-- Restore tokens (NVM3)
-- Reset tokens (NVM3)
+- Get NVM3 tokens info (details of what Backup saves)
+- Backup NVM3 tokens
+- Restore NVM3 tokens
+- Reset NVM3 tokens
 - Get security info
 - Repairs
   - Check for EUI64 mismatch

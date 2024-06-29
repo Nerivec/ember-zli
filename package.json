@@ -17,7 +17,7 @@
     "cli-progress": "^3.12.0",
     "crc-32": "^1.2.2",
     "winston": "^3.13.0",
-    "zigbee-herdsman": "file:zigbee-herdsman-6fd50e5.tgz"
+    "zigbee-herdsman": "file:zigbee-herdsman-0e18acd.tgz"
   },
   "devDependencies": {
     "@oclif/prettier-config": "^0.2.1",
@@ -41,7 +41,7 @@
     "/bin",
     "/dist",
     "/oclif.manifest.json",
-    "/zigbee-herdsman-6fd50e5.tgz"
+    "/zigbee-herdsman-0e18acd.tgz"
   ],
   "homepage": "https://github.com/Nerivec/ember-zli",
   "keywords": [

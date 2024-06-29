@@ -235,7 +235,7 @@ export default class Bootloader extends Command {
     private async selectFirmware(gecko: GeckoBootloader): Promise<Buffer> {
         const firmwareSource = await select<FirmwareSource>({
             choices: [
-                { disabled: (gecko.adapterModel === undefined), name: 'Use pre-defined firmware (recommended or latest based on your adapter)', value: FirmwareSource.PRE_DEFINED },
+                { name: 'Use pre-defined firmware (recommended or latest based on your adapter)', value: FirmwareSource.PRE_DEFINED, disabled: (gecko.adapterModel === undefined)},
                 { name: 'Provide URL', value: FirmwareSource.URL },
                 { name: `Select file in data folder (${DATA_FOLDER})`, value: FirmwareSource.DATA_FOLDER },
             ],

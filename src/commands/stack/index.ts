@@ -11,9 +11,11 @@ import { EmberInitialSecurityState, EmberNetworkParameters, EmberZigbeeNetwork, 
 import { initSecurityManagerContext } from 'zigbee-herdsman/dist/adapter/ember/utils/initters.js'
 import { toUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
 
-import { DATA_FOLDER, DEFAULT_NETWORK_BACKUP_PATH, DEFAULT_STACK_CONFIG_PATH, DEFAULT_TOKENS_BACKUP_PATH, logger } from '../../index.js'
-import { backupNetwork, emberFullVersion, emberNetworkInit, emberStart, emberStop, getBackup, getStackConfig, waitForStackStatus } from '../../utils/ember.js'
+import { DATA_FOLDER, DEFAULT_NETWORK_BACKUP_PATH, DEFAULT_STACK_CONFIG_PATH, DEFAULT_TOKENS_BACKUP_PATH, DEFAULT_TOKENS_INFO_PATH, logger } from '../../index.js'
+import { backupNetwork, emberFullVersion, emberNetworkInit, emberStart, emberStop, getBackup, getStackConfig, getTokensInfo, importLinkKeys, waitForStackStatus } from '../../utils/ember.js'
+import { NVM3ObjectKey } from '../../utils/enums.js'
 import { getPortConf } from '../../utils/port.js'
+import { LinkKeyBackupData } from '../../utils/types.js'
 
 enum StackMenu {
     STACK_INFO = 0,
@@ -28,6 +30,7 @@ enum StackMenu {
     TOKENS_BACKUP = 20,
     TOKENS_RESTORE = 21,
     TOKENS_RESET = 22,
+    TOKENS_INFO = 23,
 
     SECURITY_INFO = 30,
 
@@ -40,10 +43,6 @@ enum RepairId {
 
 const BULLET_FULL = '\u2022'
 const BULLET_EMPTY = '\u2219'
-
-// from EmberTokensManager
-const NVM3KEY_DOMAIN_ZIGBEE        = 0x10000
-const NVM3KEY_STACK_TRUST_CENTER   = (NVM3KEY_DOMAIN_ZIGBEE | 0xE124)
 
 export default class Stack extends Command {
     static override args = {
@@ -264,11 +263,6 @@ export default class Stack extends Command {
             return false
         }
 
-        if (backup.devices.length > 0) {
-            logger.error(`Restoring with App Link Keys currently not supported by CLI.`)
-            return false
-        }
-
         const radioTxPower = Number.parseInt(await input({
             default: '5',
             message: 'Initial radio transmit power [0-20]',
@@ -291,7 +285,7 @@ export default class Stack extends Command {
         }
 
         if (!noNetwork) {
-            const overwrite = await confirm({ default: false, message: 'A network is present in the adapter. Continue restoring?' })
+            const overwrite = await confirm({ default: false, message: 'A network is present in the adapter. Leave and continue restoring?' })
 
             if (!overwrite) {
                 logger.info(`Restore cancelled.`)
@@ -307,6 +301,21 @@ export default class Stack extends Command {
 
             await waitForStackStatus(this, ezsp, SLStatus.NETWORK_DOWN)
         }
+
+        const keyList: LinkKeyBackupData[] = backup.devices.map((device) => {
+            const octets = [...device.ieeeAddress.reverse()]
+
+            return {
+                deviceEui64: `0x${octets.map(octet => octet.toString(16).padStart(2, '0')).join('')}`,
+                // won't export if linkKey not present, so should always be valid here
+                key: {contents: device.linkKey!.key},
+                outgoingFrameCounter: device.linkKey!.txCounter,
+                incomingFrameCounter: device.linkKey!.rxCounter,
+            }
+        })
+
+        // before forming
+        await importLinkKeys(this, ezsp, keyList)
 
         const state: EmberInitialSecurityState = {
             bitmask: (
@@ -447,11 +456,15 @@ export default class Stack extends Command {
             logger.debug(`ezspEnergyScanResultHandler: ${JSON.stringify({ channel, maxRssiValue })}`)
             const full = 90 + maxRssiValue
             const empty = 90 - full
-            reportedValues.push(`Channel ${channel}: ${BULLET_FULL.repeat(full)}${BULLET_EMPTY.repeat(empty)} [${maxRssiValue} dBm]`)
+
+            if (full < 1 || empty < 1) {
+                reportedValues.push(`Channel ${channel}: ERROR`)
+            } else {
+                reportedValues.push(`Channel ${channel}: ${BULLET_FULL.repeat(full)}${BULLET_EMPTY.repeat(empty)} [${maxRssiValue} dBm]`)
+            }
         }
 
         ezsp.ezspNetworkFoundHandler = (networkFound: EmberZigbeeNetwork, lastHopLqi: number, lastHopRssi: number): void => {
-            // eslint-disable-next-line perfectionist/sort-objects
             logger.debug(`ezspNetworkFoundHandler: ${JSON.stringify({ networkFound, lastHopLqi, lastHopRssi })}`)
             reportedValues.push(`Found network: PAN ID: ${networkFound.panId}, channel: ${networkFound.channel}, Node RSSI: ${lastHopRssi} dBm, LQI: ${lastHopLqi}.`)
         }
@@ -538,7 +551,7 @@ export default class Stack extends Command {
 
                 logger.warning(`Fixing EUI64 mismatch...`)
 
-                const [gtkStatus, tokenData] = await ezsp.ezspGetTokenData(NVM3KEY_STACK_TRUST_CENTER, 0)
+                const [gtkStatus, tokenData] = await ezsp.ezspGetTokenData(NVM3ObjectKey.STACK_TRUST_CENTER, 0)
 
                 if (gtkStatus !== SLStatus.OK) {
                     logger.error(`Failed get token data request with status=${SLStatus[gtkStatus]}.`)
@@ -551,7 +564,7 @@ export default class Stack extends Command {
                 if (tokenEUI64.equals(tcEUI64)) {
                     tokenData.data.set(Buffer.from(eui64.slice(2/* 0x */), 'hex').reverse(), 2/* skip uint16_t at start */)
 
-                    const stkStatus = await ezsp.ezspSetTokenData(NVM3KEY_STACK_TRUST_CENTER, 0, tokenData)
+                    const stkStatus = await ezsp.ezspSetTokenData(NVM3ObjectKey.STACK_TRUST_CENTER, 0, tokenData)
 
                     if (stkStatus !== SLStatus.OK) {
                         logger.error(`Failed set token data request with status=${SLStatus[stkStatus]}.`)
@@ -703,6 +716,25 @@ export default class Stack extends Command {
         return false
     }
 
+    private async menuTokensInfo(ezsp: Ezsp): Promise<boolean> {
+        let saveFile: string | undefined = undefined
+
+        if (await confirm({ default: false, message: 'Save to file? (Only print if not)' })) {
+            saveFile = await this.browseToFile('Info save location (JSON)', DEFAULT_TOKENS_INFO_PATH)
+        }
+
+        const tokensInfo = await getTokensInfo(this, ezsp)
+
+        if (tokensInfo === null) {
+            logger.error(`Failed to get tokens info.`)
+        } else if (saveFile !== undefined) {
+            writeFileSync(saveFile, JSON.stringify(tokensInfo, null, 2), 'utf8')
+            logger.info(`Tokens info written to '${saveFile}'.`)
+        }
+
+        return false
+    }
+
     private async menuTokensReset(ezsp: Ezsp): Promise<boolean> {
         const confirmed = await confirm({ default: false, message: 'Confirm tokens reset? (Cannot be undone without a backup.)' })
 
@@ -748,9 +780,10 @@ export default class Stack extends Command {
                 { name: 'Backup network', value: StackMenu.NETWORK_BACKUP },
                 { name: 'Restore network', value: StackMenu.NETWORK_RESTORE },
                 { name: 'Leave network', value: StackMenu.NETWORK_LEAVE },
-                { name: 'Backup tokens (NVM3)', value: StackMenu.TOKENS_BACKUP },
-                { name: 'Restore tokens (NVM3)', value: StackMenu.TOKENS_RESTORE },
-                { name: 'Reset tokens (NVM3)', value: StackMenu.TOKENS_RESET },
+                { name: 'Get NVM3 tokens info (details of what Backup saves)', value: StackMenu.TOKENS_INFO },
+                { name: 'Backup NVM3 tokens', value: StackMenu.TOKENS_BACKUP },
+                { name: 'Restore NVM3 tokens', value: StackMenu.TOKENS_RESTORE },
+                { name: 'Reset NVM3 tokens', value: StackMenu.TOKENS_RESET },
                 { name: 'Get security info', value: StackMenu.SECURITY_INFO },
                 { name: 'Repairs', value: StackMenu.REPAIRS },
                 { name: 'Exit', value: -1 },
@@ -785,6 +818,10 @@ export default class Stack extends Command {
 
             case StackMenu.NETWORK_LEAVE: {
                 return this.menuNetworkLeave(ezsp)
+            }
+
+            case StackMenu.TOKENS_INFO: {
+                return this.menuTokensInfo(ezsp)
             }
 
             case StackMenu.TOKENS_BACKUP: {

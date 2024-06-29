@@ -12,6 +12,7 @@ export const CONF_NETWORK_PATH = join(DATA_FOLDER, 'conf_network.json')
 export const DEFAULT_STACK_CONFIG_PATH = join(DATA_FOLDER, 'stack_config.json')
 export const DEFAULT_NETWORK_BACKUP_PATH = join(DATA_FOLDER, 'coordinator_backup.json')
 export const DEFAULT_TOKENS_BACKUP_PATH = join(DATA_FOLDER, 'tokens_backup.nvm3')
+export const DEFAULT_TOKENS_INFO_PATH = join(DATA_FOLDER, 'tokens_info.json')
 
 if (!existsSync(DATA_FOLDER)){
     mkdirSync(DATA_FOLDER)
