@@ -1,11 +1,19 @@
 {
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
   "extends": ["oclif", "oclif-typescript", "prettier"],
   "rules": {
+    "complexity": ["warn", 25],
     "unicorn/numeric-separators-style": "off",
     "unicorn/prefer-event-target": "off",
     "no-bitwise": "off",
     "no-await-in-loop": "off",
     "no-undef-init": "off",
-    "perfectionist/sort-enums": "off"
+    "perfectionist/sort-enums": "off",
+    "perfectionist/sort-objects": "off",
+    "perfectionist/sort-object-types": "off",
+    "unicorn/prefer-math-trunc": "off",
+    "@typescript-eslint/no-floating-promises": "error"
   }
 }

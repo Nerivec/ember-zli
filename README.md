@@ -23,9 +23,10 @@ Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
 - Backup network
 - Restore network
 - Leave network
-- Backup tokens (NVM3)
-- Restore tokens (NVM3)
-- Reset tokens (NVM3)
+- Get NVM3 tokens info (details of what Backup saves)
+- Backup NVM3 tokens
+- Restore NVM3 tokens
+- Reset NVM3 tokens
 - Get security info
 - Repairs
   - Check for EUI64 mismatch
@@ -51,7 +52,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/1.0.5 win32-x64 node-v20.10.0
+ember-zli/2.0.0 win32-x64 node-v20.10.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
@@ -85,7 +86,7 @@ EXAMPLES
   $ ember-zli bootloader
 ```
 
-_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.5/src/commands/bootloader/index.ts)_
+_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.0.0/src/commands/bootloader/index.ts)_
 
 ## `ember-zli help [COMMAND]`
 
@@ -122,7 +123,7 @@ EXAMPLES
   $ ember-zli stack
 ```
 
-_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v1.0.5/src/commands/stack/index.ts)_
+_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.0.0/src/commands/stack/index.ts)_
 
 ## `ember-zli version`
 

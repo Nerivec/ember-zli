@@ -1,4 +1,1 @@
-
-describe('bootloader', () => {
-
-})
+describe('bootloader', () => {})

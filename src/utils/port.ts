@@ -6,13 +6,21 @@ import { CONF_PORT_PATH, logger } from '../index.js'
 import { BAUDRATES, TCP_REGEX } from './consts.js'
 import { BaudRate, PortConf, PortType } from './types.js'
 
-export const getPortConfFile = async (noTCP: boolean = false): Promise<PortConf | undefined> => {
+export const parseTcpPath = (path: string): {host: string; port: number} => {
+    const str = path.replace("tcp://", "")
+
+    return {
+        host: str.slice(0, Math.max(0, str.indexOf(":"))),
+        port: Number(str.slice(Math.max(0, str.indexOf(":") + 1))),
+    }
+}
+
+export const getPortConfFile = async (): Promise<PortConf | undefined> => {
     if (!existsSync(CONF_PORT_PATH)) {
         return undefined
     }
 
     const file = readFileSync(CONF_PORT_PATH, 'utf8')
-
     const conf: PortConf = JSON.parse(file)
 
     if (!conf.baudRate || !BAUDRATES.includes(conf.baudRate)) {
@@ -25,15 +33,12 @@ export const getPortConfFile = async (noTCP: boolean = false): Promise<PortConf 
         return undefined
     }
 
-    if (TCP_REGEX.test(conf.path)) {
-        if (noTCP) {
-            throw new Error(`Interacting with bootloader over TCP is not supported.`)
-        }
-    } else {
+    if (!TCP_REGEX.test(conf.path)) {
         const portList = await SerialPort.list()
 
         if (portList.length === 0) {
-            throw new Error('No serial device found.')
+            logger.error('Cached config is using serial, no serial device currently connected.')
+            return undefined
         }
 
         if (!portList.some((p) => p.path === conf.path)) {
@@ -50,8 +55,8 @@ export const getPortConfFile = async (noTCP: boolean = false): Promise<PortConf 
     return conf
 }
 
-export const getPortConf = async (noTCP: boolean = false): Promise<PortConf> => {
-    const portConfFile = await getPortConfFile(noTCP)
+export const getPortConf = async (): Promise<PortConf> => {
+    const portConfFile = await getPortConfFile()
 
     if (portConfFile !== undefined) {
         const usePortConfFile = await confirm({
@@ -95,8 +100,11 @@ export const getPortConf = async (noTCP: boolean = false): Promise<PortConf> => 
             }
 
             path = await select<string>({
-                // @ts-expect-error friendlyName windows only
-                choices: portList.map((p) => ({ name: `${p.manufacturer} ${p.friendlyName ?? ''} ${p.pnpId} (${p.path})`, value: p.path })),
+                choices: portList.map((p) => ({
+                    // @ts-expect-error friendlyName windows only
+                    name: `${p.manufacturer} ${p.friendlyName ?? ''} ${p.pnpId} (${p.path})`,
+                    value: p.path,
+                })),
                 message: 'Serial port',
             })
 
@@ -106,7 +114,7 @@ export const getPortConf = async (noTCP: boolean = false): Promise<PortConf> => 
             ]
             rtscts = await select<boolean>({
                 choices: fcChoices,
-                message: 'Flow control'
+                message: 'Flow control',
             })
             break
         }
@@ -124,7 +132,7 @@ export const getPortConf = async (noTCP: boolean = false): Promise<PortConf> => 
         throw new Error('Invalid port path.')
     }
 
-    const conf = {baudRate, path, rtscts}
+    const conf = { baudRate, path, rtscts }
 
     try {
         writeFileSync(CONF_PORT_PATH, JSON.stringify(conf, null, 2), 'utf8')
