@@ -6,12 +6,12 @@ import { CONF_PORT_PATH, logger } from '../index.js'
 import { BAUDRATES, TCP_REGEX } from './consts.js'
 import { BaudRate, PortConf, PortType } from './types.js'
 
-export const parseTcpPath = (path: string): {host: string; port: number} => {
-    const str = path.replace("tcp://", "")
+export const parseTcpPath = (path: string): { host: string; port: number } => {
+    const str = path.replace('tcp://', '')
 
     return {
-        host: str.slice(0, Math.max(0, str.indexOf(":"))),
-        port: Number(str.slice(Math.max(0, str.indexOf(":") + 1))),
+        host: str.slice(0, Math.max(0, str.indexOf(':'))),
+        port: Number(str.slice(Math.max(0, str.indexOf(':') + 1))),
     }
 }
 

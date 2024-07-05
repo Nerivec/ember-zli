@@ -82,6 +82,7 @@ export const emberVersion = async (ezsp: Ezsp): Promise<EmberFullVersion> => {
         )
     }
 
+    ezsp.setProtocolVersion(ncpEzspProtocolVer)
     logger.debug(`NCP info: EZSPVersion=${ncpEzspProtocolVer} StackType=${ncpStackType} StackVersion=${ncpStackVer}`, NS)
 
     const [status, versionStruct] = await ezsp.ezspGetVersionStruct()

@@ -5,6 +5,6 @@ export default {
     singleQuote: true,
     printWidth: 150,
     bracketSpacing: true,
-    endOfLine: "auto",
+    endOfLine: "lf",
     tabWidth: 4
 };

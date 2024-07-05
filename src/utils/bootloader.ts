@@ -3,7 +3,7 @@ import { confirm } from '@inquirer/prompts'
 import CRC32 from 'crc-32'
 import EventEmitter from 'node:events'
 import { Socket } from 'node:net'
-import { Readable } from "node:stream"
+import { Readable } from 'node:stream'
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
@@ -22,8 +22,7 @@ class BootloaderWriter extends Readable {
         this.emit('data', bytesToWrite)
     }
 
-    public _read(): void {
-    }
+    public _read(): void {}
 }
 
 enum BootloaderMode {
@@ -93,7 +92,6 @@ const NVM3_INIT_START =
 const NVM3_INIT_BLANK_CHUNK_START = '01009ab2010000d0feffff0fffffffff0098'
 const NVM3_INIT_BLANK_CHUNK_LENGTH = 8174
 const NVM3_INIT_END = 'fc0404fc040000004b83c4aa'
-
 
 export enum BootloaderEvent {
     FAILED = 'failed',
@@ -211,7 +209,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             case BootloaderMenu.UPLOAD_GBL: {
                 if (firmware === undefined) {
                     logger.error(`Navigating to upload GBL requires a valid firmware.`, NS)
-                    await this.close(false)// don't emit closed since we're returning true which will close anyway
+                    await this.close(false) // don't emit closed since we're returning true which will close anyway
 
                     return true
                 }
@@ -461,7 +459,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             }
         } catch (error) {
             logger.error(`Failed to open port: ${error}.`, NS)
-            await this.close(false, false)// force failed below
+            await this.close(false, false) // force failed below
             this.emit(BootloaderEvent.FAILED)
 
             return
@@ -472,7 +470,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail)
 
         if (!res) {
-            await this.close(fail)// emit closed based on if we want to fail on unsuccessful knock
+            await this.close(fail) // emit closed based on if we want to fail on unsuccessful knock
 
             if (fail) {
                 logger.error(`Unable to enter bootloader.`, NS)
