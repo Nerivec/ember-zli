@@ -111,11 +111,8 @@ const FIRMWARE_LINKS: Record<FirmwareVersion, Record<AdapterModel, FirmwareMetad
 
 export default class Bootloader extends Command {
     static override args = {}
-
     static override description = 'Interact with the Gecko bootloader in the adapter via serial.'
-
     static override examples = ['<%= config.bin %> <%= command.id %>']
-
     static override flags = {
         file: Flags.file({
             char: 'f',
@@ -294,7 +291,7 @@ export default class Bootloader extends Command {
 
                 const firmwareFile = await select<string>({
                     choices: fileChoices,
-                    message: 'Firmware version',
+                    message: 'Firmware file',
                 })
 
                 return readFileSync(join(DATA_FOLDER, firmwareFile))

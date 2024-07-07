@@ -1,21 +1,40 @@
-import { readFileSync } from 'node:fs'
-import { ZSpec } from 'zigbee-herdsman'
-import { EmberLibraryId, EmberLibraryStatus, EmberNetworkInitBitmask, EmberVersionType, SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
+import { ZSpec, Zcl } from 'zigbee-herdsman'
+import { FIXED_ENDPOINTS } from 'zigbee-herdsman/dist/adapter/ember/adapter/endpoints.js'
+import {
+    EMBER_HIGH_RAM_CONCENTRATOR,
+    EMBER_LOW_RAM_CONCENTRATOR,
+    SECURITY_LEVEL_Z3,
+    STACK_PROFILE_ZIGBEE_PRO,
+} from 'zigbee-herdsman/dist/adapter/ember/consts.js'
+import {
+    EmberLibraryId,
+    EmberLibraryStatus,
+    EmberNetworkInitBitmask,
+    EmberSourceRouteDiscoveryMode,
+    EmberVersionType,
+    SLStatus,
+} from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { EZSP_MIN_PROTOCOL_VERSION, EZSP_PROTOCOL_VERSION, EZSP_STACK_TYPE_MESH } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
-import { EzspConfigId } from 'zigbee-herdsman/dist/adapter/ember/ezsp/enums.js'
+import { EzspConfigId, EzspDecisionId, EzspPolicyId, EzspValueId } from 'zigbee-herdsman/dist/adapter/ember/ezsp/enums.js'
 import { Ezsp, EzspEvents } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
-import { EmberNetworkInitStruct } from 'zigbee-herdsman/dist/adapter/ember/types.js'
-import { Backup } from 'zigbee-herdsman/dist/models/backup.js'
-import { UnifiedBackupStorage } from 'zigbee-herdsman/dist/models/backup-storage-unified.js'
-import { fromUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
+import { EmberMulticastId, EmberMulticastTableEntry, EmberNetworkInitStruct } from 'zigbee-herdsman/dist/adapter/ember/types.js'
+import { lowHighBytes } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
 
 import { logger } from '../index.js'
 import { NVM3ObjectKey } from './enums.js'
-import { EmberFullVersion, PortConf } from './types.js'
+import { EmberFullVersion, PortConf, StackConfig } from './types.js'
 
 const NS = { namespace: 'ember' }
-const STACK_PROFILE_ZIGBEE_PRO = 2
-export let emberFullVersion: EmberFullVersion
+export let emberFullVersion: EmberFullVersion = {
+    ezsp: -1,
+    revision: 'unknown',
+    build: -1,
+    major: -1,
+    minor: -1,
+    patch: -1,
+    special: -1,
+    type: EmberVersionType.PRE_RELEASE,
+}
 
 export const waitForStackStatus = async (ezsp: Ezsp, status: SLStatus, timeout: number = 10000): Promise<void> =>
     new Promise<void>((resolve, reject) => {
@@ -107,12 +126,14 @@ export const emberVersion = async (ezsp: Ezsp): Promise<EmberFullVersion> => {
     return version
 }
 
-export const emberNetworkInit = async (ezsp: Ezsp): Promise<SLStatus> => {
-    // required for proper network init
-    const status = await ezsp.ezspSetConfigurationValue(EzspConfigId.STACK_PROFILE, STACK_PROFILE_ZIGBEE_PRO)
+export const emberNetworkInit = async (ezsp: Ezsp, wasConfigured: boolean = false): Promise<SLStatus> => {
+    if (!wasConfigured) {
+        // minimum required for proper network init
+        const status = await ezsp.ezspSetConfigurationValue(EzspConfigId.STACK_PROFILE, STACK_PROFILE_ZIGBEE_PRO)
 
-    if (status !== SLStatus.OK) {
-        throw new Error(`Failed to set stack profile with status=${SLStatus[status]}.`)
+        if (status !== SLStatus.OK) {
+            throw new Error(`Failed to set stack profile with status=${SLStatus[status]}.`)
+        }
     }
 
     const networkInitStruct: EmberNetworkInitStruct = {
@@ -120,6 +141,97 @@ export const emberNetworkInit = async (ezsp: Ezsp): Promise<SLStatus> => {
     }
 
     return ezsp.ezspNetworkInit(networkInitStruct)
+}
+
+export const emberNetworkConfig = async (ezsp: Ezsp, stackConf: StackConfig, manufacturerCode: Zcl.ManufacturerCode): Promise<void> => {
+    /** MAC indirect timeout should be 7.68 secs (STACK_PROFILE_ZIGBEE_PRO) */
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.INDIRECT_TRANSMISSION_TIMEOUT, 7680)
+    /** Max hops should be 2 * nwkMaxDepth, where nwkMaxDepth is 15 (STACK_PROFILE_ZIGBEE_PRO) */
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.MAX_HOPS, 30)
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.SUPPORTED_NETWORKS, 1)
+    // allow other devices to modify the binding table
+    await ezsp.ezspSetPolicy(EzspPolicyId.BINDING_MODIFICATION_POLICY, EzspDecisionId.CHECK_BINDING_MODIFICATIONS_ARE_VALID_ENDPOINT_CLUSTERS)
+    // return message tag only in ezspMessageSentHandler()
+    await ezsp.ezspSetPolicy(EzspPolicyId.MESSAGE_CONTENTS_IN_CALLBACK_POLICY, EzspDecisionId.MESSAGE_TAG_ONLY_IN_CALLBACK)
+    await ezsp.ezspSetValue(EzspValueId.TRANSIENT_DEVICE_TIMEOUT, 2, lowHighBytes(stackConf.TRANSIENT_DEVICE_TIMEOUT))
+    await ezsp.ezspSetManufacturerCode(manufacturerCode)
+    // network security init
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.STACK_PROFILE, STACK_PROFILE_ZIGBEE_PRO)
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.SECURITY_LEVEL, SECURITY_LEVEL_Z3)
+    // common configs
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.MAX_END_DEVICE_CHILDREN, stackConf.MAX_END_DEVICE_CHILDREN)
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.END_DEVICE_POLL_TIMEOUT, stackConf.END_DEVICE_POLL_TIMEOUT)
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.TRANSIENT_KEY_TIMEOUT_S, stackConf.TRANSIENT_KEY_TIMEOUT_S)
+}
+
+export const emberRegisterFixedEndpoints = async (ezsp: Ezsp, multicastTable: EmberMulticastId[]): Promise<void> => {
+    for (const ep of FIXED_ENDPOINTS) {
+        if (ep.networkIndex !== 0x00) {
+            logger.debug(`Multi-network not currently supported. Skipping endpoint ${JSON.stringify(ep)}.`, NS)
+            continue
+        }
+
+        const [epStatus] = await ezsp.ezspGetEndpointFlags(ep.endpoint)
+
+        // endpoint already registered
+        if (epStatus === SLStatus.OK) {
+            logger.debug(`Endpoint "${ep.endpoint}" already registered.`, NS)
+        } else {
+            // check to see if ezspAddEndpoint needs to be called
+            // if ezspInit is called without NCP reset, ezspAddEndpoint is not necessary and will return an error
+            const status = await ezsp.ezspAddEndpoint(
+                ep.endpoint,
+                ep.profileId,
+                ep.deviceId,
+                ep.deviceVersion,
+                [...ep.inClusterList], // copy
+                [...ep.outClusterList], // copy
+            )
+
+            if (status === SLStatus.OK) {
+                logger.debug(`Registered endpoint '${ep.endpoint}'.`, NS)
+            } else {
+                throw new Error(`Failed to register endpoint "${ep.endpoint}" with status=${SLStatus[status]}.`)
+            }
+        }
+
+        for (const multicastId of ep.multicastIds) {
+            const multicastEntry: EmberMulticastTableEntry = {
+                multicastId,
+                endpoint: ep.endpoint,
+                networkIndex: ep.networkIndex,
+            }
+
+            const status = await ezsp.ezspSetMulticastTableEntry(multicastTable.length, multicastEntry)
+
+            if (status !== SLStatus.OK) {
+                throw new Error(`Failed to register group "${multicastId}" in multicast table with status=${SLStatus[status]}.`)
+            }
+
+            logger.debug(`Registered multicast table entry (${multicastTable.length}): ${JSON.stringify(multicastEntry)}.`, NS)
+            multicastTable.push(multicastEntry.multicastId)
+        }
+    }
+}
+
+export const emberSetConcentrator = async (ezsp: Ezsp, stackConf: StackConfig): Promise<void> => {
+    const status = await ezsp.ezspSetConcentrator(
+        true,
+        stackConf.CONCENTRATOR_RAM_TYPE === 'low' ? EMBER_LOW_RAM_CONCENTRATOR : EMBER_HIGH_RAM_CONCENTRATOR,
+        stackConf.CONCENTRATOR_MIN_TIME,
+        stackConf.CONCENTRATOR_MAX_TIME,
+        stackConf.CONCENTRATOR_ROUTE_ERROR_THRESHOLD,
+        stackConf.CONCENTRATOR_DELIVERY_FAILURE_THRESHOLD,
+        stackConf.CONCENTRATOR_MAX_HOPS,
+    )
+
+    if (status !== SLStatus.OK) {
+        throw new Error(`[CONCENTRATOR] Failed to set concentrator with status=${SLStatus[status]}.`)
+    }
+
+    const remainTilMTORR = await ezsp.ezspSetSourceRouteDiscoveryMode(EmberSourceRouteDiscoveryMode.RESCHEDULE)
+
+    logger.info(`[CONCENTRATOR] Started source route discovery. ${remainTilMTORR}ms until next broadcast.`, NS)
 }
 
 // -- Utils
@@ -212,35 +324,4 @@ export const parseTokenData = (nvm3Key: NVM3ObjectKey, data: Buffer): string => 
             return data.toString('hex')
         }
     }
-}
-
-export const getBackupFromFile = (backupFile: string): Backup | undefined => {
-    try {
-        const data: UnifiedBackupStorage = JSON.parse(readFileSync(backupFile, 'utf8'))
-
-        if (data.metadata?.format === 'zigpy/open-coordinator-backup' && data.metadata?.version) {
-            if (data.metadata?.version !== 1) {
-                logger.error(`Unsupported open coordinator backup version (version=${data.metadata?.version}). Cannot restore.`)
-                return undefined
-            }
-
-            if (!data.stack_specific?.ezsp || !data.metadata.internal.ezspVersion) {
-                logger.error(`Current backup file is not for EmberZNet stack. Cannot restore.`)
-                return undefined
-            }
-
-            if (!data.stack_specific?.ezsp?.hashed_tclk) {
-                logger.error(`Current backup file does not contain the Trust Center Link Key. Cannot restore.`)
-                return undefined
-            }
-
-            return fromUnifiedBackup(data)
-        }
-
-        logger.error(`Unknown backup format.`)
-    } catch (error) {
-        logger.error(`Not valid backup found. ${error}`)
-    }
-
-    return undefined
 }
