@@ -27,8 +27,15 @@ if (!existsSync(LOGS_FOLDER)) {
 export const logger = createLogger({
     format: format.combine(
         format.errors({ stack: true }),
-        format.timestamp(), // new Date().toISOString()
-        format.printf((info) => `[${info.timestamp}] ${info.level}:\t${info.namespace ?? 'cli'}: ${info.message}`),
+        format.timestamp({
+            format:
+                new Date().toLocaleString(
+                    'sv' /* uses ISO */,
+                    // eslint-disable-next-line new-cap
+                    { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                ) + '.SSS',
+        }),
+        format.printf((info) => `[${info.timestamp}] ${info.level}: \t${info.namespace ?? 'cli'}: ${info.message}`),
     ),
     levels: config.syslog.levels,
     transports: [

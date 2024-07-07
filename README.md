@@ -52,6 +52,10 @@ Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
 - Reload custom event handlers
 - Run custom script
 
+#### Sniff
+
+- Start sniffing
+
 #### Utils
 
 - Parse NVM3 tokens backup file
@@ -82,6 +86,7 @@ USAGE
 * [`ember-zli bootloader`](#ember-zli-bootloader)
 * [`ember-zli help [COMMAND]`](#ember-zli-help-command)
 * [`ember-zli router`](#ember-zli-router)
+* [`ember-zli sniff`](#ember-zli-sniff)
 * [`ember-zli stack`](#ember-zli-stack)
 * [`ember-zli utils`](#ember-zli-utils)
 * [`ember-zli version`](#ember-zli-version)
@@ -126,7 +131,7 @@ DESCRIPTION
   Display help for ember-zli.
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.0.22/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.5/src/commands/help.ts)_
 
 ## `ember-zli router`
 
@@ -144,6 +149,23 @@ EXAMPLES
 ```
 
 _See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.0/src/commands/router/index.ts)_
+
+## `ember-zli sniff`
+
+Sniff Zigbee traffic (to Wireshark, to custom handler or just log in file)
+
+```
+USAGE
+  $ ember-zli sniff
+
+DESCRIPTION
+  Sniff Zigbee traffic (to Wireshark, to custom handler or just log in file)
+
+EXAMPLES
+  $ ember-zli sniff
+```
+
+_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.0/src/commands/sniff/index.ts)_
 
 ## `ember-zli stack`
 
@@ -197,5 +219,5 @@ FLAG DESCRIPTIONS
     Additionally shows the architecture, node version, operating system, and versions of plugins that the CLI is using.
 ```
 
-_See code: [@oclif/plugin-version](https://github.com/oclif/plugin-version/blob/v2.1.2/src/commands/version.ts)_
+_See code: [@oclif/plugin-version](https://github.com/oclif/plugin-version/blob/v2.2.6/src/commands/version.ts)_
 <!-- commandsstop -->

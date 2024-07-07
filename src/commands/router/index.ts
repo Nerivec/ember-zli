@@ -174,7 +174,7 @@ export default class Router extends Command {
             exit = await this.navigateMenu()
 
             if (exit && this.routerState === RouterState.RUNNING) {
-                exit = await confirm({ default: false, message: 'Router is currently running. Confirm exit?' })
+                exit = await confirm({ message: 'Router is currently running. Confirm exit?', default: false })
             }
         }
 
