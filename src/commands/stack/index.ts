@@ -314,14 +314,15 @@ export default class Stack extends Command {
         const radioTxPower = Number.parseInt(
             await input({
                 default: '5',
-                message: 'Initial radio transmit power [0-20]',
+                message: 'Radio transmit power [-128-127]',
                 validate(value: string) {
                     if (/\./.test(value)) {
                         return false
                     }
 
                     const v = Number.parseInt(value, 10)
-                    return v >= 0 && v <= 20
+
+                    return v >= -128 && v <= 127
                 },
             }),
             10,
@@ -488,14 +489,15 @@ export default class Stack extends Command {
         const radioTxPower = Number.parseInt(
             await input({
                 default: '5',
-                message: 'Radio transmit power [0-20]',
+                message: 'Radio transmit power [-128-127]',
                 validate(value: string) {
                     if (/\./.test(value)) {
                         return false
                     }
 
                     const v = Number.parseInt(value, 10)
-                    return v >= 0 && v <= 20
+
+                    return v >= -128 && v <= 127
                 },
             }),
             10,
