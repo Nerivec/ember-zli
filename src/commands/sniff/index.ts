@@ -23,7 +23,7 @@ const DEFAULT_ZEP_UDP_PORT = 17754
 
 export default class Sniff extends Command {
     static override args = {}
-    static override description = 'Sniff Zigbee traffic (to Wireshark, to custom handler or just log in file)'
+    static override description = 'Sniff Zigbee traffic (to Wireshark, to custom handler or just log in file).'
     static override examples = ['<%= config.bin %> <%= command.id %>']
     static override flags = {}
 
