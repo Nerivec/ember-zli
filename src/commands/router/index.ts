@@ -6,7 +6,6 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Logger } from 'winston'
 import { ZSpec, Zcl, Zdo } from 'zigbee-herdsman'
-import { FIXED_ENDPOINTS } from 'zigbee-herdsman/dist/adapter/ember/adapter/endpoints.js'
 import { EmberTokensManager } from 'zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js'
 import { EMBER_MIN_BROADCAST_ADDRESS, STACK_PROFILE_ZIGBEE_PRO } from 'zigbee-herdsman/dist/adapter/ember/consts.js'
 import {
@@ -48,6 +47,7 @@ import {
     waitForStackStatus,
 } from '../../utils/ember.js'
 import { getPortConf } from '../../utils/port.js'
+import { ROUTER_FIXED_ENDPOINTS } from '../../utils/router-endpoints.js'
 import { StackConfig } from '../../utils/types.js'
 import { browseToFile, loadStackConfig, toHex } from '../../utils/utils.js'
 
@@ -166,7 +166,7 @@ export default class Router extends Command {
         this.stackConfig = loadStackConfig()
 
         await emberNetworkConfig(this.ezsp, this.stackConfig, this.manufacturerCode)
-        await emberRegisterFixedEndpoints(this.ezsp, this.multicastTable /* IN/OUT */)
+        await emberRegisterFixedEndpoints(this.ezsp, this.multicastTable /* IN/OUT */, true)
 
         let exit: boolean = false
 
@@ -566,8 +566,8 @@ export default class Router extends Command {
             {
                 profileId: ZSpec.HA_PROFILE_ID,
                 clusterId: Zcl.Clusters.genBasic.ID,
-                sourceEndpoint: FIXED_ENDPOINTS[0].endpoint,
-                destinationEndpoint: FIXED_ENDPOINTS[0].endpoint,
+                sourceEndpoint: ROUTER_FIXED_ENDPOINTS[0].endpoint,
+                destinationEndpoint: ROUTER_FIXED_ENDPOINTS[0].endpoint,
                 options: DEFAULT_APS_OPTIONS,
                 groupId: 0,
                 sequence: 0,
@@ -887,8 +887,8 @@ export default class Router extends Command {
             type === EmberIncomingMessageType.UNICAST &&
             apsFrame.profileId === ZSpec.HA_PROFILE_ID &&
             apsFrame.clusterId === Zcl.Clusters.genBasic.ID &&
-            apsFrame.destinationEndpoint === FIXED_ENDPOINTS[0].endpoint &&
-            apsFrame.sourceEndpoint === FIXED_ENDPOINTS[0].endpoint
+            apsFrame.destinationEndpoint === ROUTER_FIXED_ENDPOINTS[0].endpoint &&
+            apsFrame.sourceEndpoint === ROUTER_FIXED_ENDPOINTS[0].endpoint
         ) {
             const header = Zcl.Header.fromBuffer(messageContents)
 
@@ -1012,8 +1012,8 @@ export default class Router extends Command {
             const tableIdx = this.multicastTable.length
             const multicastEntry: EmberMulticastTableEntry = {
                 multicastId: apsFrame.groupId,
-                endpoint: FIXED_ENDPOINTS[0].endpoint,
-                networkIndex: FIXED_ENDPOINTS[0].networkIndex,
+                endpoint: ROUTER_FIXED_ENDPOINTS[0].endpoint,
+                networkIndex: ROUTER_FIXED_ENDPOINTS[0].networkIndex,
             }
             // set immediately to avoid potential race
             this.multicastTable.push(multicastEntry.multicastId)

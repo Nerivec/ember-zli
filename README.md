@@ -135,14 +135,14 @@ _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.5
 
 ## `ember-zli router`
 
-Use an NCP as a router and interact with the joined network.
+Use a coordinator firwmare as a router and interact with the joined network.
 
 ```
 USAGE
   $ ember-zli router
 
 DESCRIPTION
-  Use an NCP as a router and interact with the joined network.
+  Use a coordinator firwmare as a router and interact with the joined network.
 
 EXAMPLES
   $ ember-zli router

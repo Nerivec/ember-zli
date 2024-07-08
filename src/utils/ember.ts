@@ -22,6 +22,7 @@ import { lowHighBytes } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
 
 import { logger } from '../index.js'
 import { NVM3ObjectKey } from './enums.js'
+import { ROUTER_FIXED_ENDPOINTS } from './router-endpoints.js'
 import { EmberFullVersion, PortConf, StackConfig } from './types.js'
 
 const NS = { namespace: 'ember' }
@@ -164,8 +165,8 @@ export const emberNetworkConfig = async (ezsp: Ezsp, stackConf: StackConfig, man
     await ezsp.ezspSetConfigurationValue(EzspConfigId.TRANSIENT_KEY_TIMEOUT_S, stackConf.TRANSIENT_KEY_TIMEOUT_S)
 }
 
-export const emberRegisterFixedEndpoints = async (ezsp: Ezsp, multicastTable: EmberMulticastId[]): Promise<void> => {
-    for (const ep of FIXED_ENDPOINTS) {
+export const emberRegisterFixedEndpoints = async (ezsp: Ezsp, multicastTable: EmberMulticastId[], router: boolean = false): Promise<void> => {
+    for (const ep of router ? ROUTER_FIXED_ENDPOINTS : FIXED_ENDPOINTS) {
         if (ep.networkIndex !== 0x00) {
             logger.debug(`Multi-network not currently supported. Skipping endpoint ${JSON.stringify(ep)}.`, NS)
             continue
