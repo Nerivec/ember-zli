@@ -111,7 +111,7 @@ const FIRMWARE_LINKS: Record<FirmwareVersion, Record<AdapterModel, FirmwareMetad
 
 export default class Bootloader extends Command {
     static override args = {}
-    static override description = 'Interact with the Gecko bootloader in the adapter via serial.'
+    static override description = 'Interact with the Gecko bootloader in the adapter.'
     static override examples = ['<%= config.bin %> <%= command.id %>']
     static override flags = {
         file: Flags.file({
