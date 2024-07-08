@@ -6,15 +6,6 @@ import { CONF_PORT_PATH, logger } from '../index.js'
 import { BAUDRATES, TCP_REGEX } from './consts.js'
 import { BaudRate, PortConf, PortType } from './types.js'
 
-export const parseTcpPath = (path: string): { host: string; port: number } => {
-    const str = path.replace('tcp://', '')
-
-    return {
-        host: str.slice(0, Math.max(0, str.indexOf(':'))),
-        port: Number(str.slice(Math.max(0, str.indexOf(':') + 1))),
-    }
-}
-
 export const getPortConfFile = async (): Promise<PortConf | undefined> => {
     if (!existsSync(CONF_PORT_PATH)) {
         return undefined
@@ -23,17 +14,18 @@ export const getPortConfFile = async (): Promise<PortConf | undefined> => {
     const file = readFileSync(CONF_PORT_PATH, 'utf8')
     const conf: PortConf = JSON.parse(file)
 
-    if (!conf.baudRate || !BAUDRATES.includes(conf.baudRate)) {
-        logger.error(`Cached config does not include a valid baudrate value.`)
-        return undefined
-    }
-
     if (!conf.path) {
         logger.error(`Cached config does not include a valid path value.`)
         return undefined
     }
 
     if (!TCP_REGEX.test(conf.path)) {
+        // serial-only validation
+        if (!conf.baudRate || !BAUDRATES.includes(conf.baudRate)) {
+            logger.error(`Cached config does not include a valid baudrate value.`)
+            return undefined
+        }
+
         const portList = await SerialPort.list()
 
         if (portList.length === 0) {
@@ -45,11 +37,11 @@ export const getPortConfFile = async (): Promise<PortConf | undefined> => {
             logger.error(`Cached config path does not match a currently connected serial device.`)
             return undefined
         }
-    }
 
-    if (conf.rtscts !== true && conf.rtscts !== false) {
-        logger.error(`Cached config does not include a valid rtscts value.`)
-        return undefined
+        if (conf.rtscts !== true && conf.rtscts !== false) {
+            logger.error(`Cached config does not include a valid rtscts value.`)
+            return undefined
+        }
     }
 
     return conf
@@ -59,26 +51,16 @@ export const getPortConf = async (): Promise<PortConf> => {
     const portConfFile = await getPortConfFile()
 
     if (portConfFile !== undefined) {
+        const isTcp = TCP_REGEX.test(portConfFile.path)
         const usePortConfFile = await confirm({
             default: true,
-            message: `Baudrate: ${portConfFile.baudRate}, Path: ${portConfFile.path}, RTS/CTS: ${portConfFile.rtscts}. Use this config?`,
+            message: `Path: ${portConfFile.path}${isTcp ? '' : `, Baudrate: ${portConfFile.baudRate}, RTS/CTS: ${portConfFile.rtscts}`}. Use this config?`,
         })
 
         if (usePortConfFile) {
             return portConfFile
         }
     }
-
-    const baudrateChoices = []
-
-    for (const v of BAUDRATES) {
-        baudrateChoices.push({ name: v.toString(), value: v })
-    }
-
-    const baudRate = await select<BaudRate>({
-        choices: baudrateChoices,
-        message: 'Adapter firmware baudrate',
-    })
 
     const type = await select<PortType>({
         choices: [
@@ -88,11 +70,23 @@ export const getPortConf = async (): Promise<PortConf> => {
         message: 'Adapter connection type',
     })
 
+    let baudRate = BAUDRATES[0]
     let path = null
     let rtscts = false
 
     switch (type) {
         case 'serial': {
+            const baudrateChoices = []
+
+            for (const v of BAUDRATES) {
+                baudrateChoices.push({ name: v.toString(), value: v })
+            }
+
+            baudRate = await select<BaudRate>({
+                choices: baudrateChoices,
+                message: 'Adapter firmware baudrate',
+            })
+
             const portList = await SerialPort.list()
 
             if (portList.length === 0) {
@@ -116,14 +110,16 @@ export const getPortConf = async (): Promise<PortConf> => {
                 choices: fcChoices,
                 message: 'Flow control',
             })
+
             break
         }
 
         case 'tcp': {
             path = await input({
-                message: 'TCP path',
+                message: 'TCP path ("tcp://<host>:<port>")',
                 validate: (s) => TCP_REGEX.test(s),
             })
+
             break
         }
     }

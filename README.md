@@ -23,7 +23,6 @@ Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
 - Backup network
 - Restore network
 - Leave network
-- Get NVM3 tokens info (details of what Backup saves)
 - Backup NVM3 tokens
 - Restore NVM3 tokens
 - Reset NVM3 tokens
@@ -37,6 +36,29 @@ Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
 - Update firmware
 - Clear NVM3
 - Exit bootloader
+
+#### Router
+
+- Join network
+- Rejoin network
+- Leave network
+- Backup NVM3 tokens
+- Restore NVM3 tokens
+- Reset NVM3 tokens
+- Get network info
+- Set manufacturer code
+- Read counters
+- Ping coordinator
+- Reload custom event handlers
+- Run custom script
+
+#### Sniff
+
+- Start sniffing
+
+#### Utils
+
+- Parse NVM3 tokens backup file
 
 # ToC
 
@@ -52,7 +74,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/2.0.2 win32-x64 node-v20.15.0
+ember-zli/2.1.0 win32-x64 node-v20.15.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
@@ -63,7 +85,10 @@ USAGE
 <!-- commands -->
 * [`ember-zli bootloader`](#ember-zli-bootloader)
 * [`ember-zli help [COMMAND]`](#ember-zli-help-command)
+* [`ember-zli router`](#ember-zli-router)
+* [`ember-zli sniff`](#ember-zli-sniff)
 * [`ember-zli stack`](#ember-zli-stack)
+* [`ember-zli utils`](#ember-zli-utils)
 * [`ember-zli version`](#ember-zli-version)
 
 ## `ember-zli bootloader`
@@ -86,7 +111,7 @@ EXAMPLES
   $ ember-zli bootloader
 ```
 
-_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.0.2/src/commands/bootloader/index.ts)_
+_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.0/src/commands/bootloader/index.ts)_
 
 ## `ember-zli help [COMMAND]`
 
@@ -106,7 +131,41 @@ DESCRIPTION
   Display help for ember-zli.
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.0.22/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.5/src/commands/help.ts)_
+
+## `ember-zli router`
+
+Use a coordinator firwmare as a router and interact with the joined network.
+
+```
+USAGE
+  $ ember-zli router
+
+DESCRIPTION
+  Use a coordinator firwmare as a router and interact with the joined network.
+
+EXAMPLES
+  $ ember-zli router
+```
+
+_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.0/src/commands/router/index.ts)_
+
+## `ember-zli sniff`
+
+Sniff Zigbee traffic (to Wireshark, to custom handler or just log in file)
+
+```
+USAGE
+  $ ember-zli sniff
+
+DESCRIPTION
+  Sniff Zigbee traffic (to Wireshark, to custom handler or just log in file)
+
+EXAMPLES
+  $ ember-zli sniff
+```
+
+_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.0/src/commands/sniff/index.ts)_
 
 ## `ember-zli stack`
 
@@ -123,7 +182,24 @@ EXAMPLES
   $ ember-zli stack
 ```
 
-_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.0.2/src/commands/stack/index.ts)_
+_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.0/src/commands/stack/index.ts)_
+
+## `ember-zli utils`
+
+Execute various utility commands.
+
+```
+USAGE
+  $ ember-zli utils
+
+DESCRIPTION
+  Execute various utility commands.
+
+EXAMPLES
+  $ ember-zli utils
+```
+
+_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.0/src/commands/utils/index.ts)_
 
 ## `ember-zli version`
 
@@ -143,5 +219,5 @@ FLAG DESCRIPTIONS
     Additionally shows the architecture, node version, operating system, and versions of plugins that the CLI is using.
 ```
 
-_See code: [@oclif/plugin-version](https://github.com/oclif/plugin-version/blob/v2.1.2/src/commands/version.ts)_
+_See code: [@oclif/plugin-version](https://github.com/oclif/plugin-version/blob/v2.2.6/src/commands/version.ts)_
 <!-- commandsstop -->

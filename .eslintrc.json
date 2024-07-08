@@ -5,6 +5,7 @@
   "extends": ["oclif", "oclif-typescript", "prettier"],
   "rules": {
     "complexity": ["warn", 25],
+    "max-params": ["error", 10],
     "unicorn/numeric-separators-style": "off",
     "unicorn/prefer-event-target": "off",
     "no-bitwise": "off",

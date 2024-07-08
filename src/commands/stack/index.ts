@@ -1,8 +1,7 @@
 import { checkbox, confirm, input, select } from '@inquirer/prompts'
 import { Command } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
-import { existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
-import { dirname, extname, join } from 'node:path'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { ZSpec } from 'zigbee-herdsman'
 import { EmberTokensManager } from 'zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js'
 import {
@@ -23,27 +22,12 @@ import { EmberInitialSecurityState, EmberNetworkParameters, EmberZigbeeNetwork, 
 import { initSecurityManagerContext } from 'zigbee-herdsman/dist/adapter/ember/utils/initters.js'
 import { toUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
 
-import {
-    DATA_FOLDER,
-    DEFAULT_NETWORK_BACKUP_PATH,
-    DEFAULT_STACK_CONFIG_PATH,
-    DEFAULT_TOKENS_BACKUP_PATH,
-    DEFAULT_TOKENS_INFO_PATH,
-    logger,
-} from '../../index.js'
-import {
-    emberFullVersion,
-    emberNetworkInit,
-    emberStart,
-    emberStop,
-    getBackupFromFile,
-    getLibraryStatus,
-    parseTokenData,
-    waitForStackStatus,
-} from '../../utils/ember.js'
+import { DEFAULT_NETWORK_BACKUP_PATH, DEFAULT_STACK_CONFIG_PATH, DEFAULT_TOKENS_BACKUP_PATH, logger } from '../../index.js'
+import { emberFullVersion, emberNetworkInit, emberStart, emberStop, getLibraryStatus, waitForStackStatus } from '../../utils/ember.js'
 import { NVM3ObjectKey } from '../../utils/enums.js'
 import { getPortConf } from '../../utils/port.js'
-import { ConfigValue, LinkKeyBackupData, TokensInfo } from '../../utils/types.js'
+import { ConfigValue, LinkKeyBackupData } from '../../utils/types.js'
+import { browseToFile, getBackupFromFile } from '../../utils/utils.js'
 
 enum StackMenu {
     STACK_INFO = 0,
@@ -58,7 +42,6 @@ enum StackMenu {
     TOKENS_BACKUP = 20,
     TOKENS_RESTORE = 21,
     TOKENS_RESET = 22,
-    TOKENS_INFO = 23,
 
     SECURITY_INFO = 30,
 
@@ -74,11 +57,8 @@ const BULLET_EMPTY = '\u2219'
 
 export default class Stack extends Command {
     static override args = {}
-
     static override description = 'Interact with the EmberZNet stack in the adapter.'
-
     static override examples = ['<%= config.bin %> <%= command.id %>']
-
     static override flags = {}
 
     public async run(): Promise<void> {
@@ -111,80 +91,8 @@ export default class Stack extends Command {
         return this.exit(0)
     }
 
-    private async browseToFile(message: string, defaultValue: string, selectInData: boolean = false): Promise<string> {
-        const choices = [
-            { name: `Use default (${defaultValue})`, value: 0 },
-            { name: `Enter path manually`, value: 1 },
-        ]
-
-        if (selectInData) {
-            choices.push({ name: `Select in data folder (${DATA_FOLDER})`, value: 2 })
-        }
-
-        const pathOpt = await select<number>({ choices, message })
-        let filepath: string = defaultValue
-
-        switch (pathOpt) {
-            case 1: {
-                filepath = await input({
-                    message: 'Enter path to file',
-                    validate(path: string): boolean {
-                        return existsSync(dirname(path)) && extname(path) === extname(defaultValue)
-                    },
-                })
-
-                break
-            }
-
-            case 2: {
-                const files = readdirSync(DATA_FOLDER)
-                const fileChoices = []
-
-                for (const file of files) {
-                    if (extname(file) === extname(defaultValue)) {
-                        fileChoices.push({ name: file, value: file })
-                    }
-                }
-
-                if (fileChoices.length === 0) {
-                    logger.error(`Found no file in '${DATA_FOLDER}'. Using default '${defaultValue}'.`)
-                    break
-                }
-
-                filepath = join(
-                    DATA_FOLDER,
-                    await select<string>({
-                        choices: fileChoices,
-                        message,
-                    }),
-                )
-
-                break
-            }
-        }
-
-        if (!selectInData && existsSync(filepath)) {
-            const rename = await select<number>({
-                choices: [
-                    { name: `Overwrite`, value: 0 },
-                    { name: `Rename`, value: 1 },
-                ],
-                message: 'File already exists',
-            })
-
-            if (rename === 1) {
-                const renamed = `${filepath}-${Date.now()}.old`
-
-                logger.info(`Renaming existing file to '${renamed}'.`)
-                renameSync(filepath, renamed)
-            }
-        }
-
-        return filepath
-    }
-
     private async menuNetworkBackup(ezsp: Ezsp): Promise<boolean> {
-        const saveFile = await this.browseToFile('Network backup save file', DEFAULT_NETWORK_BACKUP_PATH)
+        const saveFile = await browseToFile('Network backup save file', DEFAULT_NETWORK_BACKUP_PATH, true)
         const initStatus = await emberNetworkInit(ezsp)
 
         if (initStatus === SLStatus.NOT_JOINED) {
@@ -202,7 +110,7 @@ export default class Stack extends Command {
         const [netStatus, , netParams] = await ezsp.ezspGetNetworkParameters()
 
         if (netStatus !== SLStatus.OK) {
-            logger.error(`Failed to get network parameters.`)
+            logger.error(`Failed to get network parameters with status=${SLStatus[netStatus]}.`)
             return true
         }
 
@@ -210,7 +118,7 @@ export default class Stack extends Command {
         const [netKeyStatus, netKeyInfo] = await ezsp.ezspGetNetworkKeyInfo()
 
         if (netKeyStatus !== SLStatus.OK) {
-            logger.error(`Failed to get network keys info.`)
+            logger.error(`Failed to get network keys info with status=${SLStatus[netKeyStatus]}.`)
             return true
         }
 
@@ -335,16 +243,16 @@ export default class Stack extends Command {
 
         await waitForStackStatus(ezsp, SLStatus.NETWORK_UP)
 
-        const [netStatus, nodeType, netParams] = await ezsp.ezspGetNetworkParameters()
+        const [npStatus, nodeType, netParams] = await ezsp.ezspGetNetworkParameters()
 
-        if (netStatus !== SLStatus.OK) {
-            logger.error(`Failed to get network parameters.`)
+        if (npStatus !== SLStatus.OK) {
+            logger.error(`Failed to get network parameters with status=${SLStatus[npStatus]}.`)
             return true
         }
 
         const eui64 = await ezsp.ezspGetEui64()
 
-        logger.info(`Node address=${eui64}, type=${EmberNodeType[nodeType]}.`)
+        logger.info(`Node EUI64=${eui64} type=${EmberNodeType[nodeType]}.`)
         logger.info(`Network parameters:`)
         logger.info(`  - PAN ID: ${netParams.panId}`)
         logger.info(`  - Extended PAN ID: ${netParams.extendedPanId}`)
@@ -358,7 +266,7 @@ export default class Stack extends Command {
     private async menuNetworkLeave(ezsp: Ezsp): Promise<boolean> {
         const confirmed = await confirm({
             default: false,
-            message: 'Confirm network leave? (Cannot be undone without a backup.)',
+            message: 'Confirm leave network? (Cannot be undone without a backup.)',
         })
 
         if (!confirmed) {
@@ -395,7 +303,7 @@ export default class Stack extends Command {
     }
 
     private async menuNetworkRestore(ezsp: Ezsp): Promise<boolean> {
-        const backupFile = await this.browseToFile('Network backup file location', DEFAULT_NETWORK_BACKUP_PATH, true)
+        const backupFile = await browseToFile('Network backup file location', DEFAULT_NETWORK_BACKUP_PATH)
         const backup = getBackupFromFile(backupFile)
 
         if (backup === undefined) {
@@ -406,14 +314,15 @@ export default class Stack extends Command {
         const radioTxPower = Number.parseInt(
             await input({
                 default: '5',
-                message: 'Initial radio transmit power [0-20]',
+                message: 'Radio transmit power [-128-127]',
                 validate(value: string) {
                     if (/\./.test(value)) {
                         return false
                     }
 
                     const v = Number.parseInt(value, 10)
-                    return v >= 0 && v <= 20
+
+                    return v >= -128 && v <= 127
                 },
             }),
             10,
@@ -580,14 +489,15 @@ export default class Stack extends Command {
         const radioTxPower = Number.parseInt(
             await input({
                 default: '5',
-                message: 'Radio transmit power [0-20]',
+                message: 'Radio transmit power [-128-127]',
                 validate(value: string) {
                     if (/\./.test(value)) {
                         return false
                     }
 
                     const v = Number.parseInt(value, 10)
-                    return v >= 0 && v <= 20
+
+                    return v >= -128 && v <= 127
                 },
             }),
             10,
@@ -867,14 +777,13 @@ export default class Stack extends Command {
         let saveFile: string | undefined = undefined
 
         if (await confirm({ default: false, message: 'Save to file? (Only print if not)' })) {
-            saveFile = await this.browseToFile('Config save location (JSON)', DEFAULT_STACK_CONFIG_PATH)
+            saveFile = await browseToFile('Config save location (JSON)', DEFAULT_STACK_CONFIG_PATH, true)
         }
 
         const stackConfig: ConfigValue = {}
 
         for (const key of Object.keys(EzspConfigId)) {
-            // @ts-expect-error enum by value
-            const configId = EzspConfigId[key]
+            const configId = EzspConfigId[key as keyof typeof EzspConfigId]
 
             if (typeof configId !== 'number') {
                 continue
@@ -891,8 +800,7 @@ export default class Stack extends Command {
             const tcDecisions = []
 
             for (const key of Object.keys(EzspDecisionBitmask)) {
-                // @ts-expect-error enum by value
-                const bitmask = EzspDecisionBitmask[key]
+                const bitmask = EzspDecisionBitmask[key as keyof typeof EzspDecisionBitmask]
 
                 if (typeof bitmask !== 'number') {
                     continue
@@ -907,8 +815,7 @@ export default class Stack extends Command {
         }
 
         for (const key of Object.keys(EzspPolicyId)) {
-            // @ts-expect-error enum by value
-            const policyId = EzspPolicyId[key]
+            const policyId = EzspPolicyId[key as keyof typeof EzspPolicyId]
 
             if (typeof policyId !== 'number' || policyId === EzspPolicyId.TRUST_CENTER_POLICY) {
                 continue
@@ -931,8 +838,7 @@ export default class Stack extends Command {
         }
 
         for (const key of Object.keys(EzspMfgTokenId)) {
-            // @ts-expect-error enum by value
-            const tokenId = EzspMfgTokenId[key]
+            const tokenId = EzspMfgTokenId[key as keyof typeof EzspMfgTokenId]
 
             if (typeof tokenId !== 'number') {
                 continue
@@ -961,7 +867,7 @@ export default class Stack extends Command {
     }
 
     private async menuTokensBackup(ezsp: Ezsp): Promise<boolean> {
-        const saveFile = await this.browseToFile('Tokens backup save file', DEFAULT_TOKENS_BACKUP_PATH)
+        const saveFile = await browseToFile('Tokens backup save file', DEFAULT_TOKENS_BACKUP_PATH, true)
         const eui64 = await ezsp.ezspGetEui64()
         const tokensBuf = await EmberTokensManager.saveTokens(ezsp, Buffer.from(eui64.slice(2 /* 0x */), 'hex').reverse())
 
@@ -971,95 +877,6 @@ export default class Stack extends Command {
             writeFileSync(saveFile, tokensBuf.toString('hex'), 'utf8')
 
             logger.info(`Tokens backup written to '${saveFile}'.`)
-        }
-
-        return false
-    }
-
-    private async menuTokensInfo(ezsp: Ezsp): Promise<boolean> {
-        let saveFile: string | undefined = undefined
-
-        if (await confirm({ default: false, message: 'Save to file? (Only print if not)' })) {
-            saveFile = await this.browseToFile('Info save location (JSON)', DEFAULT_TOKENS_INFO_PATH)
-        }
-
-        logger.info(`[TOKENS] Getting tokens...`)
-        const tokenCount = await ezsp.ezspGetTokenCount()
-
-        if (!tokenCount) {
-            // ezspGetTokenCount == 0 OR (ezspGetTokenInfo|ezspGetTokenData|ezspSetTokenData return LIBRARY_NOT_PRESENT)
-            // ezspTokenFactoryReset will do nothing.
-            logger.error(`[TOKENS] Saving tokens not supported by adapter (not NVM3-based).`)
-
-            return false
-        }
-
-        const tokensInfo: TokensInfo = []
-        // returns 1 if NCP has secure key storage (where these tokens do not store the key data).
-        const hasSecureStorage: boolean = await EmberTokensManager.ncpUsesPSAKeyStorage(ezsp)
-
-        logger.debug(`[TOKENS] Getting ${tokenCount} tokens, ${hasSecureStorage ? 'with' : 'without'} secure storage.`)
-
-        for (let i = 0; i < tokenCount; i++) {
-            const [tiStatus, tokenInfo] = await ezsp.ezspGetTokenInfo(i)
-
-            if (tiStatus !== SLStatus.OK) {
-                logger.error(`[TOKENS] Failed to get token info at index ${i} with status=${SLStatus[tiStatus]}.`)
-                continue
-            }
-
-            // buffers as hex strings
-            const data: string[] = []
-
-            for (let arrayIndex = 0; arrayIndex < tokenInfo.arraySize; arrayIndex++) {
-                const [tdStatus, tokenData] = await ezsp.ezspGetTokenData(tokenInfo.nvm3Key, arrayIndex)
-
-                if (tdStatus !== SLStatus.OK) {
-                    logger.error(`[TOKENS] Failed to get token data at index ${arrayIndex} with status=${SLStatus[tdStatus]}.`)
-                    continue
-                }
-
-                if (hasSecureStorage) {
-                    // Populate keys into tokenData because tokens do not contain them with secure key storage
-                    await EmberTokensManager.saveKeysToData(ezsp, tokenData, tokenInfo.nvm3Key, arrayIndex)
-
-                    // ensure the token data was retrieved properly, length should match the size announced by the token info
-                    if (tokenData.data.length !== tokenInfo.size) {
-                        logger.error(`[TOKENS] Mismatch in token data size; got ${tokenData.data.length}, expected ${tokenInfo.size}.`)
-                    }
-                }
-
-                // Check the Key to see if the token to save is restoredEui64, in that case
-                // check if it is blank, then save the node EUI64 in its place, else save the value
-                // received from the API. Once it saves, during restore process the set token will
-                // simply write the restoredEUI64 and the node will start to use that.
-                if (
-                    tokenInfo.nvm3Key === NVM3ObjectKey.STACK_RESTORED_EUI64 &&
-                    tokenData.size === ZSpec.EUI64_SIZE &&
-                    tokenData.data.equals(Buffer.from(ZSpec.BLANK_EUI64.slice(2), 'hex'))
-                ) {
-                    logger.info(`[TOKENS] RESTORED EUI64 is blank. It will be replaced with node EUI64 on backup.`)
-                }
-
-                const parsedTokenData = parseTokenData(tokenInfo.nvm3Key, tokenData.data)
-
-                logger.info(`[TOKENS] nvm3Key=${NVM3ObjectKey[tokenInfo.nvm3Key]} size=${tokenInfo.size} token=[${parsedTokenData}]`)
-                data.push(parsedTokenData)
-            }
-
-            tokensInfo.push({
-                nvm3Key: NVM3ObjectKey[tokenInfo.nvm3Key] ?? tokenInfo.nvm3Key,
-                size: tokenInfo.size,
-                arraySize: tokenInfo.arraySize,
-                data,
-            })
-        }
-
-        if (tokensInfo === null) {
-            logger.error(`Failed to get tokens info.`)
-        } else if (saveFile !== undefined) {
-            writeFileSync(saveFile, JSON.stringify(tokensInfo, null, 2), 'utf8')
-            logger.info(`Tokens info written to '${saveFile}'.`)
         }
 
         return false
@@ -1076,7 +893,7 @@ export default class Stack extends Command {
             return false
         }
 
-        const options = await checkbox({
+        const options = await checkbox<string>({
             choices: [
                 { checked: false, name: 'Exclude network and APS outgoing frame counter tokens?', value: 'excludeOutgoingFC' },
                 { checked: false, name: 'Exclude stack boot counter token?', value: 'excludeBootCounter' },
@@ -1090,12 +907,12 @@ export default class Stack extends Command {
     }
 
     private async menuTokensRestore(ezsp: Ezsp): Promise<boolean> {
-        const backupFile = await this.browseToFile('Tokens backup file location', DEFAULT_TOKENS_BACKUP_PATH, true)
+        const backupFile = await browseToFile('Tokens backup file location', DEFAULT_TOKENS_BACKUP_PATH)
         const tokensBuf = Buffer.from(readFileSync(backupFile, 'utf8'), 'hex')
         const status = await EmberTokensManager.restoreTokens(ezsp, tokensBuf)
 
         if (status === SLStatus.OK) {
-            logger.info(`Restored tokens backup.`)
+            logger.info(`Restored tokens.`)
         } else {
             logger.error(`Failed to restore tokens.`)
         }
@@ -1113,7 +930,6 @@ export default class Stack extends Command {
                 { name: 'Backup network', value: StackMenu.NETWORK_BACKUP },
                 { name: 'Restore network', value: StackMenu.NETWORK_RESTORE },
                 { name: 'Leave network', value: StackMenu.NETWORK_LEAVE },
-                { name: 'Get NVM3 tokens info (details of what Backup saves)', value: StackMenu.TOKENS_INFO },
                 { name: 'Backup NVM3 tokens', value: StackMenu.TOKENS_BACKUP },
                 { name: 'Restore NVM3 tokens', value: StackMenu.TOKENS_RESTORE },
                 { name: 'Reset NVM3 tokens', value: StackMenu.TOKENS_RESET },
@@ -1151,10 +967,6 @@ export default class Stack extends Command {
 
             case StackMenu.NETWORK_LEAVE: {
                 return this.menuNetworkLeave(ezsp)
-            }
-
-            case StackMenu.TOKENS_INFO: {
-                return this.menuTokensInfo(ezsp)
             }
 
             case StackMenu.TOKENS_BACKUP: {
