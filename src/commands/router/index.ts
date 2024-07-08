@@ -121,7 +121,7 @@ enum RouterState {
 
 export default class Router extends Command {
     static override args = {}
-    static override description = 'Use an NCP as a router and interact with the joined network.'
+    static override description = 'Use a coordinator firwmare as a router and interact with the joined network.'
     static override examples = ['<%= config.bin %> <%= command.id %>']
     static override flags = {}
 
