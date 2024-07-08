@@ -11,7 +11,6 @@ import { logger } from '../index.js'
 import { CONFIG_HIGHWATER_MARK, TCP_REGEX } from './consts.js'
 import { emberStart, emberStop } from './ember.js'
 import { FirmwareValidation } from './enums.js'
-import { parseTcpPath } from './port.js'
 import { AdapterModel, FirmwareFileMetadata, PortConf } from './types.js'
 import { XEvent, XExitStatus, XModemCRC } from './xmodem.js'
 
@@ -232,7 +231,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 })
 
                 if (!confirmed) {
-                    logger.warning(`Cancelled NVM3 clearing.`)
+                    logger.warning(`Cancelled NVM3 clearing.`, NS)
                     return false
                 }
 
@@ -254,9 +253,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
     }
 
-    public async resetByPattern(): Promise<void> {
-        if (this.portSerial === undefined) {
-            logger.error(`Reset by pattern unavailable for TCP.`)
+    public async resetByPattern(knock: boolean = false): Promise<void> {
+        if (!this.portSerial) {
+            logger.error(`Reset by pattern unavailable for TCP.`, NS)
             return
         }
 
@@ -264,26 +263,33 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             // TODO: support per adapter
             case 'Sonoff ZBDongle-E':
             case undefined: {
-                await this.setSerialOpt({ dtr: false, rts: true })
-                await new Promise((resolve) => {
-                    setTimeout(resolve, 100)
+                await new Promise<void>((resolve, reject) => {
+                    this.portSerial?.set({ dtr: false, rts: true }, (error) => (error ? reject(error) : resolve()))
                 })
-                await this.setSerialOpt({ dtr: true, rts: false })
-                await new Promise((resolve) => {
-                    setTimeout(resolve, 500)
+                await new Promise<void>((resolve, reject) => {
+                    setTimeout(() => {
+                        this.portSerial?.set({ dtr: true, rts: false }, (error) => (error ? reject(error) : resolve()))
+                    }, 100)
                 })
-                await this.setSerialOpt({ dtr: false })
+
+                if (!knock) {
+                    await new Promise<void>((resolve, reject) => {
+                        setTimeout(() => {
+                            this.portSerial?.set({ dtr: false }, (error) => (error ? reject(error) : resolve()))
+                        }, 500)
+                    })
+                }
 
                 break
             }
 
             default: {
-                logger.error(`Reset by pattern unavailable on ${this.adapterModel}.`)
+                logger.error(`Reset by pattern unavailable on ${this.adapterModel}.`, NS)
             }
         }
     }
 
-    public async validateFirmware(firmware: Buffer, supportedVersionsRegex: RegExp, expectedBaudRate: number): Promise<FirmwareValidation> {
+    public async validateFirmware(firmware: Buffer, supportedVersionsRegex: RegExp): Promise<FirmwareValidation> {
         if (firmware.indexOf(GBL_START_TAG) !== 0) {
             logger.error(`Firmware file invalid. GBL start tag not found.`, NS)
             return FirmwareValidation.INVALID
@@ -337,9 +343,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 NS,
             )
 
-            if (recdMetadata.baudrate !== expectedBaudRate) {
+            if (!TCP_REGEX.test(this.portConf.path) && recdMetadata.baudrate !== this.portConf.baudRate) {
                 logger.warning(
-                    `Firmware file baudrate ${recdMetadata.baudrate} differs from your current port configuration of ${expectedBaudRate}.`,
+                    `Firmware file baudrate ${recdMetadata.baudrate} differs from your current port configuration of ${this.portConf.baudRate}.`,
                     NS,
                 )
             }
@@ -370,8 +376,8 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         await this.close(false)
 
         if (TCP_REGEX.test(this.portConf.path)) {
-            const info = parseTcpPath(this.portConf.path)
-            logger.debug(`Opening TCP socket with ${info.host}:${info.port}`, NS)
+            const info = new URL(this.portConf.path)
+            logger.debug(`Opening TCP socket with ${info.hostname}:${info.port}`, NS)
 
             this.portSocket = new Socket()
 
@@ -405,7 +411,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     resolve()
                 })
                 this.portSocket.once('error', openError)
-                this.portSocket.connect(info.port, info.host)
+                this.portSocket.connect(Number.parseInt(info.port, 10), info.hostname)
             })
         }
 
@@ -419,13 +425,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             stopBits: 1 as const,
             xoff: false,
             xon: false,
-        }
-
-        // enable software flow control if RTS/CTS not enabled in config
-        if (!serialOpts.rtscts) {
-            logger.info(`RTS/CTS config is off, enabling software flow control.`, NS)
-            serialOpts.xon = true
-            serialOpts.xoff = true
         }
 
         logger.debug(`Opening serial port with ${JSON.stringify(serialOpts)}`, NS)
@@ -450,7 +449,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             await this.initPort()
 
             if (forceReset) {
-                await this.resetByPattern()
+                await this.resetByPattern(true)
 
                 if (this.state === BootloaderState.IDLE) {
                     logger.debug(`Entered bootloader via pattern reset.`, NS)
@@ -540,7 +539,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         this.state = BootloaderState.BEGIN_UPLOAD
 
         await this.write(Buffer.from([BootloaderMenu.UPLOAD_GBL])) // start upload
-        await this.waitForState(BootloaderState.UPLOADING, BOOTLOADER_CMD_EXEC_TIMEOUT)
+        await this.waitForState(BootloaderState.UPLOADING, BOOTLOADER_UPLOAD_EXIT_TIMEOUT)
         await this.waitForState(BootloaderState.UPLOADED, BOOTLOADER_UPLOAD_TIMEOUT)
 
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_UPLOAD_EXIT_TIMEOUT, false)
@@ -629,7 +628,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
             case BootloaderState.GETTING_INFO: {
                 const blv = received.indexOf(BOOTLOADER_INFO)
-                logger.debug(blv)
 
                 if (blv !== -1) {
                     this.resolveState(BootloaderState.GOT_INFO)
@@ -716,12 +714,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         logger.debug(`New bootloader state: ${BootloaderState[state]}.`, NS)
         // always set even if no waiter
         this.state = state
-    }
-
-    private async setSerialOpt(options: { dtr: boolean; rts?: boolean }): Promise<void> {
-        return new Promise((resolve, reject) => {
-            this.portSerial!.set(options, (error) => (error ? reject(error) : resolve()))
-        })
     }
 
     private waitForState(state: BootloaderState, timeout: number = 5000, fail: boolean = true): Promise<boolean> {

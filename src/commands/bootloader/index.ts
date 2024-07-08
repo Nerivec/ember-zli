@@ -166,7 +166,7 @@ export default class Bootloader extends Command {
         let exit: boolean = false
 
         while (!exit) {
-            exit = await this.navigateMenu(gecko, flags.file, portConf.baudRate)
+            exit = await this.navigateMenu(gecko, flags.file)
         }
 
         await gecko.close(false)
@@ -191,7 +191,7 @@ export default class Bootloader extends Command {
         }
     }
 
-    private async navigateMenu(gecko: GeckoBootloader, firmwareFile: string | undefined, expectedBaudRate: number): Promise<boolean> {
+    private async navigateMenu(gecko: GeckoBootloader, firmwareFile: string | undefined): Promise<boolean> {
         const answer = await select<-1 | BootloaderMenu>({
             choices: [
                 { name: 'Get info', value: BootloaderMenu.INFO },
@@ -216,7 +216,7 @@ export default class Bootloader extends Command {
             while (validFirmware !== FirmwareValidation.VALID) {
                 firmware = firmwareFile === undefined ? await this.selectFirmware(gecko) : readFileSync(firmwareFile)
 
-                validFirmware = await gecko.validateFirmware(firmware, SUPPORTED_VERSIONS_REGEX, expectedBaudRate)
+                validFirmware = await gecko.validateFirmware(firmware, SUPPORTED_VERSIONS_REGEX)
 
                 if (validFirmware === FirmwareValidation.CANCELLED) {
                     return false
