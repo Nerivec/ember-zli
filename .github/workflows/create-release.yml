@@ -1,0 +1,38 @@
+name: Create tag for a new version and a github release to go with it
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+
+      - name: Check if version already exists
+        id: version-check
+        run: |
+          package_version=$(node -p "require('./package.json').version")
+          exists=$(gh api repos/${{ github.repository }}/releases/tags/v$package_version >/dev/null 2>&1 && echo "true" || echo "")
+
+          if [ -n "$exists" ];
+          then
+            echo "Version v$package_version already exists"
+            echo "::warning file=package.json,line=1::Version v$package_version already exists - no release will be created. If you want to create a new release, please update the version in package.json and push again."
+            echo "skipped=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version v$package_version does not exist. Creating release..."
+            echo "skipped=false" >> $GITHUB_OUTPUT
+            echo "tag=v$package_version" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Github Release
+        uses: ncipollo/release-action@v1
+        if: ${{ steps.version-check.outputs.skipped == 'false' }}
+        with:
+          name: ${{ steps.version-check.outputs.tag }}
+          tag: ${{ steps.version-check.outputs.tag }}
+          commit: ${{ github.ref_name }}
+          skipIfReleaseExists: true

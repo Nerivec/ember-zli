@@ -1,0 +1,27 @@
+name: Build standalone versions and attach to a newly published release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release-add-builds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install
+      - run: npm install -g oclif
+
+      - run: oclif pack tarballs -r . --prune-lockfiles
+
+      - name: Upload tarballs to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: "./dist/ember-zli-*"
+          file_glob: true
+          overwrite: true
+          tag: ${{ github.ref }}
