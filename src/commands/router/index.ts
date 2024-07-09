@@ -224,7 +224,7 @@ export default class Router extends Command {
 
         logger.info(`Node ID=${toHex(nodeId)}/${nodeId} EUI64=${eui64} type=${EmberNodeType[nodeType]}.`)
         logger.info(`Network parameters:`)
-        logger.info(`  - PAN ID: ${netParams.panId}`)
+        logger.info(`  - PAN ID: ${netParams.panId} (${toHex(netParams.panId)})`)
         logger.info(`  - Extended PAN ID: ${netParams.extendedPanId}`)
         logger.info(`  - Radio Channel: ${netParams.radioChannel}`)
         logger.info(`  - Radio Power: ${netParams.radioTxPower} dBm`)
