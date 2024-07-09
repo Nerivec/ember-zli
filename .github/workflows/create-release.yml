@@ -56,4 +56,4 @@ jobs:
           file: "./dist/ember-zli-*"
           file_glob: true
           overwrite: true
-          tag: ${{ github.ref }}
+          tag: ${{ steps.version-check.outputs.tag }}
