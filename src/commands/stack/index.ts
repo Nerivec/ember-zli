@@ -27,7 +27,7 @@ import { emberFullVersion, emberNetworkInit, emberStart, emberStop, getLibrarySt
 import { NVM3ObjectKey } from '../../utils/enums.js'
 import { getPortConf } from '../../utils/port.js'
 import { ConfigValue, LinkKeyBackupData } from '../../utils/types.js'
-import { browseToFile, getBackupFromFile } from '../../utils/utils.js'
+import { browseToFile, getBackupFromFile, toHex } from '../../utils/utils.js'
 
 enum StackMenu {
     STACK_INFO = 0,
@@ -254,7 +254,7 @@ export default class Stack extends Command {
 
         logger.info(`Node EUI64=${eui64} type=${EmberNodeType[nodeType]}.`)
         logger.info(`Network parameters:`)
-        logger.info(`  - PAN ID: ${netParams.panId}`)
+        logger.info(`  - PAN ID: ${netParams.panId} (${toHex(netParams.panId)})`)
         logger.info(`  - Extended PAN ID: ${netParams.extendedPanId}`)
         logger.info(`  - Radio Channel: ${netParams.radioChannel}`)
         logger.info(`  - Radio Power: ${netParams.radioTxPower} dBm`)
@@ -616,8 +616,11 @@ export default class Stack extends Command {
     }
 
     private async menuRepairs(ezsp: Ezsp): Promise<boolean> {
-        const repairId = await select<RepairId>({
-            choices: [{ name: 'Check for EUI64 mismatch', value: RepairId.EUI64_MISMATCH }],
+        const repairId = await select<-1 | RepairId>({
+            choices: [
+                { name: 'Check for EUI64 mismatch', value: RepairId.EUI64_MISMATCH },
+                { name: 'Go Back', value: -1 },
+            ],
             message: 'Repair',
         })
 
@@ -678,6 +681,10 @@ export default class Stack extends Command {
                 }
 
                 break
+            }
+
+            case -1: {
+                return false
             }
         }
 
