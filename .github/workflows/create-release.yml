@@ -48,6 +48,9 @@ jobs:
       - run: npm install -g oclif
         if: ${{ steps.version-check.outputs.skipped == 'false' }}
 
+      - run: npm run build:run
+        if: ${{ steps.version-check.outputs.skipped == 'false' }}
+
       - run: oclif pack tarballs -r . --prune-lockfiles
         if: ${{ steps.version-check.outputs.skipped == 'false' }}
 
