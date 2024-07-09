@@ -12,6 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Check if version already exists
         id: version-check
@@ -38,3 +40,20 @@ jobs:
           tag: ${{ steps.version-check.outputs.tag }}
           commit: ${{ github.ref_name }}
           skipIfReleaseExists: true
+
+      - run: npm install
+        if: ${{ steps.version-check.outputs.skipped == 'false' }}
+      - run: npm install -g oclif
+        if: ${{ steps.version-check.outputs.skipped == 'false' }}
+
+      - run: oclif pack tarballs -r . --prune-lockfiles
+        if: ${{ steps.version-check.outputs.skipped == 'false' }}
+
+      - name: Upload tarballs to release
+        if: ${{ steps.version-check.outputs.skipped == 'false' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: "./dist/ember-zli-*"
+          file_glob: true
+          overwrite: true
+          tag: ${{ github.ref }}
