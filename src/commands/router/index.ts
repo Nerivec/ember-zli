@@ -680,13 +680,13 @@ export default class Router extends Command {
                 newCode = Number.parseInt(
                     await input({
                         default: Zcl.ManufacturerCode.SILICON_LABORATORIES.toString(),
-                        message: 'Code [0-65535]',
+                        message: 'Code [0-65535/0x0000-0xFFFF]',
                         validate(value: string) {
                             if (/\./.test(value)) {
                                 return false
                             }
 
-                            const v = Number.parseInt(value, 10)
+                            const v = Number.parseInt(value, value.startsWith('0x') ? 16 : 10)
                             return v >= 0 && v <= 65535
                         },
                     }),
