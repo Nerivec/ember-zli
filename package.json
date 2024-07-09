@@ -1,7 +1,7 @@
 {
   "name": "ember-zli",
   "description": "Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "author": "Nerivec",
   "bin": {
     "ember-zli": "bin/run.js"
@@ -24,7 +24,7 @@
     "@oclif/test": "^4",
     "@types/cli-progress": "^3.11.6",
     "@types/mocha": "^10",
-    "@types/node": "^18",
+    "@types/node": "^20",
     "eslint": "^8",
     "eslint-config-oclif": "^5",
     "eslint-config-oclif-typescript": "^3",
