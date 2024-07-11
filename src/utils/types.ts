@@ -3,6 +3,8 @@ import { EUI64 } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 
 import { BAUDRATES } from './consts.js'
 
+export type Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+
 export type AdapterModel =
     | 'Aeotec Zi-Stick (ZGA008)'
     | 'EasyIOT ZB-GW04 v1.1'
@@ -26,24 +28,23 @@ export type PortConf = {
 export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion
 export type ConfigValue = { [key: string]: string }
 
-export type FirmwareVersion = 'latest' | 'recommended'
-
+export type FirmwareVariant = 'latest' | 'official' | 'recommended'
+export type FirmwareVersion = `${Digit}.${Digit}.${Digit}.${Digit}`
 export type FirmwareFilename = `${string}.gbl`
-
 export type FirmwareURL = `https://${string}/${FirmwareFilename}`
 
 export type FirmwareMetadata = {
     settings: Omit<PortConf, 'path'>
-    url: FirmwareURL
-    version: string
+    url: FirmwareURL | undefined
+    version: FirmwareVersion
 }
 
 export type FirmwareFileMetadata = {
     baudrate: number // 115200
-    ezsp_version: string // '7.4.1.0'
+    ezsp_version: FirmwareVersion // '7.4.1.0'
     fw_type: string // 'ncp-uart-hw'
     metadata_version: number // 1
-    sdk_version: string // '4.4.1'
+    sdk_version: `${Digit}.${Digit}.${Digit}` // '4.4.1'
 }
 
 export type TokensInfo = {

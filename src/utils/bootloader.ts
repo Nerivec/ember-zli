@@ -289,7 +289,12 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
     }
 
-    public async validateFirmware(firmware: Buffer, supportedVersionsRegex: RegExp): Promise<FirmwareValidation> {
+    public async validateFirmware(firmware: Buffer | undefined, supportedVersionsRegex: RegExp): Promise<FirmwareValidation> {
+        if (!firmware) {
+            logger.error(`Cannot proceed without a firmware file.`, NS)
+            return FirmwareValidation.INVALID
+        }
+
         if (firmware.indexOf(GBL_START_TAG) !== 0) {
             logger.error(`Firmware file invalid. GBL start tag not found.`, NS)
             return FirmwareValidation.INVALID

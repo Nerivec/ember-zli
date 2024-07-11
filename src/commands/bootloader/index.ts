@@ -7,107 +7,12 @@ import { join } from 'node:path'
 import { DATA_FOLDER, logger } from '../../index.js'
 import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from '../../utils/bootloader.js'
 import { FirmwareSource, FirmwareValidation } from '../../utils/enums.js'
+import { FIRMWARE_LINKS } from '../../utils/firmware-links.js'
 import { getPortConf } from '../../utils/port.js'
-import { AdapterModel, FirmwareMetadata, FirmwareVersion } from '../../utils/types.js'
+import { AdapterModel, FirmwareVariant } from '../../utils/types.js'
 
 const SUPPORTED_VERSIONS_REGEX = /(7\.4\.\d\.\d)|(8\.0\.\d\.\d)/
 const FIRMWARE_EXT = '.gbl'
-const FIRMWARE_LINKS: Record<FirmwareVersion, Record<AdapterModel, FirmwareMetadata>> = {
-    latest: {
-        'Aeotec Zi-Stick (ZGA008)': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/main/firmware_builds/aeotec-zga008/ncp-uart-hw-v7.4.3.0-aeotec-zga008-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'EasyIOT ZB-GW04 v1.1': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.3.0-zb-gw04-1v1-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'EasyIOT ZB-GW04 v1.2': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/ember-nohw/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.3.0-zb-gw04-1v2-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'Home Assistant SkyConnect': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/ember-nohw/firmware_builds/skyconnect/ncp-uart-hw-v7.4.3.0-skyconnect-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'Home Assistant Yellow': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/ember-nohw/firmware_builds/yellow/ncp-uart-hw-v7.4.3.0-yellow-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'SMLight SLZB06-M': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/main/firmware_builds/slzb-06m/ncp-uart-hw-v7.4.3.0-slzb-06m-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'SMLight SLZB07': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/ember-nohw/firmware_builds/slzb-07/ncp-uart-hw-v7.4.3.0-slzb-07-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'Sonoff ZBDongle-E': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.3.0-zbdonglee-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'TubeZB MGM24': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/tube0013/tube_gateways/raw/main/models/current/tubeszb-efr32-MGM24/firmware/mgm24/ncp/4.4.3/maxed_settings/tubesZB-EFR32-MGM24_NCP_7.4.3.gbl',
-            version: '7.4.3.0',
-        },
-    },
-    recommended: {
-        'Aeotec Zi-Stick (ZGA008)': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/main/firmware_builds/aeotec-zga008/ncp-uart-hw-v7.4.3.0-aeotec-zga008-115200.gbl',
-            version: '7.4.3.0',
-        },
-        'EasyIOT ZB-GW04 v1.1': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.1.0-zb-gw04-1v1-115200.gbl',
-            version: '7.4.1.0',
-        },
-        'EasyIOT ZB-GW04 v1.2': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/ember-nohw/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.1.0-zb-gw04-1v2-115200.gbl',
-            version: '7.4.1.0',
-        },
-        'Home Assistant SkyConnect': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/ember-nohw/firmware_builds/skyconnect/ncp-uart-hw-v7.4.1.0-skyconnect-115200.gbl',
-            version: '7.4.1.0',
-        },
-        'Home Assistant Yellow': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/ember-nohw/firmware_builds/yellow/ncp-uart-hw-v7.4.1.0-yellow-115200.gbl',
-            version: '7.4.1.0',
-        },
-        'SMLight SLZB06-M': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/main/firmware_builds/slzb-06m/ncp-uart-hw-v7.4.1.0-slzb-06m-115200.gbl',
-            version: '7.4.1.0',
-        },
-        'SMLight SLZB07': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/ember-nohw/firmware_builds/slzb-07/ncp-uart-hw-v7.4.1.0-slzb-07-115200.gbl',
-            version: '7.4.1.0',
-        },
-        'Sonoff ZBDongle-E': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/darkxst/silabs-firmware-builder/raw/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.1.0-zbdonglee-115200.gbl',
-            version: '7.4.1.0',
-        },
-        'TubeZB MGM24': {
-            settings: { baudRate: 115200, rtscts: false },
-            url: 'https://github.com/tube0013/tube_gateways/raw/main/models/current/tubeszb-efr32-MGM24/firmware/mgm24/ncp/4.4.1/tubesZB-EFR32-MGM24_NCP_7.4.1.gbl',
-            version: '7.4.1.0',
-        },
-    },
-}
 
 export default class Bootloader extends Command {
     static override args = {}
@@ -174,8 +79,10 @@ export default class Bootloader extends Command {
         return this.exit(0)
     }
 
-    private async downloadFirmware(url: string): Promise<Buffer> {
+    private async downloadFirmware(url: string): Promise<Buffer | undefined> {
         try {
+            logger.info(`Downloading firmware from ${url}.`)
+
             const response = await fetch(url)
 
             if (!response.ok) {
@@ -186,9 +93,10 @@ export default class Bootloader extends Command {
 
             return Buffer.from(arrayBuffer)
         } catch (error) {
-            logger.error(`Failed to download file at '${url}' with error ${error}.`)
-            return this.exit(1)
+            logger.error(`Failed to download firmware file from ${url} with error ${error}.`)
         }
+
+        return undefined
     }
 
     private async navigateMenu(gecko: GeckoBootloader, firmwareFile: string | undefined): Promise<boolean> {
@@ -227,7 +135,7 @@ export default class Bootloader extends Command {
         return gecko.navigate(answer, firmware)
     }
 
-    private async selectFirmware(gecko: GeckoBootloader): Promise<Buffer> {
+    private async selectFirmware(gecko: GeckoBootloader): Promise<Buffer | undefined> {
         const firmwareSource = await select<FirmwareSource>({
             choices: [
                 {
@@ -246,15 +154,39 @@ export default class Bootloader extends Command {
                 // valid adapterModel since select option disabled if not
                 const recommended = FIRMWARE_LINKS.recommended[gecko.adapterModel!]
                 const latest = FIRMWARE_LINKS.latest[gecko.adapterModel!]
-                const firmwareVersion = await select<FirmwareVersion>({
+                const official = FIRMWARE_LINKS.official[gecko.adapterModel!]
+                const firmwareVariant = await select<FirmwareVariant>({
                     choices: [
-                        { name: `Recommended (${recommended.version})`, value: 'recommended' },
-                        { name: `Latest (${latest.version})`, value: 'latest' },
+                        {
+                            name: `Recommended for Zigbee2MQTT`,
+                            value: 'recommended',
+                            description: recommended.url
+                                ? `Version: ${recommended.version}, RTS/CTS: ${recommended.settings.rtscts}, URL: ${recommended.url}`
+                                : undefined,
+                            disabled: !recommended.url,
+                        },
+                        {
+                            name: `Latest`,
+                            value: 'latest',
+                            description: latest.url
+                                ? `Version: ${latest.version}, RTS/CTS: ${latest.settings.rtscts}, URL: ${latest.url}`
+                                : undefined,
+                            disabled: !latest.url,
+                        },
+                        {
+                            name: `Latest from manufacturer`,
+                            value: 'official',
+                            description: official.url
+                                ? `Version: ${official.version}, RTS/CTS: ${official.settings.rtscts}, URL: ${official.url}`
+                                : undefined,
+                            disabled: !official.url,
+                        },
                     ],
                     message: 'Firmware version',
                 })
 
-                return this.downloadFirmware(FIRMWARE_LINKS[firmwareVersion][gecko.adapterModel!].url)
+                // valid url from choices filtering
+                return this.downloadFirmware(FIRMWARE_LINKS[firmwareVariant][gecko.adapterModel!].url!)
             }
 
             case FirmwareSource.URL: {
