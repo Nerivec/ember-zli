@@ -145,6 +145,8 @@ export const emberNetworkInit = async (ezsp: Ezsp, wasConfigured: boolean = fals
 }
 
 export const emberNetworkConfig = async (ezsp: Ezsp, stackConf: StackConfig, manufacturerCode: Zcl.ManufacturerCode): Promise<void> => {
+    /** The address cache needs to be initialized and used with the source routing code for the trust center to operate properly. */
+    await ezsp.ezspSetConfigurationValue(EzspConfigId.TRUST_CENTER_ADDRESS_CACHE_SIZE, 2)
     /** MAC indirect timeout should be 7.68 secs (STACK_PROFILE_ZIGBEE_PRO) */
     await ezsp.ezspSetConfigurationValue(EzspConfigId.INDIRECT_TRANSMISSION_TIMEOUT, 7680)
     /** Max hops should be 2 * nwkMaxDepth, where nwkMaxDepth is 15 (STACK_PROFILE_ZIGBEE_PRO) */

@@ -74,7 +74,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/2.1.3 win32-x64 node-v20.15.0
+ember-zli/2.1.4 win32-x64 node-v20.15.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
@@ -111,7 +111,7 @@ EXAMPLES
   $ ember-zli bootloader
 ```
 
-_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.3/src/commands/bootloader/index.ts)_
+_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.4/src/commands/bootloader/index.ts)_
 
 ## `ember-zli help [COMMAND]`
 
@@ -148,7 +148,7 @@ EXAMPLES
   $ ember-zli router
 ```
 
-_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.3/src/commands/router/index.ts)_
+_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.4/src/commands/router/index.ts)_
 
 ## `ember-zli sniff`
 
@@ -165,7 +165,7 @@ EXAMPLES
   $ ember-zli sniff
 ```
 
-_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.3/src/commands/sniff/index.ts)_
+_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.4/src/commands/sniff/index.ts)_
 
 ## `ember-zli stack`
 
@@ -182,7 +182,7 @@ EXAMPLES
   $ ember-zli stack
 ```
 
-_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.3/src/commands/stack/index.ts)_
+_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.4/src/commands/stack/index.ts)_
 
 ## `ember-zli utils`
 
@@ -199,7 +199,7 @@ EXAMPLES
   $ ember-zli utils
 ```
 
-_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.3/src/commands/utils/index.ts)_
+_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.1.4/src/commands/utils/index.ts)_
 
 ## `ember-zli version`
 
