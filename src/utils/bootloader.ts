@@ -24,13 +24,6 @@ class BootloaderWriter extends Readable {
     public _read(): void {}
 }
 
-enum BootloaderMode {
-    /** The bootloader should not be run. */
-    NO_BOOTLOADER = 0xff,
-    STANDALONE_BOOTLOADER_NORMAL = 1,
-    STANDALONE_BOOTLOADER_RECOVERY = 0,
-}
-
 export enum BootloaderState {
     /** Not connected to bootloader (i.e. not any of below) */
     NOT_CONNECTED = 0,
@@ -490,7 +483,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         const ezsp = await emberStart(this.portConf)
 
         try {
-            const status = await ezsp.ezspLaunchStandaloneBootloader(BootloaderMode.STANDALONE_BOOTLOADER_NORMAL)
+            const status = await ezsp.ezspLaunchStandaloneBootloader(true)
 
             if (status !== SLStatus.OK) {
                 throw new Error(SLStatus[status])
