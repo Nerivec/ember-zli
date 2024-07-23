@@ -178,7 +178,7 @@ export const emberRegisterFixedEndpoints = async (ezsp: Ezsp, multicastTable: Em
 
         // endpoint already registered
         if (epStatus === SLStatus.OK) {
-            logger.debug(`Endpoint "${ep.endpoint}" already registered.`, NS)
+            logger.debug(`Endpoint '${ep.endpoint}' already registered.`, NS)
         } else {
             // check to see if ezspAddEndpoint needs to be called
             // if ezspInit is called without NCP reset, ezspAddEndpoint is not necessary and will return an error
@@ -194,7 +194,7 @@ export const emberRegisterFixedEndpoints = async (ezsp: Ezsp, multicastTable: Em
             if (status === SLStatus.OK) {
                 logger.debug(`Registered endpoint '${ep.endpoint}'.`, NS)
             } else {
-                throw new Error(`Failed to register endpoint "${ep.endpoint}" with status=${SLStatus[status]}.`)
+                throw new Error(`Failed to register endpoint '${ep.endpoint}' with status=${SLStatus[status]}.`)
             }
         }
 
@@ -208,7 +208,7 @@ export const emberRegisterFixedEndpoints = async (ezsp: Ezsp, multicastTable: Em
             const status = await ezsp.ezspSetMulticastTableEntry(multicastTable.length, multicastEntry)
 
             if (status !== SLStatus.OK) {
-                throw new Error(`Failed to register group "${multicastId}" in multicast table with status=${SLStatus[status]}.`)
+                throw new Error(`Failed to register group '${multicastId}' in multicast table with status=${SLStatus[status]}.`)
             }
 
             logger.debug(`Registered multicast table entry (${multicastTable.length}): ${JSON.stringify(multicastEntry)}.`, NS)

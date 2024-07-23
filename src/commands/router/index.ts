@@ -21,7 +21,6 @@ import {
     EzspStatus,
     SLStatus,
 } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
-import { EZSP_MAX_FRAME_LENGTH } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
 import { Ezsp, EzspEvents } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
 import {
     EmberApsFrame,
@@ -198,9 +197,9 @@ export default class Router extends Command {
 
                     this.customEventHandlers[handler as keyof CustomEventHandlers] = importedScript.default
 
-                    logger.info(`Loaded custom handler for ${handler}.`)
+                    logger.info(`Loaded custom handler for '${handler}'.`)
                 } catch (error) {
-                    logger.error(`Failed to load custom handler for ${handler}. ${error}`)
+                    logger.error(`Failed to load custom handler for '${handler}'. ${error}`)
                 }
             }
         }
@@ -288,7 +287,7 @@ export default class Router extends Command {
         status = await this.ezsp.ezspSetRadioPower(radioTxPower)
 
         if (status !== SLStatus.OK) {
-            logger.error(`Failed to set transmit power to ${radioTxPower} status=${SLStatus[status]}.`)
+            logger.error(`Failed to set transmit power to '${radioTxPower}' status=${SLStatus[status]}.`)
             return true
         }
 
@@ -996,40 +995,51 @@ export default class Router extends Command {
         apsFrame: EmberApsFrame,
         messageTag: number,
     ): Promise<void> {
-        if (status === SLStatus.ZIGBEE_DELIVERY_FAILED) {
-            // no ACK was received from the destination
-            logger.error(
-                `Delivery of ${EmberOutgoingMessageType[type]} failed for "${indexOrDestination}" [apsFrame=${JSON.stringify(apsFrame)} messageTag=${messageTag}]`,
-            )
-        } else if (
-            status === SLStatus.OK &&
-            type === EmberOutgoingMessageType.MULTICAST &&
-            apsFrame.destinationEndpoint === 0xff &&
-            apsFrame.groupId < EMBER_MIN_BROADCAST_ADDRESS &&
-            !this.multicastTable.includes(apsFrame.groupId)
-        ) {
-            // workaround for devices using multicast for state update (coordinator passthrough)
-            const tableIdx = this.multicastTable.length
-            const multicastEntry: EmberMulticastTableEntry = {
-                multicastId: apsFrame.groupId,
-                endpoint: ROUTER_FIXED_ENDPOINTS[0].endpoint,
-                networkIndex: ROUTER_FIXED_ENDPOINTS[0].networkIndex,
+        switch (status) {
+            case SLStatus.ZIGBEE_DELIVERY_FAILED: {
+                // no ACK was received from the destination
+                logger.error(
+                    `Delivery of ${EmberOutgoingMessageType[type]} failed for '${indexOrDestination}' [apsFrame=${JSON.stringify(apsFrame)} messageTag=${messageTag}]`,
+                )
+
+                break
             }
-            // set immediately to avoid potential race
-            this.multicastTable.push(multicastEntry.multicastId)
 
-            try {
-                const status = await this.ezsp!.ezspSetMulticastTableEntry(tableIdx, multicastEntry)
+            case SLStatus.OK: {
+                if (
+                    type === EmberOutgoingMessageType.MULTICAST &&
+                    apsFrame.destinationEndpoint === 0xff &&
+                    apsFrame.groupId < EMBER_MIN_BROADCAST_ADDRESS &&
+                    !this.multicastTable.includes(apsFrame.groupId)
+                ) {
+                    // workaround for devices using multicast for state update (coordinator passthrough)
+                    const tableIdx = this.multicastTable.length
+                    const multicastEntry: EmberMulticastTableEntry = {
+                        multicastId: apsFrame.groupId,
+                        endpoint: ROUTER_FIXED_ENDPOINTS[0].endpoint,
+                        networkIndex: ROUTER_FIXED_ENDPOINTS[0].networkIndex,
+                    }
+                    // set immediately to avoid potential race
+                    this.multicastTable.push(multicastEntry.multicastId)
 
-                if (status !== SLStatus.OK) {
-                    throw new Error(`Failed to register group "${multicastEntry.multicastId}" in multicast table with status=${SLStatus[status]}.`)
+                    try {
+                        const status = await this.ezsp!.ezspSetMulticastTableEntry(tableIdx, multicastEntry)
+
+                        if (status !== SLStatus.OK) {
+                            throw new Error(
+                                `Failed to register group '${multicastEntry.multicastId}' in multicast table with status=${SLStatus[status]}.`,
+                            )
+                        }
+
+                        logger.debug(`Registered multicast table entry (${tableIdx}): ${JSON.stringify(multicastEntry)}.`)
+                    } catch (error) {
+                        // remove to allow retry on next occurrence
+                        this.multicastTable.splice(tableIdx, 1)
+                        logger.error(`${error}`)
+                    }
                 }
 
-                logger.debug(`Registered multicast table entry (${tableIdx}): ${JSON.stringify(multicastEntry)}.`)
-            } catch (error) {
-                // remove to allow retry on next occurrence
-                this.multicastTable.splice(tableIdx, 1)
-                throw error
+                break
             }
         }
         // shouldn't be any other status
@@ -1105,10 +1115,6 @@ export default class Router extends Command {
         if (!this.ezsp) {
             logger.error(`Invalid state, no EZSP layer available.`)
             return this.exit(1)
-        }
-
-        if (messageContents.length > EZSP_MAX_FRAME_LENGTH) {
-            return [SLStatus.MESSAGE_TOO_LONG, undefined, undefined]
         }
 
         this.zdoRequestSequence = ++this.zdoRequestSequence & APPLICATION_ZDO_SEQUENCE_MASK
