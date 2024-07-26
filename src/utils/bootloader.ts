@@ -2,27 +2,18 @@ import { confirm } from '@inquirer/prompts'
 // eslint-disable-next-line import/default
 import CRC32 from 'crc-32'
 import EventEmitter from 'node:events'
-import { Socket } from 'node:net'
-import { Readable } from 'node:stream'
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
-import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
 import { logger } from '../index.js'
-import { CONFIG_HIGHWATER_MARK, TCP_REGEX } from './consts.js'
+import { TCP_REGEX } from './consts.js'
+import { Cpc, CpcEvent } from './cpc.js'
 import { emberStart, emberStop } from './ember.js'
 import { FirmwareValidation } from './enums.js'
-import { AdapterModel, FirmwareFileMetadata, PortConf } from './types.js'
+import { Transport, TransportEvent } from './serial.js'
+import { AdapterModel, CpcSystemStatus, FirmwareFileMetadata, PortConf } from './types.js'
 import { XEvent, XExitStatus, XModemCRC } from './xmodem.js'
 
 const NS = { namespace: 'gecko' }
-
-class BootloaderWriter extends Readable {
-    public writeBytes(bytesToWrite: Buffer): void {
-        this.emit('data', bytesToWrite)
-    }
-
-    public _read(): void {}
-}
 
 export enum BootloaderState {
     /** Not connected to bootloader (i.e. not any of below) */
@@ -104,10 +95,8 @@ interface GeckoBootloaderEventMap {
 export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
     public readonly adapterModel?: AdapterModel
     public readonly portConf: PortConf
-    public portWriter: BootloaderWriter | undefined
+    public readonly transport: Transport
     public readonly xmodem: XModemCRC
-    private portSerial: SerialPort | undefined
-    private portSocket: Socket | undefined
     private state: BootloaderState
 
     private waiter:
@@ -126,42 +115,22 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         this.waiter = undefined
         this.portConf = portConf
         this.adapterModel = adapter
+        // override config to default for serial gecko bootloader
+        this.transport = new Transport({
+            ...this.portConf,
+            baudRate: 115200,
+            rtscts: false,
+            xon: false,
+            xoff: false,
+        })
         this.xmodem = new XModemCRC()
+
+        this.transport.on(TransportEvent.FAILED, this.onTransportFailed.bind(this))
+        this.transport.on(TransportEvent.DATA, this.onTransportData.bind(this))
 
         this.xmodem.on(XEvent.START, this.onXModemStart.bind(this))
         this.xmodem.on(XEvent.STOP, this.onXModemStop.bind(this))
         this.xmodem.on(XEvent.DATA, this.onXModemData.bind(this))
-    }
-
-    public async close(emitClosed: boolean, emitFailed: boolean = true): Promise<void> {
-        this.state = BootloaderState.NOT_CONNECTED
-
-        if (this.portSerial?.isOpen) {
-            logger.info(`Closing serial connection...`, NS)
-
-            try {
-                await this.portSerial.asyncFlushAndClose()
-            } catch (error) {
-                logger.error(`Failed to close port: ${error}.`, NS)
-                this.portSerial.removeAllListeners()
-
-                if (emitFailed) {
-                    this.emit(BootloaderEvent.FAILED)
-                }
-
-                return
-            }
-
-            this.portSerial.removeAllListeners()
-        } else if (this.portSocket !== undefined && !this.portSocket.closed) {
-            logger.info(`Closing socket connection...`, NS)
-            this.portSocket.destroy()
-            this.portSocket.removeAllListeners()
-        }
-
-        if (emitClosed) {
-            this.emit(BootloaderEvent.CLOSED)
-        }
     }
 
     public async connect(forceReset: boolean): Promise<void> {
@@ -178,7 +147,12 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         // @ts-expect-error changed by received serial data
         if (this.state !== BootloaderState.IDLE) {
             // not already in bootloader, so launch it, then knock again
-            await this.launch()
+            const isRCP = await confirm({
+                default: false,
+                message: 'Is currently installed firmware RCP (multiprotocol)?',
+            })
+
+            isRCP ? await this.cpcLaunch() : await this.ezspLaunch()
             // this time will fail if not successful since exhausted all possible ways
             await this.knock(true)
 
@@ -201,7 +175,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             case BootloaderMenu.UPLOAD_GBL: {
                 if (firmware === undefined) {
                     logger.error(`Navigating to upload GBL requires a valid firmware.`, NS)
-                    await this.close(false) // don't emit closed since we're returning true which will close anyway
+                    await this.transport.close(false) // don't emit closed since we're returning true which will close anyway
 
                     return true
                 }
@@ -247,7 +221,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
     }
 
     public async resetByPattern(knock: boolean = false): Promise<void> {
-        if (!this.portSerial) {
+        if (!this.transport.isSerial) {
             logger.error(`Reset by pattern unavailable for TCP.`, NS)
             return
         }
@@ -256,21 +230,11 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             // TODO: support per adapter
             case 'Sonoff ZBDongle-E':
             case undefined: {
-                await new Promise<void>((resolve, reject) => {
-                    this.portSerial?.set({ dtr: false, rts: true }, (error) => (error ? reject(error) : resolve()))
-                })
-                await new Promise<void>((resolve, reject) => {
-                    setTimeout(() => {
-                        this.portSerial?.set({ dtr: true, rts: false }, (error) => (error ? reject(error) : resolve()))
-                    }, 100)
-                })
+                await this.transport.serialSet({ dtr: false, rts: true })
+                await this.transport.serialSet({ dtr: true, rts: false }, 100)
 
                 if (!knock) {
-                    await new Promise<void>((resolve, reject) => {
-                        setTimeout(() => {
-                            this.portSerial?.set({ dtr: false }, (error) => (error ? reject(error) : resolve()))
-                        }, 500)
-                    })
+                    await this.transport.serialSet({ dtr: false }, 500)
                 }
 
                 break
@@ -336,10 +300,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         try {
             const recdMetadata: FirmwareFileMetadata = JSON.parse(metaBuf.toString('utf8'))
 
-            logger.info(
-                `Firmware file metadata: SDK version: ${recdMetadata.sdk_version}, EZSP version: ${recdMetadata.ezsp_version}, baudrate: ${recdMetadata.baudrate}, type: ${recdMetadata.fw_type}`,
-                NS,
-            )
+            logger.info(`Firmware file metadata: ${JSON.stringify(recdMetadata)}`, NS)
 
             if (!TCP_REGEX.test(this.portConf.path) && recdMetadata.baudrate !== this.portConf.baudRate) {
                 logger.warning(
@@ -348,7 +309,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 )
             }
 
-            if (!supportedVersionsRegex.test(recdMetadata.ezsp_version)) {
+            if (!recdMetadata.ezsp_version || !supportedVersionsRegex.test(recdMetadata.ezsp_version)) {
                 logger.warning(`Firmware file version is not recognized as currently supported by Zigbee2MQTT ember driver.`, NS)
             }
 
@@ -369,82 +330,56 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         return FirmwareValidation.VALID
     }
 
-    private async initPort(): Promise<void> {
-        // will do nothing if nothing's open
-        await this.close(false)
+    private async cpcLaunch(): Promise<void> {
+        logger.debug(`Launching bootloader from CPC...`, NS)
 
-        if (TCP_REGEX.test(this.portConf.path)) {
-            const info = new URL(this.portConf.path)
-            logger.debug(`Opening TCP socket with ${info.hostname}:${info.port}`, NS)
+        const cpc = new Cpc(this.portConf)
 
-            this.portSocket = new Socket()
+        await cpc.start()
 
-            this.portSocket.setNoDelay(true)
-            this.portSocket.setKeepAlive(true, 15000)
+        cpc.on(CpcEvent.FAILED, this.onTransportFailed.bind(this))
 
-            this.portWriter = new BootloaderWriter({ highWaterMark: CONFIG_HIGHWATER_MARK })
+        try {
+            const status = await cpc.cpcLaunchStandaloneBootloader()
 
-            this.portWriter.pipe(this.portSocket)
-            this.portSocket.on('data', this.onReceivedData.bind(this))
-
-            return new Promise((resolve, reject): void => {
-                const openError = async (err: Error): Promise<void> => {
-                    reject(err)
-                }
-
-                if (this.portSocket === undefined) {
-                    reject(new Error(`Invalid socket`))
-                    return
-                }
-
-                this.portSocket.on('connect', () => {
-                    logger.debug(`Socket connected`, NS)
-                })
-                this.portSocket.on('ready', (): void => {
-                    logger.info(`Socket ready`, NS)
-                    this.portSocket!.removeListener('error', openError)
-                    this.portSocket!.once('close', this.onPortClose.bind(this))
-                    this.portSocket!.on('error', this.onPortError.bind(this))
-
-                    resolve()
-                })
-                this.portSocket.once('error', openError)
-                this.portSocket.connect(Number.parseInt(info.port, 10), info.hostname)
-            })
+            if (status !== CpcSystemStatus.OK) {
+                throw new Error(CpcSystemStatus[status])
+            }
+        } catch (error) {
+            logger.error(`Unable to launch bootloader from CPC: ${error}`, NS)
+            this.emit(BootloaderEvent.FAILED)
+            return
         }
 
-        const serialOpts = {
-            autoOpen: false,
-            baudRate: 115200,
-            dataBits: 8 as const,
-            parity: 'none' as const,
-            path: this.portConf.path,
-            rtscts: false,
-            stopBits: 1 as const,
-            xoff: false,
-            xon: false,
+        await cpc.stop()
+    }
+
+    private async ezspLaunch(): Promise<void> {
+        logger.debug(`Launching bootloader from EZSP...`, NS)
+
+        const ezsp = await emberStart(this.portConf)
+
+        try {
+            const status = await ezsp.ezspLaunchStandaloneBootloader(true)
+
+            if (status !== SLStatus.OK) {
+                throw new Error(SLStatus[status])
+            }
+        } catch (error) {
+            logger.error(`Unable to launch bootloader from EZSP: ${error}`, NS)
+            this.emit(BootloaderEvent.FAILED)
+            return
         }
 
-        logger.debug(`Opening serial port with ${JSON.stringify(serialOpts)}`, NS)
-
-        this.portSerial = new SerialPort(serialOpts)
-        this.portWriter = new BootloaderWriter({ highWaterMark: CONFIG_HIGHWATER_MARK })
-
-        this.portWriter.pipe(this.portSerial)
-        this.portSerial.on('data', this.onReceivedData.bind(this))
-
-        await this.portSerial.asyncOpen()
-        logger.info(`Serial port opened`, NS)
-
-        this.portSerial.once('close', this.onPortClose.bind(this))
-        this.portSerial.on('error', this.onPortError.bind(this))
+        // free serial
+        await emberStop(ezsp)
     }
 
     private async knock(fail: boolean, forceReset: boolean = false): Promise<void> {
         logger.debug(`Knocking...`, NS)
 
         try {
-            await this.initPort()
+            await this.transport.initPort()
 
             if (forceReset) {
                 await this.resetByPattern(true)
@@ -456,18 +391,18 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             }
         } catch (error) {
             logger.error(`Failed to open port: ${error}.`, NS)
-            await this.close(false, false) // force failed below
+            await this.transport.close(false, false) // force failed below
             this.emit(BootloaderEvent.FAILED)
 
             return
         }
 
-        await this.write(BOOTLOADER_KNOCK)
+        await this.transport.write(BOOTLOADER_KNOCK)
 
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail)
 
         if (!res) {
-            await this.close(fail) // emit closed based on if we want to fail on unsuccessful knock
+            await this.transport.close(fail) // emit closed based on if we want to fail on unsuccessful knock
 
             if (fail) {
                 logger.error(`Unable to enter bootloader.`, NS)
@@ -477,33 +412,12 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
     }
 
-    private async launch(): Promise<void> {
-        logger.debug(`Launching bootloader...`, NS)
-
-        const ezsp = await emberStart(this.portConf)
-
-        try {
-            const status = await ezsp.ezspLaunchStandaloneBootloader(true)
-
-            if (status !== SLStatus.OK) {
-                throw new Error(SLStatus[status])
-            }
-        } catch (error) {
-            logger.error(`Unable to launch bootloader: ${JSON.stringify(error)}`, NS)
-            this.emit(BootloaderEvent.FAILED)
-            return
-        }
-
-        // free serial
-        await emberStop(ezsp)
-    }
-
     private async menuGetInfo(): Promise<boolean> {
         logger.debug(`Entering 'Info' menu...`, NS)
 
         this.state = BootloaderState.GETTING_INFO
 
-        await this.write(Buffer.from([BootloaderMenu.INFO]))
+        await this.transport.write(Buffer.from([BootloaderMenu.INFO]))
 
         await this.waitForState(BootloaderState.GOT_INFO, BOOTLOADER_CMD_EXEC_TIMEOUT)
 
@@ -515,7 +429,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.RUNNING
 
-        await this.write(Buffer.from([BootloaderMenu.RUN]))
+        await this.transport.write(Buffer.from([BootloaderMenu.RUN]))
 
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_CMD_EXEC_TIMEOUT, false)
 
@@ -536,7 +450,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.BEGIN_UPLOAD
 
-        await this.write(Buffer.from([BootloaderMenu.UPLOAD_GBL])) // start upload
+        await this.transport.write(Buffer.from([BootloaderMenu.UPLOAD_GBL])) // start upload
         await this.waitForState(BootloaderState.UPLOADING, BOOTLOADER_UPLOAD_EXIT_TIMEOUT)
         await this.waitForState(BootloaderState.UPLOADED, BOOTLOADER_UPLOAD_TIMEOUT)
 
@@ -544,33 +458,15 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         if (!res) {
             // force back to menu if not automatically back to it already
-            await this.write(BOOTLOADER_KNOCK)
+            await this.transport.write(BOOTLOADER_KNOCK)
             await this.waitForState(BootloaderState.IDLE, BOOTLOADER_UPLOAD_EXIT_TIMEOUT)
         }
 
         return false
     }
 
-    private onPortClose(error: Error): void {
-        logger.info(`Port closed.`, NS)
-
-        if (error && this.state !== BootloaderState.NOT_CONNECTED) {
-            this.state = BootloaderState.NOT_CONNECTED
-
-            logger.info(`Port close ${error}`, NS)
-            this.emit(BootloaderEvent.FAILED)
-        }
-    }
-
-    private onPortError(error: Error): void {
-        this.state = BootloaderState.NOT_CONNECTED
-
-        logger.info(`Port ${error}`, NS)
-        this.emit(BootloaderEvent.FAILED)
-    }
-
-    private async onReceivedData(received: Buffer): Promise<void> {
-        logger.debug(`Received serial data: ${received.toString('hex')} while in state ${BootloaderState[this.state]}.`, NS)
+    private async onTransportData(received: Buffer): Promise<void> {
+        logger.debug(`Received transport data: ${received.toString('hex')} while in state ${BootloaderState[this.state]}.`, NS)
 
         switch (this.state) {
             case BootloaderState.NOT_CONNECTED: {
@@ -648,9 +544,14 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
     }
 
+    private onTransportFailed(): void {
+        this.state = BootloaderState.NOT_CONNECTED
+        this.emit(BootloaderEvent.FAILED)
+    }
+
     private async onXModemData(data: Buffer, progressPc: number): Promise<void> {
         this.emit(BootloaderEvent.UPLOAD_PROGRESS, progressPc)
-        await this.write(data)
+        await this.transport.write(data)
     }
 
     private async onXModemStart(): Promise<void> {
@@ -734,14 +635,5 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 }, timeout),
             }
         })
-    }
-
-    private async write(buffer: Buffer): Promise<void> {
-        if (this.portWriter === undefined) {
-            logger.error(`No port available to write.`, NS)
-            this.emit(BootloaderEvent.FAILED)
-        } else {
-            this.portWriter.writeBytes(buffer)
-        }
     }
 }

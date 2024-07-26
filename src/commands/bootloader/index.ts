@@ -24,7 +24,11 @@ export default class Bootloader extends Command {
             description: 'Path to a firmware file. If not provided, will be set via interactive prompt when entering relevant menu.',
             exists: true,
         }),
-        forceReset: Flags.boolean({ char: 'r', default: false, description: 'Try to force reset into bootloader.' }),
+        forceReset: Flags.boolean({
+            char: 'r',
+            default: false,
+            description: 'Try to force reset into bootloader (supported by: Sonoff ZBDongle-E).',
+        }),
     }
 
     public async run(): Promise<void> {
@@ -74,7 +78,7 @@ export default class Bootloader extends Command {
             exit = await this.navigateMenu(gecko, flags.file)
         }
 
-        await gecko.close(false)
+        await gecko.transport.close(false)
 
         return this.exit(0)
     }

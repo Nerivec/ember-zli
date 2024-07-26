@@ -42,6 +42,16 @@ export const getPortConfFile = async (): Promise<PortConf | undefined> => {
             logger.error(`Cached config does not include a valid rtscts value.`)
             return undefined
         }
+
+        if (conf.xon !== true && conf.xon !== false) {
+            conf.xon = !conf.rtscts
+            logger.debug(`Cached config does not include a valid xon value. Derived from rtscts (will be ${conf.xon}).`)
+        }
+
+        if (conf.xoff !== true && conf.xoff !== false) {
+            conf.xoff = !conf.rtscts
+            logger.debug(`Cached config does not include a valid xoff value. Derived from rtscts (will be ${conf.xoff}).`)
+        }
     }
 
     return conf
@@ -128,7 +138,7 @@ export const getPortConf = async (): Promise<PortConf> => {
         throw new Error('Invalid port path.')
     }
 
-    const conf = { baudRate, path, rtscts }
+    const conf = { baudRate, path, rtscts, xon: !rtscts, xoff: !rtscts }
 
     try {
         writeFileSync(CONF_PORT_PATH, JSON.stringify(conf, null, 2), 'utf8')
