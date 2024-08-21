@@ -1,10 +1,12 @@
-import { confirm, input, select } from '@inquirer/prompts'
-import { Command } from '@oclif/core'
-import { Socket, createSocket } from 'node:dgram'
+import { createSocket, Socket } from 'node:dgram'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+
+import { confirm, input, select } from '@inquirer/prompts'
+import { Command } from '@oclif/core'
 import { Logger } from 'winston'
+
 import { ZSpec } from 'zigbee-herdsman'
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'

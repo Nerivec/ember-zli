@@ -1,4 +1,5 @@
-import { ZSpec, Zcl } from 'zigbee-herdsman'
+import { Zcl, ZSpec } from 'zigbee-herdsman'
+import { DEFAULT_STACK_CONFIG } from 'zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js'
 import { FIXED_ENDPOINTS } from 'zigbee-herdsman/dist/adapter/ember/adapter/endpoints.js'
 import {
     EMBER_HIGH_RAM_CONCENTRATOR,
@@ -12,18 +13,19 @@ import {
     EmberNetworkInitBitmask,
     EmberSourceRouteDiscoveryMode,
     EmberVersionType,
+    IEEE802154CcaMode,
     SLStatus,
 } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { EZSP_MIN_PROTOCOL_VERSION, EZSP_PROTOCOL_VERSION, EZSP_STACK_TYPE_MESH } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
 import { EzspConfigId, EzspDecisionId, EzspPolicyId, EzspValueId } from 'zigbee-herdsman/dist/adapter/ember/ezsp/enums.js'
-import { Ezsp, EzspEvents } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
+import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
 import { EmberMulticastId, EmberMulticastTableEntry, EmberNetworkInitStruct } from 'zigbee-herdsman/dist/adapter/ember/types.js'
 import { lowHighBytes } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
 
 import { logger } from '../index.js'
 import { NVM3ObjectKey } from './enums.js'
 import { ROUTER_FIXED_ENDPOINTS } from './router-endpoints.js'
-import { EmberFullVersion, PortConf, StackConfig } from './types.js'
+import { EmberFullVersion, PortConf } from './types.js'
 
 const NS = { namespace: 'ember' }
 export let emberFullVersion: EmberFullVersion = {
@@ -40,7 +42,7 @@ export let emberFullVersion: EmberFullVersion = {
 export const waitForStackStatus = async (ezsp: Ezsp, status: SLStatus, timeout: number = 10000): Promise<void> =>
     new Promise<void>((resolve, reject) => {
         const timeoutHandle = setTimeout(() => {
-            ezsp.removeListener(EzspEvents.STACK_STATUS, onStackStatus)
+            ezsp.removeListener('stackStatus', onStackStatus)
             return reject(new Error(`Timed out waiting for stack status '${SLStatus[status]}'.`))
         }, timeout)
         const onStackStatus = (receivedStatus: SLStatus): void => {
@@ -48,12 +50,12 @@ export const waitForStackStatus = async (ezsp: Ezsp, status: SLStatus, timeout: 
 
             if (status === receivedStatus) {
                 clearTimeout(timeoutHandle)
-                ezsp.removeListener(EzspEvents.STACK_STATUS, onStackStatus)
+                ezsp.removeListener('stackStatus', onStackStatus)
                 resolve()
             }
         }
 
-        ezsp.on(EzspEvents.STACK_STATUS, onStackStatus)
+        ezsp.on('stackStatus', onStackStatus)
     })
 
 export const emberStart = async (portConf: PortConf): Promise<Ezsp> => {
@@ -144,7 +146,11 @@ export const emberNetworkInit = async (ezsp: Ezsp, wasConfigured: boolean = fals
     return ezsp.ezspNetworkInit(networkInitStruct)
 }
 
-export const emberNetworkConfig = async (ezsp: Ezsp, stackConf: StackConfig, manufacturerCode: Zcl.ManufacturerCode): Promise<void> => {
+export const emberNetworkConfig = async (
+    ezsp: Ezsp,
+    stackConf: typeof DEFAULT_STACK_CONFIG,
+    manufacturerCode: Zcl.ManufacturerCode,
+): Promise<void> => {
     /** The address cache needs to be initialized and used with the source routing code for the trust center to operate properly. */
     await ezsp.ezspSetConfigurationValue(EzspConfigId.TRUST_CENTER_ADDRESS_CACHE_SIZE, 2)
     /** MAC indirect timeout should be 7.68 secs (STACK_PROFILE_ZIGBEE_PRO) */
@@ -165,6 +171,13 @@ export const emberNetworkConfig = async (ezsp: Ezsp, stackConf: StackConfig, man
     await ezsp.ezspSetConfigurationValue(EzspConfigId.MAX_END_DEVICE_CHILDREN, stackConf.MAX_END_DEVICE_CHILDREN)
     await ezsp.ezspSetConfigurationValue(EzspConfigId.END_DEVICE_POLL_TIMEOUT, stackConf.END_DEVICE_POLL_TIMEOUT)
     await ezsp.ezspSetConfigurationValue(EzspConfigId.TRANSIENT_KEY_TIMEOUT_S, stackConf.TRANSIENT_KEY_TIMEOUT_S)
+    // XXX: temp-fix: forces a side-effect in the firmware that prevents broadcast issues in environments with unusual interferences
+    await ezsp.ezspSetValue(EzspValueId.CCA_THRESHOLD, 1, [0])
+
+    if (stackConf.CCA_MODE) {
+        // validated in `loadStackConfig`
+        await ezsp.ezspSetRadioIeee802154CcaMode(IEEE802154CcaMode[stackConf.CCA_MODE])
+    }
 }
 
 export const emberRegisterFixedEndpoints = async (ezsp: Ezsp, multicastTable: EmberMulticastId[], router: boolean = false): Promise<void> => {
@@ -217,7 +230,7 @@ export const emberRegisterFixedEndpoints = async (ezsp: Ezsp, multicastTable: Em
     }
 }
 
-export const emberSetConcentrator = async (ezsp: Ezsp, stackConf: StackConfig): Promise<void> => {
+export const emberSetConcentrator = async (ezsp: Ezsp, stackConf: typeof DEFAULT_STACK_CONFIG): Promise<void> => {
     const status = await ezsp.ezspSetConcentrator(
         true,
         stackConf.CONCENTRATOR_RAM_TYPE === 'low' ? EMBER_LOW_RAM_CONCENTRATOR : EMBER_HIGH_RAM_CONCENTRATOR,

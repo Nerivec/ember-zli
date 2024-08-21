@@ -1,11 +1,14 @@
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+
 import { checkbox, confirm, input, select } from '@inquirer/prompts'
 import { Command } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { Logger } from 'winston'
-import { ZSpec, Zcl, Zdo } from 'zigbee-herdsman'
+
+import { Zcl, Zdo, ZSpec } from 'zigbee-herdsman'
+import { DEFAULT_STACK_CONFIG } from 'zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js'
 import { EmberTokensManager } from 'zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js'
 import { EMBER_MIN_BROADCAST_ADDRESS, STACK_PROFILE_ZIGBEE_PRO } from 'zigbee-herdsman/dist/adapter/ember/consts.js'
 import {
@@ -21,7 +24,7 @@ import {
     EzspStatus,
     SLStatus,
 } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
-import { Ezsp, EzspEvents } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
+import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
 import {
     EmberApsFrame,
     EmberInitialSecurityState,
@@ -34,7 +37,7 @@ import { DataType } from 'zigbee-herdsman/dist/zspec/zcl/index.js'
 import { BuffaloZdo } from 'zigbee-herdsman/dist/zspec/zdo/buffaloZdo.js'
 
 import { DATA_FOLDER, DEFAULT_ROUTER_TOKENS_BACKUP_PATH, logger } from '../../index.js'
-import { APPLICATION_ZDO_SEQUENCE_MASK, DEFAULT_APS_OPTIONS, DEFAULT_CONF_STACK, DEFAULT_ZDO_REQUEST_RADIUS } from '../../utils/consts.js'
+import { APPLICATION_ZDO_SEQUENCE_MASK, DEFAULT_APS_OPTIONS, DEFAULT_ZDO_REQUEST_RADIUS } from '../../utils/consts.js'
 import {
     emberFullVersion,
     emberNetworkConfig,
@@ -47,21 +50,9 @@ import {
 } from '../../utils/ember.js'
 import { getPortConf } from '../../utils/port.js'
 import { ROUTER_FIXED_ENDPOINTS } from '../../utils/router-endpoints.js'
-import { StackConfig } from '../../utils/types.js'
 import { browseToFile, loadStackConfig, toHex } from '../../utils/utils.js'
 
 type CustomEventHandlers = {
-    onGreenpowerMessage?: (
-        cmd: Command,
-        logger: Logger,
-        sequenceNumber: number,
-        commandIdentifier: number,
-        sourceId: number,
-        frameCounter: number,
-        gpdCommandId: number,
-        gpdCommandPayload: Buffer,
-        gpdLink: number,
-    ) => Promise<void>
     onIncomingMessage?: (
         cmd: Command,
         logger: Logger,
@@ -129,7 +120,6 @@ export default class Router extends Command {
     public routerState: RouterState = RouterState.UNKNOWN
 
     private customEventHandlers: CustomEventHandlers = {
-        onGreenpowerMessage: undefined,
         onIncomingMessage: undefined,
         onMessageSent: undefined,
         onStackStatus: undefined,
@@ -138,7 +128,7 @@ export default class Router extends Command {
     }
 
     private manufacturerCode: Zcl.ManufacturerCode = Zcl.ManufacturerCode.SILICON_LABORATORIES
-    private stackConfig: StackConfig = DEFAULT_CONF_STACK
+    private stackConfig: typeof DEFAULT_STACK_CONFIG = DEFAULT_STACK_CONFIG
     private zdoRequestSequence: number = 0
 
     public async run(): Promise<void> {
@@ -148,17 +138,16 @@ export default class Router extends Command {
 
         this.ezsp = await emberStart(portConf)
 
-        this.ezsp.on(EzspEvents.NCP_NEEDS_RESET_AND_INIT, (status: EzspStatus): void => {
+        this.ezsp.on('ncpNeedsResetAndInit', (status: EzspStatus): void => {
             logger.error(`Adapter needs restarting: status=${EzspStatus[status]}`)
 
             return this.exit(1)
         })
-        this.ezsp.on(EzspEvents.GREENPOWER_MESSAGE, this.onGreenpowerMessage.bind(this))
-        this.ezsp.on(EzspEvents.INCOMING_MESSAGE, this.onIncomingMessage.bind(this))
-        this.ezsp.on(EzspEvents.MESSAGE_SENT, this.onMessageSent.bind(this))
-        this.ezsp.on(EzspEvents.STACK_STATUS, this.onStackStatus.bind(this))
-        this.ezsp.on(EzspEvents.TOUCHLINK_MESSAGE, this.onTouchlinkMessage.bind(this))
-        this.ezsp.on(EzspEvents.ZDO_RESPONSE, this.onZDOResponse.bind(this))
+        this.ezsp.on('incomingMessage', this.onIncomingMessage.bind(this))
+        this.ezsp.on('messageSent', this.onMessageSent.bind(this))
+        this.ezsp.on('stackStatus', this.onStackStatus.bind(this))
+        this.ezsp.on('touchlinkMessage', this.onTouchlinkMessage.bind(this))
+        this.ezsp.on('zdoResponse', this.onZDOResponse.bind(this))
 
         await this.loadCustomEventHandlers()
 
@@ -183,7 +172,6 @@ export default class Router extends Command {
     }
 
     private async loadCustomEventHandlers(): Promise<void> {
-        // eslint-disable-next-line guard-for-in
         for (const handler in this.customEventHandlers) {
             const handlerFile = join(DATA_FOLDER, `${handler}.mjs`)
 
@@ -328,7 +316,9 @@ export default class Router extends Command {
             clearInterval(progressInterval)
 
             if (status === SLStatus.OK) {
-                scanCompleted && scanCompleted()
+                if (scanCompleted) {
+                    scanCompleted()
+                }
             } else {
                 logger.error(`Failed to scan ${channel} with status=${SLStatus[status]}.`)
             }
@@ -713,12 +703,12 @@ export default class Router extends Command {
         const eui64 = await this.ezsp.ezspGetEui64()
         const tokensBuf = await EmberTokensManager.saveTokens(this.ezsp, Buffer.from(eui64.slice(2 /* 0x */), 'hex').reverse())
 
-        if (tokensBuf === null) {
-            logger.error(`Failed to backup tokens.`)
-        } else {
+        if (tokensBuf) {
             writeFileSync(saveFile, tokensBuf.toString('hex'), 'utf8')
 
             logger.info(`Tokens backup written to '${saveFile}'.`)
+        } else {
+            logger.error(`Failed to backup tokens.`)
         }
 
         return false
@@ -848,30 +838,6 @@ export default class Router extends Command {
         }
 
         return true // exit
-    }
-
-    private async onGreenpowerMessage(
-        sequenceNumber: number,
-        commandIdentifier: number,
-        sourceId: number,
-        frameCounter: number,
-        gpdCommandId: number,
-        gpdCommandPayload: Buffer,
-        gpdLink: number,
-    ): Promise<void> {
-        if (this.customEventHandlers.onGreenpowerMessage) {
-            await this.customEventHandlers.onGreenpowerMessage(
-                this,
-                logger,
-                sequenceNumber,
-                commandIdentifier,
-                sourceId,
-                frameCounter,
-                gpdCommandId,
-                gpdCommandPayload,
-                gpdLink,
-            )
-        }
     }
 
     private async onIncomingMessage(

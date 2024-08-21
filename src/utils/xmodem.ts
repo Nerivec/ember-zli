@@ -1,4 +1,5 @@
 import EventEmitter from 'node:events'
+
 import { halCommonCrc16, highByte, lowByte } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
 
 import { logger } from '../index.js'

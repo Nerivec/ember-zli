@@ -1,7 +1,9 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+
 import { config, createLogger, format, transports } from 'winston'
+
 import { setLogger as zhSetLogger } from 'zigbee-herdsman'
 
 export const DATA_FOLDER = join(homedir(), 'ember-zli')
@@ -28,12 +30,7 @@ export const logger = createLogger({
     format: format.combine(
         format.errors({ stack: true }),
         format.timestamp({
-            format:
-                new Date().toLocaleString(
-                    'sv' /* uses ISO */,
-                    // eslint-disable-next-line new-cap
-                    { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-                ) + '.SSS',
+            format: new Date().toLocaleString('sv' /* uses ISO */, { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }) + '.SSS',
         }),
         format.printf((info) => `[${info.timestamp}] ${info.level}: \t${info.namespace ?? 'cli'}: ${info.message}`),
     ),

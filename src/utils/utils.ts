@@ -1,13 +1,15 @@
-import { input, select } from '@inquirer/prompts'
-import { existsSync, readFileSync, readdirSync, renameSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
-import { Backup } from 'zigbee-herdsman/dist/models/backup.js'
+
+import { input, select } from '@inquirer/prompts'
+
+import { DEFAULT_STACK_CONFIG } from 'zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js'
+import { IEEE802154CcaMode } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { UnifiedBackupStorage } from 'zigbee-herdsman/dist/models/backup-storage-unified.js'
+import { Backup } from 'zigbee-herdsman/dist/models/backup.js'
 import { fromUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
 
 import { CONF_STACK, DATA_FOLDER, logger } from '../index.js'
-import { DEFAULT_CONF_STACK } from './consts.js'
-import { StackConfig } from './types.js'
 
 // @from zigbee2mqtt-frontend
 export const toHex = (input: number, padding = 4): string => {
@@ -15,72 +17,81 @@ export const toHex = (input: number, padding = 4): string => {
     return '0x' + (padStr + input.toString(16)).slice(-1 * padding).toUpperCase()
 }
 
-export const loadStackConfig = (): StackConfig => {
+export const loadStackConfig = (): typeof DEFAULT_STACK_CONFIG => {
     try {
-        const customConfig: StackConfig = JSON.parse(readFileSync(CONF_STACK, 'utf8'))
+        const customConfig = JSON.parse(readFileSync(CONF_STACK, 'utf8'))
         // set any undefined config to default
-        const config: StackConfig = { ...DEFAULT_CONF_STACK, ...customConfig }
+        const config = { ...DEFAULT_STACK_CONFIG, ...customConfig }
 
-        const inRange = (value: number, min: number, max: number): boolean => !(value === null || value < min || value > max)
+        const inRange = (value: number, min: number, max: number): boolean => !(value == undefined || value < min || value > max)
 
         if (!['high', 'low'].includes(config.CONCENTRATOR_RAM_TYPE)) {
-            config.CONCENTRATOR_RAM_TYPE = DEFAULT_CONF_STACK.CONCENTRATOR_RAM_TYPE
+            config.CONCENTRATOR_RAM_TYPE = DEFAULT_STACK_CONFIG.CONCENTRATOR_RAM_TYPE
             logger.error(`[CONF STACK] Invalid CONCENTRATOR_RAM_TYPE, using default.`)
         }
 
         if (!inRange(config.CONCENTRATOR_MIN_TIME, 1, 60) || config.CONCENTRATOR_MIN_TIME >= config.CONCENTRATOR_MAX_TIME) {
-            config.CONCENTRATOR_MIN_TIME = DEFAULT_CONF_STACK.CONCENTRATOR_MIN_TIME
+            config.CONCENTRATOR_MIN_TIME = DEFAULT_STACK_CONFIG.CONCENTRATOR_MIN_TIME
             logger.error(`[CONF STACK] Invalid CONCENTRATOR_MIN_TIME, using default.`)
         }
 
         if (!inRange(config.CONCENTRATOR_MAX_TIME, 30, 300) || config.CONCENTRATOR_MAX_TIME <= config.CONCENTRATOR_MIN_TIME) {
-            config.CONCENTRATOR_MAX_TIME = DEFAULT_CONF_STACK.CONCENTRATOR_MAX_TIME
+            config.CONCENTRATOR_MAX_TIME = DEFAULT_STACK_CONFIG.CONCENTRATOR_MAX_TIME
             logger.error(`[CONF STACK] Invalid CONCENTRATOR_MAX_TIME, using default.`)
         }
 
         if (!inRange(config.CONCENTRATOR_ROUTE_ERROR_THRESHOLD, 1, 100)) {
-            config.CONCENTRATOR_ROUTE_ERROR_THRESHOLD = DEFAULT_CONF_STACK.CONCENTRATOR_ROUTE_ERROR_THRESHOLD
+            config.CONCENTRATOR_ROUTE_ERROR_THRESHOLD = DEFAULT_STACK_CONFIG.CONCENTRATOR_ROUTE_ERROR_THRESHOLD
             logger.error(`[CONF STACK] Invalid CONCENTRATOR_ROUTE_ERROR_THRESHOLD, using default.`)
         }
 
         if (!inRange(config.CONCENTRATOR_DELIVERY_FAILURE_THRESHOLD, 1, 100)) {
-            config.CONCENTRATOR_DELIVERY_FAILURE_THRESHOLD = DEFAULT_CONF_STACK.CONCENTRATOR_DELIVERY_FAILURE_THRESHOLD
+            config.CONCENTRATOR_DELIVERY_FAILURE_THRESHOLD = DEFAULT_STACK_CONFIG.CONCENTRATOR_DELIVERY_FAILURE_THRESHOLD
             logger.error(`[CONF STACK] Invalid CONCENTRATOR_DELIVERY_FAILURE_THRESHOLD, using default.`)
         }
 
         if (!inRange(config.CONCENTRATOR_MAX_HOPS, 0, 30)) {
-            config.CONCENTRATOR_MAX_HOPS = DEFAULT_CONF_STACK.CONCENTRATOR_MAX_HOPS
+            config.CONCENTRATOR_MAX_HOPS = DEFAULT_STACK_CONFIG.CONCENTRATOR_MAX_HOPS
             logger.error(`[CONF STACK] Invalid CONCENTRATOR_MAX_HOPS, using default.`)
         }
 
         if (!inRange(config.MAX_END_DEVICE_CHILDREN, 6, 64)) {
-            config.MAX_END_DEVICE_CHILDREN = DEFAULT_CONF_STACK.MAX_END_DEVICE_CHILDREN
+            config.MAX_END_DEVICE_CHILDREN = DEFAULT_STACK_CONFIG.MAX_END_DEVICE_CHILDREN
             logger.error(`[CONF STACK] Invalid MAX_END_DEVICE_CHILDREN, using default.`)
         }
 
         if (!inRange(config.TRANSIENT_DEVICE_TIMEOUT, 0, 65535)) {
-            config.TRANSIENT_DEVICE_TIMEOUT = DEFAULT_CONF_STACK.TRANSIENT_DEVICE_TIMEOUT
+            config.TRANSIENT_DEVICE_TIMEOUT = DEFAULT_STACK_CONFIG.TRANSIENT_DEVICE_TIMEOUT
             logger.error(`[CONF STACK] Invalid TRANSIENT_DEVICE_TIMEOUT, using default.`)
         }
 
         if (!inRange(config.END_DEVICE_POLL_TIMEOUT, 0, 14)) {
-            config.END_DEVICE_POLL_TIMEOUT = DEFAULT_CONF_STACK.END_DEVICE_POLL_TIMEOUT
+            config.END_DEVICE_POLL_TIMEOUT = DEFAULT_STACK_CONFIG.END_DEVICE_POLL_TIMEOUT
             logger.error(`[CONF STACK] Invalid END_DEVICE_POLL_TIMEOUT, using default.`)
         }
 
         if (!inRange(config.TRANSIENT_KEY_TIMEOUT_S, 0, 65535)) {
-            config.TRANSIENT_KEY_TIMEOUT_S = DEFAULT_CONF_STACK.TRANSIENT_KEY_TIMEOUT_S
+            config.TRANSIENT_KEY_TIMEOUT_S = DEFAULT_STACK_CONFIG.TRANSIENT_KEY_TIMEOUT_S
             logger.error(`[CONF STACK] Invalid TRANSIENT_KEY_TIMEOUT_S, using default.`)
+        }
+
+        config.CCA_MODE = config.CCA_MODE ?? undefined // always default to undefined
+
+        if (config.CCA_MODE && IEEE802154CcaMode[config.CCA_MODE] === undefined) {
+            config.CCA_MODE = undefined
+            logger.error(`[STACK CONFIG] Invalid CCA_MODE, ignoring.`)
         }
 
         logger.info(`Using stack config ${JSON.stringify(config)}.`)
 
         return config
-    } catch {}
+    } catch {
+        /* empty */
+    }
 
     logger.info(`Using default stack config.`)
 
-    return DEFAULT_CONF_STACK
+    return DEFAULT_STACK_CONFIG
 }
 
 export const browseToFile = async (message: string, defaultValue: string, toWrite: boolean = false): Promise<string> => {

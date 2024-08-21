@@ -1,7 +1,9 @@
+import { readFileSync, writeFileSync } from 'node:fs'
+
 import { checkbox, confirm, input, select } from '@inquirer/prompts'
 import { Command } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
-import { readFileSync, writeFileSync } from 'node:fs'
+
 import { ZSpec } from 'zigbee-herdsman'
 import { EmberTokensManager } from 'zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js'
 import {
@@ -12,8 +14,8 @@ import {
     EmberNetworkStatus,
     EmberNodeType,
     EzspNetworkScanType,
-    SLStatus,
     SecManKeyType,
+    SLStatus,
 } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { EMBER_AES_HASH_BLOCK_SIZE } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
 import { EzspConfigId, EzspDecisionBitmask, EzspDecisionId, EzspMfgTokenId, EzspPolicyId } from 'zigbee-herdsman/dist/adapter/ember/ezsp/enums.js'
@@ -199,7 +201,6 @@ export default class Stack extends Command {
                 },
             })),
             ezsp: {
-                // eslint-disable-next-line camelcase
                 hashed_tclk: tcLinkKey.contents,
                 version: emberFullVersion.ezsp,
                 // altNetworkKey: altNetworkKey.contents,
@@ -577,7 +578,9 @@ export default class Stack extends Command {
             clearInterval(progressInterval)
 
             if (status === SLStatus.OK) {
-                scanCompleted && scanCompleted()
+                if (scanCompleted) {
+                    scanCompleted()
+                }
             } else {
                 logger.error(`Failed to scan ${channel} with status=${SLStatus[status]}.`)
             }
@@ -878,12 +881,12 @@ export default class Stack extends Command {
         const eui64 = await ezsp.ezspGetEui64()
         const tokensBuf = await EmberTokensManager.saveTokens(ezsp, Buffer.from(eui64.slice(2 /* 0x */), 'hex').reverse())
 
-        if (tokensBuf === null) {
-            logger.error(`Failed to backup tokens.`)
-        } else {
+        if (tokensBuf) {
             writeFileSync(saveFile, tokensBuf.toString('hex'), 'utf8')
 
             logger.info(`Tokens backup written to '${saveFile}'.`)
+        } else {
+            logger.error(`Failed to backup tokens.`)
         }
 
         return false

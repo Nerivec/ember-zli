@@ -1,4 +1,4 @@
-import { ZSpec, Zcl } from 'zigbee-herdsman'
+import { Zcl, ZSpec } from 'zigbee-herdsman'
 import { EmberMulticastId } from 'zigbee-herdsman/dist/adapter/ember/types.js'
 import { ClusterId, ProfileId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 

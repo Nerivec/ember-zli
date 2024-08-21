@@ -1,6 +1,7 @@
+import { readFileSync } from 'node:fs'
+
 import { select } from '@inquirer/prompts'
 import { Command } from '@oclif/core'
-import { readFileSync } from 'node:fs'
 
 import { DEFAULT_TOKENS_BACKUP_PATH, logger } from '../../index.js'
 import { parseTokenData } from '../../utils/ember.js'

@@ -1,5 +1,7 @@
-import { confirm, input, select } from '@inquirer/prompts'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+
+import { confirm, input, select } from '@inquirer/prompts'
+
 import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
 import { CONF_PORT_PATH, logger } from '../index.js'

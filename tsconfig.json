@@ -9,7 +9,7 @@
     "moduleResolution": "node16",
     "noUnusedLocals": true
   },
-  "include": ["./src/**/*"],
+  "include": ["./src/**/*", "./eslint.config.mjs", "./.prettierrc.js"],
   "ts-node": {
     "esm": true
   }

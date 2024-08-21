@@ -1,8 +1,9 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { input, select } from '@inquirer/prompts'
 import { Command, Flags } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
-import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 
 import { DATA_FOLDER, logger } from '../../index.js'
 import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from '../../utils/bootloader.js'
@@ -198,7 +199,6 @@ export default class Bootloader extends Command {
                     message: 'Enter the URL to the firmware file',
                     validate(url: string): boolean {
                         try {
-                            // eslint-disable-next-line no-new
                             new URL(url)
                             return true
                         } catch {

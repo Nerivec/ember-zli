@@ -1,4 +1,5 @@
 import EventEmitter from 'node:events'
+
 import { EzspBuffalo } from 'zigbee-herdsman/dist/adapter/ember/ezsp/buffalo.js'
 import { halCommonCrc16 } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
 

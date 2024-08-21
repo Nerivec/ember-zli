@@ -1,7 +1,8 @@
-import { confirm } from '@inquirer/prompts'
-// eslint-disable-next-line import/default
-import CRC32 from 'crc-32'
 import EventEmitter from 'node:events'
+
+import { confirm } from '@inquirer/prompts'
+import CRC32 from 'crc-32'
+
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 
 import { logger } from '../index.js'
@@ -152,7 +153,12 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 message: 'Is currently installed firmware RCP (multiprotocol)?',
             })
 
-            isRCP ? await this.cpcLaunch() : await this.ezspLaunch()
+            if (isRCP) {
+                await this.cpcLaunch()
+            } else {
+                await this.ezspLaunch()
+            }
+
             // this time will fail if not successful since exhausted all possible ways
             await this.knock(true)
 
@@ -264,7 +270,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             return FirmwareValidation.INVALID
         }
 
-        // eslint-disable-next-line import/no-named-as-default-member
         const computedCRC32 = CRC32.buf(firmware.subarray(0, endTagStart + 12), 0) // tag+length+crc32 (4+4+4)
 
         if (computedCRC32 !== VALID_FIRMWARE_CRC32) {
