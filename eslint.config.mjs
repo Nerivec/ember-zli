@@ -8,7 +8,6 @@ export default tseslint.config(
     prettier,
     {
         files: ["**/*.ts", "**/*.tsx"],
-        ignores: ["./eslint.config.mjs", "dist", "tmp"],
         languageOptions: {
             ecmaVersion: "latest",
             sourceType: "script",
@@ -21,5 +20,8 @@ export default tseslint.config(
             "max-params": ["error", 10],
             "@typescript-eslint/no-floating-promises": "error",
         },
-    }
+    },
+    {
+        ignores: ["./eslint.config.mjs", "dist", "tmp"],
+    },
 );
