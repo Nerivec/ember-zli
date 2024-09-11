@@ -134,7 +134,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         this.xmodem.on(XEvent.DATA, this.onXModemData.bind(this))
     }
 
-    public async connect(forceReset: boolean): Promise<void> {
+    public async connect(): Promise<void> {
         if (this.state !== BootloaderState.NOT_CONNECTED) {
             logger.debug(`Already connected to bootloader. Skipping connect attempt.`, NS)
             return
@@ -142,8 +142,8 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         logger.info(`Connecting to bootloader...`, NS)
 
-        // check if already in bootloader, or try to force into it if requested, don't fail if not successful
-        await this.knock(false, forceReset)
+        // check if already in bootloader, don't fail if not successful
+        await this.knock(false)
 
         // @ts-expect-error changed by received serial data
         if (this.state !== BootloaderState.IDLE) {
@@ -226,20 +226,14 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
     }
 
-    public async resetByPattern(knock: boolean = false): Promise<void> {
-        if (!this.transport.isSerial) {
-            logger.error(`Reset by pattern unavailable for TCP.`, NS)
-            return
-        }
-
+    public async resetByPattern(exit: boolean): Promise<void> {
         switch (this.adapterModel) {
             // TODO: support per adapter
-            case 'Sonoff ZBDongle-E':
-            case undefined: {
+            case 'Sonoff ZBDongle-E': {
                 await this.transport.serialSet({ dtr: false, rts: true })
                 await this.transport.serialSet({ dtr: true, rts: false }, 100)
 
-                if (!knock) {
+                if (exit) {
                     await this.transport.serialSet({ dtr: false }, 500)
                 }
 
@@ -247,7 +241,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             }
 
             default: {
-                logger.error(`Reset by pattern unavailable on ${this.adapterModel}.`, NS)
+                logger.debug(`Reset by pattern unavailable for ${this.adapterModel}.`, NS)
             }
         }
     }
@@ -380,18 +374,23 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         await emberStop(ezsp)
     }
 
-    private async knock(fail: boolean, forceReset: boolean = false): Promise<void> {
+    private async knock(fail: boolean): Promise<void> {
         logger.debug(`Knocking...`, NS)
 
         try {
             await this.transport.initPort()
 
-            if (forceReset) {
-                await this.resetByPattern(true)
+            // on first knock only, try pattern reset if supported
+            if (!fail && this.adapterModel === 'Sonoff ZBDongle-E') {
+                const forceReset = await confirm({ message: 'Force reset into bootloader?', default: true })
 
-                if (this.state === BootloaderState.IDLE) {
-                    logger.debug(`Entered bootloader via pattern reset.`, NS)
-                    return
+                if (forceReset) {
+                    await this.resetByPattern(false)
+
+                    if (this.state === BootloaderState.IDLE) {
+                        logger.debug(`Entered bootloader via pattern reset.`, NS)
+                        return
+                    }
                 }
             }
         } catch (error) {
@@ -442,7 +441,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             // got menu back, failed to run
             logger.warning(`Failed to exit bootloader and run firmware. Trying pattern reset...`, NS)
 
-            await this.resetByPattern()
+            await this.resetByPattern(true)
         }
 
         return true

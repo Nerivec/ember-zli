@@ -1,7 +1,6 @@
 import EventEmitter from 'node:events'
 
 import { EzspBuffalo } from 'zigbee-herdsman/dist/adapter/ember/ezsp/buffalo.js'
-import { halCommonCrc16 } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
 
 import { logger } from '../index.js'
 import {
@@ -28,6 +27,7 @@ import {
 } from './consts.js'
 import { Transport, TransportEvent } from './serial.js'
 import { CpcSystemCommand, CpcSystemCommandId, CpcSystemStatus, Digit, FirmwareVersionShort, PortConf } from './types.js'
+import { computeCRC16 } from './utils.js'
 
 const NS = { namespace: 'cpc' }
 
@@ -143,8 +143,8 @@ export class Cpc extends EventEmitter<CpcEventMap> {
         }
 
         // const unnumberedType = (control >> CPC_HDLC_CONTROL_UNNUMBERED_TYPE_SHIFT) & CPC_HDLC_CONTROL_UNNUMBERED_TYPE_MASK
-        const headerChecksum = data.readUint16LE(CPC_HDLC_HEADER_SIZE)
-        const expectedHeaderChecksum = this.computeCrc(data.subarray(0, CPC_HDLC_HEADER_SIZE))
+        const headerChecksum = data.readUInt16LE(CPC_HDLC_HEADER_SIZE)
+        const expectedHeaderChecksum = computeCRC16(data.subarray(0, CPC_HDLC_HEADER_SIZE)).readUInt16BE()
 
         if (headerChecksum !== expectedHeaderChecksum) {
             throw new Error(`Received invalid System UFrame headerChecksum=${headerChecksum} expected=${expectedHeaderChecksum}.`)
@@ -157,8 +157,7 @@ export class Cpc extends EventEmitter<CpcEventMap> {
         i += 2
         const payload = data.subarray(i, -CPC_HDLC_FCS_SIZE)
         const frameChecksum = data.readUInt16LE(i + payload.length)
-
-        const expectedFrameChecksum = this.computeCrc(data.subarray(CPC_HDLC_HEADER_RAW_SIZE, -CPC_HDLC_FCS_SIZE))
+        const expectedFrameChecksum = computeCRC16(data.subarray(CPC_HDLC_HEADER_RAW_SIZE, -CPC_HDLC_FCS_SIZE)).readUInt16BE()
 
         if (frameChecksum !== expectedFrameChecksum) {
             throw new Error(`Received invalid System UFrame frameChecksum=${frameChecksum} expected=${expectedFrameChecksum}.`)
@@ -189,7 +188,7 @@ export class Cpc extends EventEmitter<CpcEventMap> {
 
         buffer.set(header, 0)
 
-        const headerChecksum = this.computeCrc(header)
+        const headerChecksum = computeCRC16(header).readUInt16BE()
 
         buffer.writeUInt16LE(headerChecksum, CPC_HDLC_HCS_POS)
 
@@ -201,7 +200,7 @@ export class Cpc extends EventEmitter<CpcEventMap> {
         buffer.set(payload, i)
         i += payload.length
 
-        const frameChecksum = this.computeCrc(buffer.subarray(CPC_HDLC_HEADER_RAW_SIZE, i))
+        const frameChecksum = computeCRC16(buffer.subarray(CPC_HDLC_HEADER_RAW_SIZE, i)).readUInt16BE()
 
         buffer.writeUInt16LE(frameChecksum, i)
 
@@ -220,16 +219,6 @@ export class Cpc extends EventEmitter<CpcEventMap> {
 
     public async stop(): Promise<void> {
         await this.transport.close(false)
-    }
-
-    private computeCrc(data: Buffer): number /* uint16_t */ {
-        let crc = 0
-
-        for (const byte of data) {
-            crc = halCommonCrc16(byte, crc)
-        }
-
-        return crc
     }
 
     private async onTransportData(received: Buffer): Promise<void> {

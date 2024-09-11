@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { input, select } from '@inquirer/prompts'
-import { Command, Flags } from '@oclif/core'
+import { Command } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
 
 import { DATA_FOLDER, logger } from '../../index.js'
@@ -19,21 +19,8 @@ export default class Bootloader extends Command {
     static override args = {}
     static override description = 'Interact with the Gecko bootloader in the adapter.'
     static override examples = ['<%= config.bin %> <%= command.id %>']
-    static override flags = {
-        file: Flags.file({
-            char: 'f',
-            description: 'Path to a firmware file. If not provided, will be set via interactive prompt when entering relevant menu.',
-            exists: true,
-        }),
-        forceReset: Flags.boolean({
-            char: 'r',
-            default: false,
-            description: 'Try to force reset into bootloader (supported by: Sonoff ZBDongle-E).',
-        }),
-    }
 
     public async run(): Promise<void> {
-        const { flags } = await this.parse(Bootloader)
         const portConf = await getPortConf()
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`)
 
@@ -71,12 +58,12 @@ export default class Bootloader extends Command {
             progressBar.update(percent)
         })
 
-        await gecko.connect(flags.forceReset)
+        await gecko.connect()
 
         let exit: boolean = false
 
         while (!exit) {
-            exit = await this.navigateMenu(gecko, flags.file)
+            exit = await this.navigateMenu(gecko)
         }
 
         await gecko.transport.close(false)
@@ -104,7 +91,7 @@ export default class Bootloader extends Command {
         return undefined
     }
 
-    private async navigateMenu(gecko: GeckoBootloader, firmwareFile: string | undefined): Promise<boolean> {
+    private async navigateMenu(gecko: GeckoBootloader): Promise<boolean> {
         const answer = await select<-1 | BootloaderMenu>({
             choices: [
                 { name: 'Get info', value: BootloaderMenu.INFO },
@@ -127,7 +114,7 @@ export default class Bootloader extends Command {
             let validFirmware: FirmwareValidation = FirmwareValidation.INVALID
 
             while (validFirmware !== FirmwareValidation.VALID) {
-                firmware = firmwareFile === undefined ? await this.selectFirmware(gecko) : readFileSync(firmwareFile)
+                firmware = await this.selectFirmware(gecko)
 
                 validFirmware = await gecko.validateFirmware(firmware, SUPPORTED_VERSIONS_REGEX)
 

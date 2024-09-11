@@ -5,6 +5,7 @@ import { input, select } from '@inquirer/prompts'
 
 import { DEFAULT_STACK_CONFIG } from 'zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js'
 import { IEEE802154CcaMode } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
+import { halCommonCrc16, highByte, lowByte } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
 import { UnifiedBackupStorage } from 'zigbee-herdsman/dist/models/backup-storage-unified.js'
 import { Backup } from 'zigbee-herdsman/dist/models/backup.js'
 import { fromUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
@@ -192,4 +193,26 @@ export const getBackupFromFile = (backupFile: string): Backup | undefined => {
     }
 
     return undefined
+}
+
+export const computeCRC16 = (data: Buffer, init: number = 0): Buffer => {
+    let crc = init
+
+    for (const byte of data) {
+        crc = halCommonCrc16(byte, crc)
+    }
+
+    return Buffer.from([highByte(crc), lowByte(crc)])
+}
+
+export const computeCRC16CITTKermit = (data: Buffer, init: number = 0): Buffer => {
+    let crc = init
+
+    for (const byte of data) {
+        let t = crc ^ byte
+        t = (t ^ (t << 4)) & 0xff
+        crc = (crc >> 8) ^ (t << 8) ^ (t >> 4) ^ (t << 3)
+    }
+
+    return Buffer.from([lowByte(crc), highByte(crc)])
 }

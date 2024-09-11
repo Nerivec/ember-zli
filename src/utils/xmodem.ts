@@ -1,8 +1,7 @@
 import EventEmitter from 'node:events'
 
-import { halCommonCrc16, highByte, lowByte } from 'zigbee-herdsman/dist/adapter/ember/utils/math.js'
-
 import { logger } from '../index.js'
+import { computeCRC16 } from './utils.js'
 
 const NS = { namespace: 'xmodemcrc' }
 const FILLER = 0xff
@@ -190,17 +189,9 @@ export class XModemCRC extends EventEmitter<XModemCRCEventMap> {
         const progressPc = Math.round((blockNum / (this.blocks.length - XMODEM_START_BLOCK)) * 100)
         this.waitForBlock = blockNum + 1
         blockNum &= 0xff // starts at 1, goes to 255, then wraps back to 0 (XModem spec)
-        let buffer = Buffer.concat([Buffer.from([XSignal.SOH]), Buffer.from([blockNum]), Buffer.from([0xff - blockNum]), blockData])
-        let crc = 0
-
-        for (const blockDatum of blockData) {
-            crc = halCommonCrc16(blockDatum, crc)
-        }
-
-        buffer = Buffer.concat([buffer, Buffer.from([highByte(crc), lowByte(crc)])])
 
         logger.debug(`Sending block ${blockNum}.`, NS)
 
-        this.emit(XEvent.DATA, buffer, progressPc)
+        this.emit(XEvent.DATA, Buffer.concat([Buffer.from([XSignal.SOH, blockNum, 0xff - blockNum]), blockData, computeCRC16(blockData)]), progressPc)
     }
 }

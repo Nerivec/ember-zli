@@ -18,6 +18,8 @@ export const DEFAULT_NETWORK_BACKUP_PATH = join(DATA_FOLDER, 'coordinator_backup
 export const DEFAULT_TOKENS_BACKUP_PATH = join(DATA_FOLDER, 'tokens_backup.nvm3')
 export const DEFAULT_ROUTER_TOKENS_BACKUP_PATH = join(DATA_FOLDER, 'router_tokens_backup.nvm3')
 
+export const DEFAULT_PCAP_PATH = join(DATA_FOLDER, 'sniff.pcap')
+
 if (!existsSync(DATA_FOLDER)) {
     mkdirSync(DATA_FOLDER)
 }

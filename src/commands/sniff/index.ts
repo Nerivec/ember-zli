@@ -1,5 +1,5 @@
 import { createSocket, Socket } from 'node:dgram'
-import { existsSync } from 'node:fs'
+import { createWriteStream, existsSync, WriteStream } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -11,13 +11,20 @@ import { ZSpec } from 'zigbee-herdsman'
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
 
-import { DATA_FOLDER, logger } from '../../index.js'
+import { DATA_FOLDER, DEFAULT_PCAP_PATH, logger } from '../../index.js'
 import { emberStart, emberStop } from '../../utils/ember.js'
 import { getPortConf } from '../../utils/port.js'
-import { createWiresharkZEPFrame } from '../../utils/wireshark.js'
+import { browseToFile, computeCRC16CITTKermit } from '../../utils/utils.js'
+import { createPcapFileHeader, createPcapPacketRecordMs, createWiresharkZEPFrame, PCAP_MAGIC_NUMBER_MS } from '../../utils/wireshark.js'
 
 enum SniffMenu {
     START_SNIFFING = 0,
+}
+
+enum SniffDestination {
+    LOG_FILE = 0,
+    WIRESHARK = 1,
+    PCAP_FILE = 2,
 }
 
 const DEFAULT_WIRESHARK_IP_ADDRESS = '127.0.0.1'
@@ -33,6 +40,7 @@ export default class Sniff extends Command {
     public sequence: number = 0
     public sniffing: boolean = false
     public udpSocket: Socket | undefined
+    public pcapFileStream: WriteStream | undefined
     public wiresharkIPAddress: string = DEFAULT_WIRESHARK_IP_ADDRESS
     public zepUDPPort: number = DEFAULT_ZEP_UDP_PORT
 
@@ -55,6 +63,7 @@ export default class Sniff extends Command {
         }
 
         this.udpSocket?.close()
+        this.pcapFileStream?.close()
         await emberStop(this.ezsp)
 
         return this.exit(0)
@@ -66,14 +75,42 @@ export default class Sniff extends Command {
             return this.exit(1)
         }
 
-        const sendToWireshark = await confirm({ message: 'Send to Wireshark?', default: true })
+        const sniffDestination = await select({
+            choices: [
+                { name: 'Wireshark', value: SniffDestination.WIRESHARK, description: 'Write to Wireshark ZEP UDP Protocol' },
+                { name: 'PCAP file', value: SniffDestination.PCAP_FILE, description: 'Write to a PCAP file for later use or sharing.' },
+                { name: 'Log', value: SniffDestination.LOG_FILE, description: 'Write raw data to log file.' },
+            ],
+            message: 'Destination (Note: if present, custom handler is always used, regardless of the selected destination)',
+        })
 
-        if (sendToWireshark) {
-            this.wiresharkIPAddress = await input({ message: 'Wireshark IP address', default: DEFAULT_WIRESHARK_IP_ADDRESS })
-            this.zepUDPPort = Number.parseInt(await input({ message: 'Wireshark ZEP UDP port', default: `${DEFAULT_ZEP_UDP_PORT}` }), 10)
-            this.udpSocket = createSocket('udp4')
+        switch (sniffDestination) {
+            case SniffDestination.WIRESHARK: {
+                this.wiresharkIPAddress = await input({ message: 'Wireshark IP address', default: DEFAULT_WIRESHARK_IP_ADDRESS })
+                this.zepUDPPort = Number.parseInt(await input({ message: 'Wireshark ZEP UDP port', default: `${DEFAULT_ZEP_UDP_PORT}` }), 10)
+                this.udpSocket = createSocket('udp4')
 
-            this.udpSocket.bind(this.zepUDPPort)
+                this.udpSocket.bind(this.zepUDPPort)
+
+                break
+            }
+
+            case SniffDestination.PCAP_FILE: {
+                const pcapFilePath = await browseToFile('PCAP file', DEFAULT_PCAP_PATH, true)
+                this.pcapFileStream = createWriteStream(pcapFilePath, 'utf8')
+
+                this.pcapFileStream.on('error', (error) => {
+                    logger.error(error)
+
+                    return true
+                })
+
+                const fileHeader = createPcapFileHeader(PCAP_MAGIC_NUMBER_MS)
+
+                this.pcapFileStream.write(fileHeader)
+
+                break
+            }
         }
 
         // set desired tx power before scan
@@ -156,24 +193,45 @@ export default class Sniff extends Command {
                 this.customHandler(this, logger, linkQuality, rssi, packetContents)
             }
 
-            if (sendToWireshark) {
-                try {
-                    const wsZEPFrame = createWiresharkZEPFrame(channel, deviceId, linkQuality, rssi, this.sequence, packetContents)
-                    this.sequence += 1
+            switch (sniffDestination) {
+                case SniffDestination.WIRESHARK: {
+                    try {
+                        const wsZEPFrame = createWiresharkZEPFrame(channel, deviceId, linkQuality, rssi, this.sequence, packetContents)
+                        this.sequence += 1
 
-                    if (this.sequence > 4294967295) {
-                        // wrap if necessary...
-                        this.sequence = 0
+                        if (this.sequence > 0xffffffff) {
+                            // wrap if necessary...
+                            this.sequence = 0
+                        }
+
+                        if (this.udpSocket) {
+                            this.udpSocket.send(wsZEPFrame, this.zepUDPPort, this.wiresharkIPAddress)
+                        }
+                    } catch (error) {
+                        logger.debug(error)
                     }
 
-                    // expected valid if `sendToWireshark`
-                    this.udpSocket!.send(wsZEPFrame, this.zepUDPPort, this.wiresharkIPAddress)
-                } catch (error) {
-                    logger.debug(error)
+                    break
                 }
-            } else if (!this.customHandler) {
-                // log as debug if nothing enabled
-                ezspMfglibRxHandlerOriginal(linkQuality, rssi, packetContents)
+
+                case SniffDestination.PCAP_FILE: {
+                    if (this.pcapFileStream) {
+                        // fix static CRC used in EZSP >= v8
+                        packetContents.set(computeCRC16CITTKermit(packetContents.subarray(0, -2)), packetContents.length - 2)
+
+                        const packet = createPcapPacketRecordMs(packetContents)
+
+                        this.pcapFileStream.write(packet)
+                    }
+
+                    break
+                }
+
+                case SniffDestination.LOG_FILE: {
+                    ezspMfglibRxHandlerOriginal(linkQuality, rssi, packetContents)
+
+                    break
+                }
             }
         }
 
