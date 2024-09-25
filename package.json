@@ -1,7 +1,7 @@
 {
   "name": "ember-zli",
   "description": "Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "author": "Nerivec",
   "bin": {
     "ember-zli": "bin/run.js"
@@ -16,7 +16,7 @@
     "cli-progress": "^3",
     "crc-32": "^1",
     "winston": "^3",
-    "zigbee-herdsman": "0.57.3"
+    "zigbee-herdsman": "2.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9",

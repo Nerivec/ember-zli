@@ -147,6 +147,7 @@ export default class Bootloader extends Command {
                 const recommended = FIRMWARE_LINKS.recommended[gecko.adapterModel!]
                 const latest = FIRMWARE_LINKS.latest[gecko.adapterModel!]
                 const official = FIRMWARE_LINKS.official[gecko.adapterModel!]
+                const experimental = FIRMWARE_LINKS.experimental[gecko.adapterModel!]
                 const firmwareVariant = await select<FirmwareVariant>({
                     choices: [
                         {
@@ -172,6 +173,14 @@ export default class Bootloader extends Command {
                                 ? `Version: ${official.version}, RTS/CTS: ${official.settings.rtscts}, URL: ${official.url}`
                                 : undefined,
                             disabled: !official.url,
+                        },
+                        {
+                            name: `Experimental`,
+                            value: 'experimental',
+                            description: experimental.url
+                                ? `Version: ${experimental.version}, RTS/CTS: ${experimental.settings.rtscts}, URL: ${experimental.url}`
+                                : undefined,
+                            disabled: !experimental.url,
                         },
                     ],
                     message: 'Firmware version',

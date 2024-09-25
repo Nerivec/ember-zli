@@ -6,7 +6,7 @@
 /tmp
 /node_modules
 oclif.manifest.json
-
+*.tsbuildinfo
 
 
 yarn.lock

@@ -1060,7 +1060,7 @@ export default class Router extends Command {
 
         if (broadcastMgmtPermitJoin) {
             // `authentication`: TC significance always 1 (zb specs)
-            const zdoPayload = BuffaloZdo.buildPermitJoining(duration, 1, [])
+            const zdoPayload = BuffaloZdo.buildRequest(true, Zdo.ClusterId.PERMIT_JOINING_REQUEST, duration, 1, [])
             ;[status, apsFrame, messageTag] = await this.sendZDORequest(
                 ZSpec.BroadcastAddress.DEFAULT,
                 Zdo.ClusterId.PERMIT_JOINING_REQUEST,
