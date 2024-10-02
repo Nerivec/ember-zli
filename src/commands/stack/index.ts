@@ -25,13 +25,14 @@ import { initSecurityManagerContext } from 'zigbee-herdsman/dist/adapter/ember/u
 import { toUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
 
 import { DEFAULT_NETWORK_BACKUP_PATH, DEFAULT_STACK_CONFIG_PATH, DEFAULT_TOKENS_BACKUP_PATH, logger } from '../../index.js'
+import { CREATOR_STACK_RESTORED_EUI64 } from '../../utils/consts.js'
 import { emberFullVersion, emberNetworkInit, emberStart, emberStop, getLibraryStatus, waitForStackStatus } from '../../utils/ember.js'
 import { NVM3ObjectKey } from '../../utils/enums.js'
 import { getPortConf } from '../../utils/port.js'
 import { ConfigValue, LinkKeyBackupData } from '../../utils/types.js'
 import { browseToFile, getBackupFromFile, toHex } from '../../utils/utils.js'
 
-enum StackMenu {
+const enum StackMenu {
     STACK_INFO = 0,
     STACK_CONFIG = 1,
 
@@ -44,14 +45,11 @@ enum StackMenu {
     TOKENS_BACKUP = 20,
     TOKENS_RESTORE = 21,
     TOKENS_RESET = 22,
+    TOKENS_WRITE_EUI64 = 23,
 
     SECURITY_INFO = 30,
 
     REPAIRS = 99,
-}
-
-enum RepairId {
-    EUI64_MISMATCH = 0,
 }
 
 const BULLET_FULL = '\u2022'
@@ -316,7 +314,7 @@ export default class Stack extends Command {
             await input({
                 default: '5',
                 message: 'Radio transmit power [-128-127]',
-                validate(value: string) {
+                validate(value) {
                     if (/\./.test(value)) {
                         return false
                     }
@@ -491,7 +489,7 @@ export default class Stack extends Command {
             await input({
                 default: '5',
                 message: 'Radio transmit power [-128-127]',
-                validate(value: string) {
+                validate(value) {
                     if (/\./.test(value)) {
                         return false
                     }
@@ -619,6 +617,9 @@ export default class Stack extends Command {
     }
 
     private async menuRepairs(ezsp: Ezsp): Promise<boolean> {
+        const enum RepairId {
+            EUI64_MISMATCH = 0,
+        }
         const repairId = await select<-1 | RepairId>({
             choices: [
                 { name: 'Check for EUI64 mismatch', value: RepairId.EUI64_MISMATCH },
@@ -930,6 +931,86 @@ export default class Stack extends Command {
         return true
     }
 
+    private async menuTokensWriteEUI64(ezsp: Ezsp): Promise<boolean> {
+        let tokenKey: number | undefined
+
+        for (const key of [NVM3ObjectKey.STACK_RESTORED_EUI64, CREATOR_STACK_RESTORED_EUI64]) {
+            const [status, tokenData] = await ezsp.ezspGetTokenData(key, 0)
+
+            if (status === SLStatus.OK) {
+                logger.debug(`Restored EUI64 token (${key}): ${tokenData.data.toString('hex')}.`)
+
+                tokenKey = key
+                break
+            }
+        }
+
+        if (tokenKey === undefined) {
+            logger.error(`Unable to write EUI64, operation not supported by firmware.`)
+
+            return false
+        }
+
+        const enum Source {
+            FILE = 0,
+            INPUT = 1,
+        }
+        const source = await select<-1 | Source>({
+            choices: [
+                { name: 'From coordinator backup file', value: Source.FILE },
+                { name: `From manual input (format: ${ZSpec.BLANK_EUI64})`, value: Source.INPUT },
+                { name: 'Go Back', value: -1 },
+            ],
+            message: 'Source for the EUI64',
+        })
+        let eui64: Buffer | undefined
+
+        switch (source) {
+            case Source.FILE: {
+                const backupFile = await browseToFile('File location', DEFAULT_NETWORK_BACKUP_PATH)
+                const backup = getBackupFromFile(backupFile)
+
+                if (backup === undefined) {
+                    // error logged in getBackup
+                    return false
+                }
+
+                eui64 = backup.coordinatorIeeeAddress
+
+                break
+            }
+
+            case Source.INPUT: {
+                const eui64Hex = await input({
+                    message: 'EUI64',
+                    default: ZSpec.BLANK_EUI64,
+                    validate(value) {
+                        return /^0x[0-9a-f]{16}$/i.test(value)
+                    },
+                })
+                eui64 = Buffer.from(eui64Hex.slice(2 /* 0x */), 'hex').reverse()
+
+                break
+            }
+
+            case -1: {
+                return false
+            }
+        }
+
+        if (!eui64) {
+            logger.error(`Invalid EUI64, cannot procede.`)
+
+            return false
+        }
+
+        logger.info(`Writing EUI64: ${eui64.toString('hex')}.`)
+
+        await ezsp.ezspSetTokenData(tokenKey, 0, { data: eui64, size: eui64.length })
+
+        return true
+    }
+
     private async navigateMenu(ezsp: Ezsp): Promise<boolean> {
         const answer = await select<-1 | StackMenu>({
             choices: [
@@ -943,6 +1024,7 @@ export default class Stack extends Command {
                 { name: 'Backup NVM3 tokens', value: StackMenu.TOKENS_BACKUP },
                 { name: 'Restore NVM3 tokens', value: StackMenu.TOKENS_RESTORE },
                 { name: 'Reset NVM3 tokens', value: StackMenu.TOKENS_RESET },
+                { name: 'Write EUI64 NVM3 token', value: StackMenu.TOKENS_WRITE_EUI64 },
                 { name: 'Get security info', value: StackMenu.SECURITY_INFO },
                 { name: 'Repairs', value: StackMenu.REPAIRS },
                 { name: 'Exit', value: -1 },
@@ -989,6 +1071,10 @@ export default class Stack extends Command {
 
             case StackMenu.TOKENS_RESET: {
                 return this.menuTokensReset(ezsp)
+            }
+
+            case StackMenu.TOKENS_WRITE_EUI64: {
+                return this.menuTokensWriteEUI64(ezsp)
             }
 
             case StackMenu.SECURITY_INFO: {

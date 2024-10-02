@@ -8,7 +8,7 @@ import { parseTokenData } from '../../utils/ember.js'
 import { NVM3ObjectKey } from '../../utils/enums.js'
 import { browseToFile } from '../../utils/utils.js'
 
-enum UtilsMenu {
+const enum UtilsMenu {
     PARSE_TOKENS_BACKUP_FILE = 10,
 }
 

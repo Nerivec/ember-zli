@@ -129,7 +129,9 @@ export const getPortConf = async (): Promise<PortConf> => {
         case 'tcp': {
             path = await input({
                 message: `TCP path ('tcp://<host>:<port>')`,
-                validate: (s) => TCP_REGEX.test(s),
+                validate(value) {
+                    return TCP_REGEX.test(value)
+                },
             })
 
             break

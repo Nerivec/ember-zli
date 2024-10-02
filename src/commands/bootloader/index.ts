@@ -7,7 +7,7 @@ import { Presets, SingleBar } from 'cli-progress'
 
 import { DATA_FOLDER, logger } from '../../index.js'
 import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from '../../utils/bootloader.js'
-import { FirmwareSource, FirmwareValidation } from '../../utils/enums.js'
+import { FirmwareValidation } from '../../utils/enums.js'
 import { FIRMWARE_LINKS } from '../../utils/firmware-links.js'
 import { getPortConf } from '../../utils/port.js'
 import { AdapterModel, FirmwareVariant } from '../../utils/types.js'
@@ -128,6 +128,11 @@ export default class Bootloader extends Command {
     }
 
     private async selectFirmware(gecko: GeckoBootloader): Promise<Buffer | undefined> {
+        const enum FirmwareSource {
+            PRE_DEFINED = 0,
+            URL = 1,
+            DATA_FOLDER = 2,
+        }
         const firmwareSource = await select<FirmwareSource>({
             choices: [
                 {
@@ -193,9 +198,9 @@ export default class Bootloader extends Command {
             case FirmwareSource.URL: {
                 const url = await input({
                     message: 'Enter the URL to the firmware file',
-                    validate(url: string): boolean {
+                    validate(value) {
                         try {
-                            new URL(url)
+                            new URL(value)
                             return true
                         } catch {
                             return false

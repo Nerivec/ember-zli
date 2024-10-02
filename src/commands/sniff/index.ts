@@ -17,14 +17,8 @@ import { getPortConf } from '../../utils/port.js'
 import { browseToFile, computeCRC16CITTKermit } from '../../utils/utils.js'
 import { createPcapFileHeader, createPcapPacketRecordMs, createWiresharkZEPFrame, PCAP_MAGIC_NUMBER_MS } from '../../utils/wireshark.js'
 
-enum SniffMenu {
+const enum SniffMenu {
     START_SNIFFING = 0,
-}
-
-enum SniffDestination {
-    LOG_FILE = 0,
-    WIRESHARK = 1,
-    PCAP_FILE = 2,
 }
 
 const DEFAULT_WIRESHARK_IP_ADDRESS = '127.0.0.1'
@@ -75,6 +69,11 @@ export default class Sniff extends Command {
             return this.exit(1)
         }
 
+        const enum SniffDestination {
+            LOG_FILE = 0,
+            WIRESHARK = 1,
+            PCAP_FILE = 2,
+        }
         const sniffDestination = await select({
             choices: [
                 { name: 'Wireshark', value: SniffDestination.WIRESHARK, description: 'Write to Wireshark ZEP UDP Protocol' },

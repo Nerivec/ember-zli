@@ -109,8 +109,8 @@ export const browseToFile = async (message: string, defaultValue: string, toWrit
         case 1: {
             filepath = await input({
                 message: 'Enter path to file',
-                validate(path: string): boolean {
-                    return existsSync(dirname(path)) && extname(path) === extname(defaultValue)
+                validate(value) {
+                    return existsSync(dirname(value)) && extname(value) === extname(defaultValue)
                 },
             })
 

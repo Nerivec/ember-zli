@@ -84,7 +84,7 @@ type CustomEventHandlers = {
     onZDOResponse?: (cmd: Command, logger: Logger, apsFrame: EmberApsFrame, sender: NodeId, messageContents: Buffer) => Promise<void>
 }
 
-enum RouterMenu {
+const enum RouterMenu {
     NETWORK_JOIN = 0,
     NETWORK_REJOIN = 1,
     NETWORK_LEAVE = 2,
@@ -259,7 +259,7 @@ export default class Router extends Command {
             await input({
                 default: '5',
                 message: 'Radio transmit power [-128-127]',
-                validate(value: string) {
+                validate(value) {
                     if (/\./.test(value)) {
                         return false
                     }
@@ -633,18 +633,23 @@ export default class Router extends Command {
             return this.exit(1)
         }
 
-        const inputType = await select<0 | 1>({
+        const enum Source {
+            ZCL_LIST = 0,
+            INPUT = 1,
+        }
+        const source = await select<-1 | Source>({
             choices: [
-                { name: 'From ZCL list (long)', value: 0 },
-                { name: 'Manually', value: 1 },
+                { name: 'From ZCL list (long)', value: Source.ZCL_LIST },
+                { name: 'From manual input', value: Source.INPUT },
+                { name: 'Go Back', value: -1 },
             ],
-            message: 'How to enter code?',
+            message: 'Source for the manufacturer code',
         })
 
         let newCode: Zcl.ManufacturerCode = this.manufacturerCode
 
-        switch (inputType) {
-            case 0: {
+        switch (source) {
+            case Source.ZCL_LIST: {
                 const choices: { name: string; value: Zcl.ManufacturerCode }[] = []
 
                 for (const name of Object.keys(Zcl.ManufacturerCode)) {
@@ -665,12 +670,12 @@ export default class Router extends Command {
                 break
             }
 
-            case 1: {
+            case Source.INPUT: {
                 newCode = Number.parseInt(
                     await input({
                         default: Zcl.ManufacturerCode.SILICON_LABORATORIES.toString(),
                         message: 'Code [0-65535/0x0000-0xFFFF]',
-                        validate(value: string) {
+                        validate(value) {
                             if (/\./.test(value)) {
                                 return false
                             }
@@ -683,6 +688,10 @@ export default class Router extends Command {
                 )
 
                 break
+            }
+
+            case -1: {
+                return false
             }
         }
 
