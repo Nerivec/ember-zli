@@ -168,19 +168,9 @@ export const getBackupFromFile = (backupFile: string): Backup | undefined => {
     try {
         const data: UnifiedBackupStorage = JSON.parse(readFileSync(backupFile, 'utf8'))
 
-        if (data.metadata?.format === 'zigpy/open-coordinator-backup' && data.metadata?.version) {
-            if (data.metadata?.version !== 1) {
-                logger.error(`Unsupported open coordinator backup version (version=${data.metadata?.version}). Cannot restore.`)
-                return undefined
-            }
-
-            if (!data.stack_specific?.ezsp || !data.metadata.internal.ezspVersion) {
-                logger.error(`Current backup file is not for EmberZNet stack. Cannot restore.`)
-                return undefined
-            }
-
-            if (!data.stack_specific?.ezsp?.hashed_tclk) {
-                logger.error(`Current backup file does not contain the Trust Center Link Key. Cannot restore.`)
+        if (data.metadata.format === 'zigpy/open-coordinator-backup') {
+            if (data.metadata.version !== 1) {
+                logger.error(`Unsupported open coordinator backup version (version=${data.metadata.version}).`)
                 return undefined
             }
 

@@ -16,7 +16,7 @@ export default tseslint.config(
             },
         },
         rules: {
-            complexity: ["warn", 25],
+            complexity: ["warn", 30],
             "max-params": ["error", 10],
             "@typescript-eslint/no-floating-promises": "error",
         },

@@ -52,7 +52,9 @@ Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
 - [Backup NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Stack#backup-nvm3-tokens)
 - [Restore NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Stack#restore-nvm3-tokens)
 - [Reset NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Stack#reset-nvm3-tokens)
+- [Write EUI64 NVM3 token](https://github.com/Nerivec/ember-zli/wiki/Stack#write-eui64-nvm3-token)
 - [Get security info](https://github.com/Nerivec/ember-zli/wiki/Stack#get-security-info)
+- [Zigbee2MQTT Onboard (auto configuration)](https://github.com/Nerivec/ember-zli/wiki/Stack#zigbee2mqtt-onboard-auto-configuration)
 - [Repairs](https://github.com/Nerivec/ember-zli/wiki/Stack#repairs)
   - [Check for EUI64 mismatch](https://github.com/Nerivec/ember-zli/wiki/Stack#check-for-eui64-mismatch)
 
@@ -74,7 +76,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/2.5.0 win32-x64 node-v20.15.0
+ember-zli/2.6.0 win32-x64 node-v20.15.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
@@ -106,7 +108,7 @@ EXAMPLES
   $ ember-zli bootloader
 ```
 
-_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.5.0/src/commands/bootloader/index.ts)_
+_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.6.0/src/commands/bootloader/index.ts)_
 
 ## `ember-zli help [COMMAND]`
 
@@ -143,7 +145,7 @@ EXAMPLES
   $ ember-zli router
 ```
 
-_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.5.0/src/commands/router/index.ts)_
+_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.6.0/src/commands/router/index.ts)_
 
 ## `ember-zli sniff`
 
@@ -160,7 +162,7 @@ EXAMPLES
   $ ember-zli sniff
 ```
 
-_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.5.0/src/commands/sniff/index.ts)_
+_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.6.0/src/commands/sniff/index.ts)_
 
 ## `ember-zli stack`
 
@@ -177,7 +179,7 @@ EXAMPLES
   $ ember-zli stack
 ```
 
-_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.5.0/src/commands/stack/index.ts)_
+_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.6.0/src/commands/stack/index.ts)_
 
 ## `ember-zli utils`
 
@@ -194,7 +196,7 @@ EXAMPLES
   $ ember-zli utils
 ```
 
-_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.5.0/src/commands/utils/index.ts)_
+_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.6.0/src/commands/utils/index.ts)_
 
 ## `ember-zli version`
 

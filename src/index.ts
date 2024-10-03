@@ -17,6 +17,7 @@ export const DEFAULT_STACK_CONFIG_PATH = join(DATA_FOLDER, 'stack_config.json')
 export const DEFAULT_NETWORK_BACKUP_PATH = join(DATA_FOLDER, 'coordinator_backup.json')
 export const DEFAULT_TOKENS_BACKUP_PATH = join(DATA_FOLDER, 'tokens_backup.nvm3')
 export const DEFAULT_ROUTER_TOKENS_BACKUP_PATH = join(DATA_FOLDER, 'router_tokens_backup.nvm3')
+export const DEFAULT_CONFIGURATION_YAML_PATH = join(DATA_FOLDER, 'configuration.yaml')
 
 export const DEFAULT_PCAP_PATH = join(DATA_FOLDER, 'sniff.pcap')
 
@@ -49,18 +50,22 @@ export const logger = createLogger({
     ],
 })
 
+const getZHMessage = (messageOrLambda: string | (() => string)): string => {
+    return messageOrLambda instanceof Function ? messageOrLambda() : messageOrLambda
+}
+
 zhSetLogger({
     debug(message, namespace) {
-        logger.debug(`${message}`, { namespace })
+        logger.debug(getZHMessage(message), { namespace })
     },
     error(message, namespace) {
-        logger.error(`${message}`, { namespace })
+        logger.error(getZHMessage(message), { namespace })
     },
     info(message, namespace) {
-        logger.info(`${message}`, { namespace })
+        logger.info(getZHMessage(message), { namespace })
     },
     warning(message, namespace) {
-        logger.warn(`${message}`, { namespace })
+        logger.warn(getZHMessage(message), { namespace })
     },
 })
 

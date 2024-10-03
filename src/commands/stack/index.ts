@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 
 import { checkbox, confirm, input, select } from '@inquirer/prompts'
@@ -11,22 +12,36 @@ import {
     EmberInitialSecurityBitmask,
     EmberJoinMethod,
     EmberLibraryId,
-    EmberNetworkStatus,
     EmberNodeType,
     EzspNetworkScanType,
     SecManKeyType,
     SLStatus,
 } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
-import { EMBER_AES_HASH_BLOCK_SIZE } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
+import { EMBER_AES_HASH_BLOCK_SIZE, EMBER_ENCRYPTION_KEY_SIZE } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
 import { EzspConfigId, EzspDecisionBitmask, EzspDecisionId, EzspMfgTokenId, EzspPolicyId } from 'zigbee-herdsman/dist/adapter/ember/ezsp/enums.js'
 import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
 import { EmberInitialSecurityState, EmberNetworkParameters, EmberZigbeeNetwork, SecManContext } from 'zigbee-herdsman/dist/adapter/ember/types.js'
 import { initSecurityManagerContext } from 'zigbee-herdsman/dist/adapter/ember/utils/initters.js'
 import { toUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
+import { PanId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 
-import { DEFAULT_NETWORK_BACKUP_PATH, DEFAULT_STACK_CONFIG_PATH, DEFAULT_TOKENS_BACKUP_PATH, logger } from '../../index.js'
+import {
+    DEFAULT_CONFIGURATION_YAML_PATH,
+    DEFAULT_NETWORK_BACKUP_PATH,
+    DEFAULT_STACK_CONFIG_PATH,
+    DEFAULT_TOKENS_BACKUP_PATH,
+    logger,
+} from '../../index.js'
 import { CREATOR_STACK_RESTORED_EUI64 } from '../../utils/consts.js'
-import { emberFullVersion, emberNetworkInit, emberStart, emberStop, getLibraryStatus, waitForStackStatus } from '../../utils/ember.js'
+import {
+    emberFullVersion,
+    emberNetworkInit,
+    emberStart,
+    emberStop,
+    getKeyStructBitmask,
+    getLibraryStatus,
+    waitForStackStatus,
+} from '../../utils/ember.js'
 import { NVM3ObjectKey } from '../../utils/enums.js'
 import { getPortConf } from '../../utils/port.js'
 import { ConfigValue, LinkKeyBackupData } from '../../utils/types.js'
@@ -48,6 +63,8 @@ const enum StackMenu {
     TOKENS_WRITE_EUI64 = 23,
 
     SECURITY_INFO = 30,
+
+    ZIGBEE2MQTT_ONBOARD = 40,
 
     REPAIRS = 99,
 }
@@ -251,6 +268,21 @@ export default class Stack extends Command {
 
         const eui64 = await ezsp.ezspGetEui64()
 
+        const [netKeyStatus, netKeyInfo] = await ezsp.ezspGetNetworkKeyInfo()
+
+        if (netKeyStatus !== SLStatus.OK) {
+            throw new Error(`[BACKUP] Failed to get network keys info with status=${SLStatus[netKeyStatus]}.`)
+        }
+
+        const context = initSecurityManagerContext()
+        context.coreKeyType = SecManKeyType.TC_LINK
+
+        const [tcKeyStatus, tcKeyInfo] = await ezsp.ezspGetApsKeyInfo(context)
+
+        if (tcKeyStatus !== SLStatus.OK) {
+            throw new Error(`[BACKUP] Failed to get TC APS key info with status=${SLStatus[tcKeyStatus]}.`)
+        }
+
         logger.info(`Node EUI64=${eui64} type=${EmberNodeType[nodeType]}.`)
         logger.info(`Network parameters:`)
         logger.info(`  - PAN ID: ${netParams.panId} (${toHex(netParams.panId)})`)
@@ -258,6 +290,16 @@ export default class Stack extends Command {
         logger.info(`  - Radio Channel: ${netParams.radioChannel}`)
         logger.info(`  - Radio Power: ${netParams.radioTxPower} dBm`)
         logger.info(`  - Preferred Channels: ${ZSpec.Utils.uint32MaskToChannels(netParams.channels).join(',')}`)
+        logger.info(`Network key info:`)
+        logger.info(`  - Set? ${netKeyInfo.networkKeySet ? 'yes' : 'no'}`)
+        logger.info(`  - Sequence Number: ${netKeyInfo.networkKeySequenceNumber}`)
+        logger.info(`  - Frame Counter: ${netKeyInfo.networkKeyFrameCounter}`)
+        logger.info(`  - Alt Set? ${netKeyInfo.alternateNetworkKeySet ? 'yes' : 'no'}`)
+        logger.info(`  - Alt Sequence Number: ${netKeyInfo.altNetworkKeySequenceNumber}`)
+        logger.info(`Trust Center link key info:`)
+        logger.info(`  - Properties: ${getKeyStructBitmask(tcKeyInfo.bitmask)}`)
+        logger.info(`  - Incoming Frame Counter: ${tcKeyInfo.incomingFrameCounter}`)
+        logger.info(`  - Outgoing Frame Counter: ${tcKeyInfo.outgoingFrameCounter}`)
 
         return true
     }
@@ -306,8 +348,23 @@ export default class Stack extends Command {
         const backup = getBackupFromFile(backupFile)
 
         if (backup === undefined) {
-            // error logged in getBackup
+            // error logged in getBackupFromFile
             return false
+        }
+
+        if (!backup.ezsp) {
+            const confirmed = await confirm({ message: `Backup file is not for EmberZNet stack. Restore anyway?`, default: false })
+
+            if (!confirmed) {
+                logger.info(`Restore cancelled.`)
+                return false
+            }
+        }
+
+        if (!backup.ezsp?.hashed_tclk) {
+            logger.debug(`Backup file does not contain the Trust Center Link Key. Generating random one.`)
+            // don't care about version here, so just overwrite the whole `ezsp` object
+            backup.ezsp = { hashed_tclk: randomBytes(EMBER_ENCRYPTION_KEY_SIZE) }
         }
 
         const radioTxPower = Number.parseInt(
@@ -326,7 +383,6 @@ export default class Stack extends Command {
             }),
             10,
         )
-
         let status = await emberNetworkInit(ezsp)
         const noNetwork = status === SLStatus.NOT_JOINED
 
@@ -357,6 +413,7 @@ export default class Stack extends Command {
         }
 
         // before forming
+
         const keyList: LinkKeyBackupData[] = backup.devices.map((device) => {
             const octets = [...device.ieeeAddress.reverse()]
 
@@ -382,13 +439,6 @@ export default class Stack extends Command {
                 return true
             }
 
-            const networkStatus = await ezsp.ezspNetworkState()
-
-            if (networkStatus !== EmberNetworkStatus.NO_NETWORK) {
-                logger.error(`Cannot import TC data while network is up, networkStatus=${EmberNetworkStatus[networkStatus]}.`)
-                return true
-            }
-
             let status: SLStatus
 
             for (let i = 0; i < keyTableSize; i++) {
@@ -406,6 +456,20 @@ export default class Stack extends Command {
             logger.info(`Imported ${keyList.length} keys.`)
         }
 
+        // status = await ezsp.ezspSetNWKFrameCounter(backup.networkKeyInfo.frameCounter)
+
+        // if (status !== SLStatus.OK) {
+        //     logger.error(`Failed to set NWK frame counter to ${backup.networkKeyInfo.frameCounter} with status=${SLStatus[status]}.`)
+        //     return true
+        // }
+
+        // status = await ezsp.ezspSetAPSFrameCounter(backup.tcLinkKeyInfo.outgoingFrameCounter)
+
+        // if (status !== SLStatus.OK) {
+        //     logger.error(`Failed to set TC APS frame counter to ${backup.tcLinkKeyInfo.outgoingFrameCounter} with status=${SLStatus[status]}.`)
+        //     return true
+        // }
+
         const state: EmberInitialSecurityState = {
             bitmask:
                 EmberInitialSecurityBitmask.TRUST_CENTER_GLOBAL_LINK_KEY |
@@ -416,7 +480,7 @@ export default class Stack extends Command {
                 EmberInitialSecurityBitmask.NO_FRAME_COUNTER_RESET,
             networkKey: { contents: backup.networkOptions.networkKey },
             networkKeySequenceNumber: backup.networkKeyInfo.sequenceNumber,
-            preconfiguredKey: { contents: backup.ezsp!.hashed_tclk! }, // presence validated by getBackup()
+            preconfiguredKey: { contents: backup.ezsp!.hashed_tclk! }, // presence validated above
             preconfiguredTrustCenterEui64: ZSpec.BLANK_EUI64,
         }
 
@@ -461,7 +525,6 @@ export default class Stack extends Command {
         const stStatus = await ezsp.ezspStartWritingStackTokens()
 
         logger.debug(`Start writing stack tokens status=${SLStatus[stStatus]}.`)
-
         logger.info(`New network formed!`)
 
         const [netStatus, , parameters] = await ezsp.ezspGetNetworkParameters()
@@ -533,12 +596,9 @@ export default class Stack extends Command {
             default: 6,
             message: 'Duration of scan per channel',
         })
-
         const progressBar = new SingleBar({ clearOnComplete: true, format: '{bar} {percentage}% | ETA: {eta}s' }, Presets.shades_classic)
-
         // a symbol is 16 microseconds, a scan period is 960 symbols
         const totalTime = (((2 ** duration + 1) * (16 * 960)) / 1000) * ZSpec.ALL_802_15_4_CHANNELS.length
-
         let scanCompleted: (value: PromiseLike<void> | void) => void
         const reportedValues: string[] = []
         // NOTE: expanding zigbee-herdsman
@@ -971,7 +1031,7 @@ export default class Stack extends Command {
                 const backup = getBackupFromFile(backupFile)
 
                 if (backup === undefined) {
-                    // error logged in getBackup
+                    // error logged in getBackupFromFile
                     return false
                 }
 
@@ -1011,6 +1071,256 @@ export default class Stack extends Command {
         return true
     }
 
+    private async menuZigbee2MQTTOnboard(ezsp: Ezsp): Promise<boolean> {
+        let status = await emberNetworkInit(ezsp)
+        const notJoined = status === SLStatus.NOT_JOINED
+
+        if (!notJoined && status !== SLStatus.OK) {
+            logger.error(`Failed network init request with status=${SLStatus[status]}.`)
+            return true
+        }
+
+        if (!notJoined) {
+            const overwrite = await confirm({ default: false, message: 'A network is present in the adapter. Leave and continue onboard?' })
+
+            if (!overwrite) {
+                logger.info(`Onboard cancelled.`)
+                return false
+            }
+
+            const status = await ezsp.ezspLeaveNetwork()
+
+            if (status !== SLStatus.OK) {
+                logger.error(`Failed to leave network with status=${SLStatus[status]}.`)
+                return true
+            }
+
+            await waitForStackStatus(ezsp, SLStatus.NETWORK_DOWN)
+        }
+
+        // set desired tx power before scan
+        const radioTxPower = Number.parseInt(
+            await input({
+                default: '5',
+                message: 'Radio transmit power [-128-127]',
+                validate(value) {
+                    if (/\./.test(value)) {
+                        return false
+                    }
+
+                    const v = Number.parseInt(value, 10)
+
+                    return v >= -128 && v <= 127
+                },
+            }),
+            10,
+        )
+
+        status = await ezsp.ezspSetRadioPower(radioTxPower)
+
+        if (status !== SLStatus.OK) {
+            logger.error(`Failed to set transmit power to ${radioTxPower} status=${SLStatus[status]}.`)
+            return true
+        }
+
+        // WiFi beacon frames at standard interval: 102.4msec
+        const duration = await select<number>({
+            choices: [
+                { name: '3948 msec', value: 8 },
+                { name: '1981 msec', value: 7 },
+                { name: '998 msec', value: 6 },
+                { name: '507 msec', value: 5 },
+                { name: '261 msec', value: 4 },
+                { name: '138 msec', value: 3 },
+                // { name: '77 msec', value: 2 },
+                // { name: '46 msec', value: 1 },
+                // { name: '31 msec', value: 0 },
+            ],
+            default: 6,
+            message: 'Duration of scan per channel',
+        })
+
+        const channelChoices: { name: string; value: number; checked: boolean }[] = []
+        const touchlinkChannels = [11, 15, 20, 25]
+
+        for (const channel of ZSpec.ALL_802_15_4_CHANNELS) {
+            // only Touchlink-compatible channels checked by default
+            channelChoices.push({ name: channel.toString(), value: channel, checked: touchlinkChannels.includes(channel) })
+        }
+
+        const channels = await checkbox<number>({
+            choices: channelChoices,
+            message: 'Channels to consider',
+            required: true,
+        })
+
+        const progressBar = new SingleBar({ clearOnComplete: true, format: '{bar} {percentage}% | ETA: {eta}s' }, Presets.shades_classic)
+        // a symbol is 16 microseconds, a scan period is 960 symbols
+        const totalTime = (((2 ** duration + 1) * (16 * 960)) / 1000) * channels.length
+        let scanCompleted: (value: [panId: number, channel: number] | PromiseLike<[panId: number, channel: number]>) => void
+        // NOTE: expanding zigbee-herdsman
+        const ezspUnusedPanIdFoundHandlerOriginal = ezsp.ezspUnusedPanIdFoundHandler
+
+        ezsp.ezspUnusedPanIdFoundHandler = (panId: PanId, channel: number): void => {
+            logger.debug(`ezspUnusedPanIdFoundHandler: ${JSON.stringify({ panId, channel })}`)
+            progressBar.stop()
+            clearInterval(progressInterval)
+
+            if (scanCompleted) {
+                scanCompleted([panId, channel])
+            }
+        }
+
+        const scanStatus = await ezsp.ezspFindUnusedPanId(ZSpec.Utils.channelsToUInt32Mask(channels), duration)
+
+        if (scanStatus !== SLStatus.OK) {
+            logger.error(`Failed find unused PAN ID request with status=${SLStatus[scanStatus]}.`)
+            // restore zigbee-herdsman default
+            ezsp.ezspUnusedPanIdFoundHandler = ezspUnusedPanIdFoundHandlerOriginal
+            return true
+        }
+
+        progressBar.start(totalTime, 0)
+
+        const progressInterval = setInterval(() => {
+            progressBar.increment(500)
+        }, 500)
+
+        const result = await new Promise<[panId: PanId, channel: number]>((resolve) => {
+            scanCompleted = resolve
+        })
+
+        // restore zigbee-herdsman default
+        ezsp.ezspUnusedPanIdFoundHandler = ezspUnusedPanIdFoundHandlerOriginal
+
+        // just in case
+        if (!result) {
+            logger.error(`Found no suitable PAN ID and channel.`)
+            return true
+        }
+
+        const [foundPanId, foundChannel] = result
+        const confirmForm = await confirm({
+            message: `Found suitable PAN ID=${foundPanId}, channel=${foundChannel}. Continue with these parameters?`,
+            default: true,
+        })
+
+        if (!confirmForm) {
+            logger.info(`Onboard cancelled.`)
+            return true
+        }
+
+        const state: EmberInitialSecurityState = {
+            bitmask:
+                EmberInitialSecurityBitmask.TRUST_CENTER_GLOBAL_LINK_KEY |
+                EmberInitialSecurityBitmask.HAVE_PRECONFIGURED_KEY |
+                EmberInitialSecurityBitmask.HAVE_NETWORK_KEY |
+                EmberInitialSecurityBitmask.TRUST_CENTER_USES_HASHED_LINK_KEY |
+                EmberInitialSecurityBitmask.REQUIRE_ENCRYPTED_KEY,
+            preconfiguredKey: { contents: randomBytes(EMBER_ENCRYPTION_KEY_SIZE) },
+            networkKey: { contents: randomBytes(ZSpec.DEFAULT_ENCRYPTION_KEY_SIZE) },
+            networkKeySequenceNumber: 0,
+            preconfiguredTrustCenterEui64: ZSpec.BLANK_EUI64,
+        }
+
+        status = await ezsp.ezspSetInitialSecurityState(state)
+
+        if (status !== SLStatus.OK) {
+            throw new Error(`Failed to set initial security state with status=${SLStatus[status]}.`)
+        }
+
+        const extended: EmberExtendedSecurityBitmask =
+            EmberExtendedSecurityBitmask.JOINER_GLOBAL_LINK_KEY | EmberExtendedSecurityBitmask.NWK_LEAVE_REQUEST_NOT_ALLOWED
+        status = await ezsp.ezspSetExtendedSecurityBitmask(extended)
+
+        if (status !== SLStatus.OK) {
+            throw new Error(`Failed to set extended security bitmask to ${extended} with status=${SLStatus[status]}.`)
+        }
+
+        status = await ezsp.ezspClearKeyTable()
+
+        if (status !== SLStatus.OK) {
+            logger.error(`Failed to clear key table with status=${SLStatus[status]}.`)
+        }
+
+        const netParams: EmberNetworkParameters = {
+            panId: foundPanId,
+            extendedPanId: Array.from(randomBytes(ZSpec.EXTENDED_PAN_ID_SIZE)),
+            radioTxPower: radioTxPower,
+            radioChannel: foundChannel,
+            joinMethod: EmberJoinMethod.MAC_ASSOCIATION,
+            nwkManagerId: ZSpec.COORDINATOR_ADDRESS,
+            nwkUpdateId: 0,
+            channels: ZSpec.ALL_802_15_4_CHANNELS_MASK,
+        }
+
+        logger.info(`Forming new network with: ${JSON.stringify(netParams)}`)
+
+        status = await ezsp.ezspFormNetwork(netParams)
+
+        if (status !== SLStatus.OK) {
+            throw new Error(`Failed form network request with status=${SLStatus[status]}.`)
+        }
+
+        await waitForStackStatus(ezsp, SLStatus.NETWORK_UP)
+
+        status = await ezsp.ezspStartWritingStackTokens()
+
+        logger.debug(`Start writing stack tokens status=${SLStatus[status]}.`)
+        logger.info(`New network formed!`)
+
+        // grab the actual parameters (should anything have gone wrong, this will hard fail)
+        const [npStatus, , actualNetParams] = await ezsp.ezspGetNetworkParameters()
+
+        if (npStatus !== SLStatus.OK) {
+            throw new Error(`Failed to get network parameters with status=${SLStatus[npStatus]}.`)
+        }
+
+        // write partial `configuration.yaml`
+        const saveFile = await browseToFile('Configuration save file', DEFAULT_CONFIGURATION_YAML_PATH, true)
+        const extensions = await checkbox<string>({
+            choices: [
+                { name: 'Frontend', value: 'frontend', checked: true },
+                { name: 'Home Assistant', value: 'homeassistant', checked: false },
+            ],
+            message: 'Extensions to enable',
+        })
+        const enableExtFrontend = extensions.includes('frontend')
+        const enableExtHomeAssistant = extensions.includes('homeassistant')
+        const mqttServer = await input({
+            message: 'Address of the MQTT server',
+            default: enableExtHomeAssistant ? 'mqtt://core-mosquitto:1883' : 'mqtt://localhost:1883',
+        })
+        // @ts-expect-error private, avoids passing portConf around just for this
+        const { baudRate, path, rtscts } = ezsp.ash.portOptions
+
+        const yaml = `
+mqtt:
+    base_topic: zigbee2mqtt
+    server: ${mqttServer}
+serial:
+    adapter: ember
+    baudrate: ${baudRate}
+    port: ${path}
+    rtscts: ${rtscts}
+advanced:
+    log_level: info
+    pan_id: ${actualNetParams.panId}
+    ext_pan_id: [${actualNetParams.extendedPanId}]
+    network_key: [${Array.from(state.networkKey.contents)}]
+    channel: ${actualNetParams.radioChannel}
+    transmit_power: ${actualNetParams.radioTxPower}
+frontend: ${enableExtFrontend}
+homeassistant: ${enableExtHomeAssistant}
+`
+
+        writeFileSync(saveFile, yaml, 'utf8')
+
+        logger.info(`Zigbee2MQTT starter configuration written to '${saveFile}'. Adjust it as necessary (port, etc.).`)
+
+        return true
+    }
+
     private async navigateMenu(ezsp: Ezsp): Promise<boolean> {
         const answer = await select<-1 | StackMenu>({
             choices: [
@@ -1026,6 +1336,7 @@ export default class Stack extends Command {
                 { name: 'Reset NVM3 tokens', value: StackMenu.TOKENS_RESET },
                 { name: 'Write EUI64 NVM3 token', value: StackMenu.TOKENS_WRITE_EUI64 },
                 { name: 'Get security info', value: StackMenu.SECURITY_INFO },
+                { name: 'Zigbee2MQTT Onboard (auto configuration)', value: StackMenu.ZIGBEE2MQTT_ONBOARD },
                 { name: 'Repairs', value: StackMenu.REPAIRS },
                 { name: 'Exit', value: -1 },
             ],
@@ -1079,6 +1390,10 @@ export default class Stack extends Command {
 
             case StackMenu.SECURITY_INFO: {
                 return this.menuSecurityInfo(ezsp)
+            }
+
+            case StackMenu.ZIGBEE2MQTT_ONBOARD: {
+                return this.menuZigbee2MQTTOnboard(ezsp)
             }
 
             case StackMenu.REPAIRS: {

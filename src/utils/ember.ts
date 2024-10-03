@@ -8,6 +8,7 @@ import {
     STACK_PROFILE_ZIGBEE_PRO,
 } from 'zigbee-herdsman/dist/adapter/ember/consts.js'
 import {
+    EmberKeyStructBitmask,
     EmberLibraryId,
     EmberLibraryStatus,
     EmberNetworkInitBitmask,
@@ -257,9 +258,8 @@ export const getLibraryStatus = (id: EmberLibraryId, status: EmberLibraryStatus)
         return 'ERROR'
     }
 
-    const present = Boolean(status & EmberLibraryStatus.LIBRARY_PRESENT_MASK)
-
     let statusStr: string = 'NOT_PRESENT'
+    const present = Boolean(status & EmberLibraryStatus.LIBRARY_PRESENT_MASK)
 
     if (present) {
         statusStr = 'PRESENT'
@@ -282,6 +282,24 @@ export const getLibraryStatus = (id: EmberLibraryId, status: EmberLibraryStatus)
     }
 
     return statusStr
+}
+
+export const getKeyStructBitmask = (bitmask: EmberKeyStructBitmask): string => {
+    const bitmaskValues: string[] = []
+
+    for (const key in EmberKeyStructBitmask) {
+        const val = EmberKeyStructBitmask[key as keyof typeof EmberKeyStructBitmask]
+
+        if (typeof val !== 'number') {
+            continue
+        }
+
+        if (bitmask & val) {
+            bitmaskValues.push(key)
+        }
+    }
+
+    return bitmaskValues.join('|')
 }
 
 export const parseTokenData = (nvm3Key: NVM3ObjectKey, data: Buffer): string => {
