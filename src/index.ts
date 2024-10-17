@@ -65,7 +65,7 @@ zhSetLogger({
         logger.info(getZHMessage(message), { namespace })
     },
     warning(message, namespace) {
-        logger.warn(getZHMessage(message), { namespace })
+        logger.warning(getZHMessage(message), { namespace })
     },
 })
 
