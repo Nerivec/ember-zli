@@ -14,6 +14,7 @@ import {
     EmberNetworkInitBitmask,
     EmberSourceRouteDiscoveryMode,
     EmberVersionType,
+    EzspStatus,
     IEEE802154CcaMode,
     SLStatus,
 } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
@@ -66,7 +67,7 @@ export const emberStart = async (portConf: PortConf): Promise<Ezsp> => {
     const startResult = await ezsp.start()
 
     if (startResult !== 0) {
-        throw new Error(`Failed to start EZSP layer with status=${startResult}.`)
+        throw new Error(`Failed to start EZSP layer with status=${EzspStatus[startResult]}.`)
     }
 
     // call before any other command, else fails
