@@ -9,14 +9,15 @@ export type AdapterModel =
     | 'Aeotec Zi-Stick (ZGA008)'
     | 'EasyIOT ZB-GW04 v1.1'
     | 'EasyIOT ZB-GW04 v1.2'
-    | 'Elelabs ELx0x3'
     | 'Home Assistant SkyConnect'
     | 'Home Assistant Yellow'
     | 'SMLight SLZB06-M'
     | 'SMLight SLZB07'
+    | 'SMLight SLZB07mg24'
     | 'Sonoff ZBDongle-E'
     | 'SparkFun MGM240p'
     | 'TubeZB MGM24'
+    | 'TubeZB MGM24PB'
 
 export type PortType = 'serial' | 'tcp'
 export type BaudRate = (typeof BAUDRATES)[number]

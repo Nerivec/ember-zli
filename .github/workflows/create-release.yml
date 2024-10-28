@@ -43,7 +43,7 @@ jobs:
           commit: ${{ github.ref_name }}
           skipIfReleaseExists: true
 
-      - run: npm install
+      - run: npm ci
         if: ${{ steps.version-check.outputs.skipped == 'false' }}
       - run: npm install -g oclif
         if: ${{ steps.version-check.outputs.skipped == 'false' }}
