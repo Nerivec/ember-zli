@@ -1,8 +1,15 @@
-name: Create tag for a new version and a github release to go with it
+name: Create tag and tarballs release
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force update release if tag already exists (re-adds tarballs from scratch)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   create-release:
@@ -11,54 +18,50 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Check if version already exists
         id: version-check
         run: |
-          package_version=$(node -p "require('./package.json').version")
-          exists=$(gh api repos/${{ github.repository }}/releases/tags/v$package_version >/dev/null 2>&1 && echo "true" || echo "")
+          tag="v$(jq < package.json .version)"
+          exists=$(gh api repos/${{ github.repository }}/releases/tags/$tag >/dev/null 2>&1 && echo "true" || echo "")
 
           if [ -n "$exists" ];
           then
-            echo "Version v$package_version already exists"
-            echo "::warning file=package.json,line=1::Version v$package_version already exists - no release will be created. If you want to create a new release, please update the version in package.json and push again."
+            echo "Version $tag already exists"
+            echo "::warning file=package.json,line=1::Version $tag already exists."
             echo "skipped=true" >> $GITHUB_OUTPUT
           else
-            echo "Version v$package_version does not exist. Creating release..."
+            echo "Version $tag does not exist. Creating release..."
             echo "skipped=false" >> $GITHUB_OUTPUT
-            echo "tag=v$package_version" >> $GITHUB_OUTPUT
+            echo "tag=$tag" >> $GITHUB_OUTPUT
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check if needs to run
+        if: |
+          fromJSON(steps.version-check.outputs.skipped) && !fromJSON(inputs.force)
+        run: exit 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install -g oclif
+
+      - run: npm ci
+      - run: npm run build:run
+
+      - run: oclif pack tarballs -r . --prune-lockfiles
+
       - name: Create Github Release
         uses: ncipollo/release-action@v1
-        if: ${{ steps.version-check.outputs.skipped == 'false' }}
         with:
           name: ${{ steps.version-check.outputs.tag }}
           tag: ${{ steps.version-check.outputs.tag }}
           commit: ${{ github.ref_name }}
-          skipIfReleaseExists: true
-
-      - run: npm ci
-        if: ${{ steps.version-check.outputs.skipped == 'false' }}
-      - run: npm install -g oclif
-        if: ${{ steps.version-check.outputs.skipped == 'false' }}
-
-      - run: npm run build:run
-        if: ${{ steps.version-check.outputs.skipped == 'false' }}
-
-      - run: oclif pack tarballs -r . --prune-lockfiles
-        if: ${{ steps.version-check.outputs.skipped == 'false' }}
-
-      - name: Upload tarballs to release
-        if: ${{ steps.version-check.outputs.skipped == 'false' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          file: "./dist/ember-zli-*"
-          file_glob: true
-          overwrite: true
-          tag: ${{ steps.version-check.outputs.tag }}
+          generateReleaseNotes: true
+          makeLatest: true
+          allowUpdates: true
+          removeArtifacts: true
+          artifacts: "./dist/ember-zli-*"
