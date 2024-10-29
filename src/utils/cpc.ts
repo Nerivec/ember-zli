@@ -26,7 +26,7 @@ import {
     CPC_SYSTEM_REBOOT_MODE_BOOTLOADER,
 } from './consts.js'
 import { Transport, TransportEvent } from './transport.js'
-import { CpcSystemCommand, CpcSystemCommandId, CpcSystemStatus, Digit, FirmwareVersionShort, PortConf } from './types.js'
+import { CpcSystemCommand, CpcSystemCommandId, CpcSystemStatus, FirmwareVersionShort, PortConf } from './types.js'
 import { computeCRC16 } from './utils.js'
 
 const NS = { namespace: 'cpc' }
@@ -77,9 +77,9 @@ export class Cpc extends EventEmitter<CpcEventMap> {
         }
 
         // const propertyId = result.payload.readUInt32LE(0)
-        const major = result.payload.readUInt32LE(4) as Digit
-        const minor = result.payload.readUInt32LE(8) as Digit
-        const patch = result.payload.readUInt32LE(12) as Digit
+        const major = result.payload.readUInt32LE(4)
+        const minor = result.payload.readUInt32LE(8)
+        const patch = result.payload.readUInt32LE(12)
 
         return `${major}.${minor}.${patch}`
     }

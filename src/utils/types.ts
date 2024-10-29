@@ -3,8 +3,6 @@ import { EUI64 } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 
 import { BAUDRATES } from './consts.js'
 
-export type Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
-
 export type AdapterModel =
     | 'Aeotec Zi-Stick (ZGA008)'
     | 'EasyIOT ZB-GW04 v1.1'
@@ -15,6 +13,7 @@ export type AdapterModel =
     | 'SMLight SLZB07'
     | 'SMLight SLZB07mg24'
     | 'Sonoff ZBDongle-E'
+    | 'Sonoff ZBDongle-E - ROUTER'
     | 'SparkFun MGM240p'
     | 'TubeZB MGM24'
     | 'TubeZB MGM24PB'
@@ -34,8 +33,8 @@ export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion
 export type ConfigValue = { [key: string]: string }
 
 export type FirmwareVariant = 'latest' | 'official' | 'recommended' | 'experimental'
-export type FirmwareVersion = `${Digit}.${Digit}.${Digit}.${Digit}`
-export type FirmwareVersionShort = `${Digit}.${Digit}.${Digit}`
+export type FirmwareVersion = `${number}.${number}.${number}.${number}`
+export type FirmwareVersionShort = `${number}.${number}.${number}`
 export type FirmwareFilename = `${string}.gbl`
 export type FirmwareURL = `https://${string}/${FirmwareFilename}`
 

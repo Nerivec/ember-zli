@@ -71,11 +71,8 @@ const GBL_END_TAG = Buffer.from([0xfc, 0x04, 0x04, 0xfc])
 const GBL_METADATA_TAG = Buffer.from([0xf6, 0x08, 0x08, 0xf6])
 const VALID_FIRMWARE_CRC32 = 558161692
 
-const NVM3_INIT_START =
-    'eb17a603080000000000000300000000f40a0af41c00000000000000000000000000000000000000000000000000000000000000fd0303fd0480000000600b00'
-const NVM3_INIT_BLANK_CHUNK_START = '01009ab2010000d0feffff0fffffffff0098'
-const NVM3_INIT_BLANK_CHUNK_LENGTH = 8174
-const NVM3_INIT_END = 'fc0404fc040000004b83c4aa'
+const FORCE_RESET_SUPPORT_ADAPTERS: ReadonlyArray<AdapterModel> = ['Sonoff ZBDongle-E', 'Sonoff ZBDongle-E - ROUTER']
+const ALWAYS_FORCE_RESET_ADAPTERS: ReadonlyArray<(typeof FORCE_RESET_SUPPORT_ADAPTERS)[number]> = ['Sonoff ZBDongle-E - ROUTER']
 
 export enum BootloaderEvent {
     FAILED = 'failed',
@@ -109,13 +106,13 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
           }
         | undefined
 
-    constructor(portConf: PortConf, adapter?: AdapterModel) {
+    constructor(portConf: PortConf, adapterModel?: AdapterModel) {
         super()
 
         this.state = BootloaderState.NOT_CONNECTED
         this.waiter = undefined
         this.portConf = portConf
-        this.adapterModel = adapter
+        this.adapterModel = adapterModel
         // override config to default for serial gecko bootloader
         this.transport = new Transport({
             ...this.portConf,
@@ -198,6 +195,13 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             }
 
             case BootloaderMenu.CLEAR_NVM3: {
+                if (firmware === undefined) {
+                    logger.error(`Navigating to clear NVM3 requires a valid firmware.`, NS)
+                    await this.transport.close(false) // don't emit closed since we're returning true which will close anyway
+
+                    return true
+                }
+
                 const confirmed = await confirm({
                     default: false,
                     message: 'Confirm NVM3 clearing? (Cannot be undone.)',
@@ -208,28 +212,16 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     return false
                 }
 
-                return this.menuUploadGBL(
-                    Buffer.concat([
-                        Buffer.from(NVM3_INIT_START, 'hex'),
-                        Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
-                        Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xff),
-                        Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
-                        Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xff),
-                        Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
-                        Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xff),
-                        Buffer.from(NVM3_INIT_BLANK_CHUNK_START, 'hex'),
-                        Buffer.alloc(NVM3_INIT_BLANK_CHUNK_LENGTH, 0xff),
-                        Buffer.from(NVM3_INIT_END, 'hex'),
-                    ]),
-                )
+                return this.menuUploadGBL(firmware)
             }
         }
     }
 
-    public async resetByPattern(exit: boolean): Promise<void> {
+    public async forceReset(exit: boolean): Promise<void> {
         switch (this.adapterModel) {
             // TODO: support per adapter
-            case 'Sonoff ZBDongle-E': {
+            case 'Sonoff ZBDongle-E':
+            case 'Sonoff ZBDongle-E - ROUTER': {
                 await this.transport.serialSet({ dtr: false, rts: true })
                 await this.transport.serialSet({ dtr: true, rts: false }, 100)
 
@@ -381,14 +373,19 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             await this.transport.initPort()
 
             // on first knock only, try pattern reset if supported
-            if (!fail && this.adapterModel === 'Sonoff ZBDongle-E') {
-                const forceReset = await confirm({ message: 'Force reset into bootloader?', default: true })
+            if (!fail && this.adapterModel && FORCE_RESET_SUPPORT_ADAPTERS.includes(this.adapterModel)) {
+                // XXX: always force reset Sonoff ZBDongle-E Router to prevent issues with EZSP 6.10.3 (can be removed once versions updated and no longer used)
+                const forceReset =
+                    ALWAYS_FORCE_RESET_ADAPTERS.includes(this.adapterModel) ||
+                    (await confirm({ message: 'Force reset into bootloader?', default: true }))
 
                 if (forceReset) {
-                    await this.resetByPattern(false)
+                    logger.debug(`Entering bootloader via force reset.`, NS)
+
+                    await this.forceReset(false)
 
                     if (this.state === BootloaderState.IDLE) {
-                        logger.debug(`Entered bootloader via pattern reset.`, NS)
+                        // nothing else to do if already got the bl prompt
                         return
                     }
                 }
@@ -441,7 +438,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             // got menu back, failed to run
             logger.warning(`Failed to exit bootloader and run firmware. Trying pattern reset...`, NS)
 
-            await this.resetByPattern(true)
+            await this.forceReset(true)
         }
 
         return true

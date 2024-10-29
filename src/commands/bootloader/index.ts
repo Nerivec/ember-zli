@@ -15,6 +15,31 @@ import { AdapterModel, FirmwareVariant } from '../../utils/types.js'
 const SUPPORTED_VERSIONS_REGEX = /(7\.4\.\d\.\d)|(8\.0\.\d\.\d)/
 const FIRMWARE_EXT = '.gbl'
 
+const clearNVM3SonoffZBDongleE: () => Buffer = () => {
+    const start = 'eb17a603080000000000000300000000f40a0af41c00000000000000000000000000000000000000000000000000000000000000fd0303fd0480000000600b00'
+    const blankChunkStart = '01009ab2010000d0feffff0fffffffff0098'
+    const blankChunkLength = 8174
+    const end = 'fc0404fc040000004b83c4aa'
+
+    return Buffer.concat([
+        Buffer.from(start, 'hex'),
+        Buffer.from(blankChunkStart, 'hex'),
+        Buffer.alloc(blankChunkLength, 0xff),
+        Buffer.from(blankChunkStart, 'hex'),
+        Buffer.alloc(blankChunkLength, 0xff),
+        Buffer.from(blankChunkStart, 'hex'),
+        Buffer.alloc(blankChunkLength, 0xff),
+        Buffer.from(blankChunkStart, 'hex'),
+        Buffer.alloc(blankChunkLength, 0xff),
+        Buffer.from(end, 'hex'),
+    ])
+}
+
+const CLEAR_NVM3_BUFFERS: Partial<Record<AdapterModel, () => Buffer>> = {
+    'Sonoff ZBDongle-E': clearNVM3SonoffZBDongleE,
+    'Sonoff ZBDongle-E - ROUTER': clearNVM3SonoffZBDongleE,
+}
+
 export default class Bootloader extends Command {
     static override args = {}
     static override description = 'Interact with the Gecko bootloader in the adapter.'
@@ -96,7 +121,7 @@ export default class Bootloader extends Command {
             choices: [
                 { name: 'Get info', value: BootloaderMenu.INFO },
                 { name: 'Update firmware', value: BootloaderMenu.UPLOAD_GBL },
-                { name: 'Clear NVM3', value: BootloaderMenu.CLEAR_NVM3, disabled: gecko.adapterModel !== 'Sonoff ZBDongle-E' },
+                { name: 'Clear NVM3', value: BootloaderMenu.CLEAR_NVM3, disabled: !this.supportsClearNVM3(gecko.adapterModel) },
                 { name: 'Exit bootloader', value: BootloaderMenu.RUN },
                 { name: 'Force close', value: -1 },
             ],
@@ -122,6 +147,9 @@ export default class Bootloader extends Command {
                     return false
                 }
             }
+        } else if (answer === BootloaderMenu.CLEAR_NVM3) {
+            // adapterModel is defined here since menu is disabled if not supported, same for the value in the object
+            firmware = CLEAR_NVM3_BUFFERS[gecko.adapterModel!]!()
         }
 
         return gecko.navigate(answer, firmware)
@@ -234,5 +262,19 @@ export default class Bootloader extends Command {
                 return readFileSync(join(DATA_FOLDER, firmwareFile))
             }
         }
+    }
+
+    private supportsClearNVM3(adapterModel?: AdapterModel): boolean {
+        if (!adapterModel) {
+            return false
+        }
+
+        for (const key in CLEAR_NVM3_BUFFERS) {
+            if (key === adapterModel) {
+                return true
+            }
+        }
+
+        return false
     }
 }
