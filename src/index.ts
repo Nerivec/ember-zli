@@ -7,7 +7,7 @@ import { config, createLogger, format, transports } from 'winston'
 import { setLogger as zhSetLogger } from 'zigbee-herdsman'
 
 export const DATA_FOLDER = join(homedir(), 'ember-zli')
-const LOGS_FOLDER = join(DATA_FOLDER, 'logs')
+export const LOGS_FOLDER = join(DATA_FOLDER, 'logs')
 
 export const CONF_PORT_PATH = join(DATA_FOLDER, 'conf_port.json')
 export const CONF_NETWORK_PATH = join(DATA_FOLDER, 'conf_network.json')
@@ -18,6 +18,8 @@ export const DEFAULT_NETWORK_BACKUP_PATH = join(DATA_FOLDER, 'coordinator_backup
 export const DEFAULT_TOKENS_BACKUP_PATH = join(DATA_FOLDER, 'tokens_backup.nvm3')
 export const DEFAULT_ROUTER_TOKENS_BACKUP_PATH = join(DATA_FOLDER, 'router_tokens_backup.nvm3')
 export const DEFAULT_CONFIGURATION_YAML_PATH = join(DATA_FOLDER, 'configuration.yaml')
+export const DEFAULT_FIRMWARE_GBL_PATH = join(DATA_FOLDER, 'firmware.gbl')
+export const DEFAULT_ROUTER_SCRIPT_MJS_PATH = join(DATA_FOLDER, 'router_script.mjs')
 
 export const DEFAULT_PCAP_PATH = join(DATA_FOLDER, 'sniff.pcap')
 

@@ -1,15 +1,17 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
 
 import { select } from '@inquirer/prompts'
 import { Command } from '@oclif/core'
 
-import { DEFAULT_TOKENS_BACKUP_PATH, logger } from '../../index.js'
+import { DEFAULT_TOKENS_BACKUP_PATH, logger, LOGS_FOLDER } from '../../index.js'
 import { parseTokenData } from '../../utils/ember.js'
 import { NVM3ObjectKey } from '../../utils/enums.js'
 import { browseToFile } from '../../utils/utils.js'
 
 const enum UtilsMenu {
     PARSE_TOKENS_BACKUP_FILE = 10,
+    PURGE_LOG_FILES = 90,
 }
 
 export default class Utils extends Command {
@@ -60,10 +62,43 @@ export default class Utils extends Command {
         return false
     }
 
+    private async menuPurgeLogFiles(): Promise<boolean> {
+        const olderThan = await select<number>({
+            choices: [
+                { name: 'Older than 30 days', value: 3600000 * 24 * 30 },
+                { name: 'Older than 7 days', value: 3600000 * 24 * 7 },
+                { name: 'Older than 1 day', value: 3600000 * 24 },
+                { name: 'Older than 1 hour', value: 3600000 },
+                { name: 'All', value: -1 },
+            ],
+            message: 'Timeframe',
+        })
+
+        let count = 0
+
+        // -1 == never process last (currently used)
+        for (const file of readdirSync(LOGS_FOLDER).slice(0, -1)) {
+            const match = file.match(/^ember-zli-(\d+)\.log$/)
+
+            if (match) {
+                if (olderThan === -1 || parseInt(match[1], 10) < Date.now() - olderThan) {
+                    rmSync(join(LOGS_FOLDER, file), { force: true })
+
+                    count++
+                }
+            }
+        }
+
+        logger.info(`Purged ${count} log files.`)
+
+        return false
+    }
+
     private async navigateMenu(): Promise<boolean> {
         const answer = await select<-1 | UtilsMenu>({
             choices: [
                 { name: 'Parse NVM3 tokens backup file', value: UtilsMenu.PARSE_TOKENS_BACKUP_FILE },
+                { name: 'Purge log files', value: UtilsMenu.PURGE_LOG_FILES },
                 { name: 'Exit', value: -1 },
             ],
             message: 'Menu',
@@ -72,6 +107,10 @@ export default class Utils extends Command {
         switch (answer) {
             case UtilsMenu.PARSE_TOKENS_BACKUP_FILE: {
                 return this.menuParseTokensBackupFile()
+            }
+
+            case UtilsMenu.PURGE_LOG_FILES: {
+                return this.menuPurgeLogFiles()
             }
         }
 
