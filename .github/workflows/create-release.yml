@@ -12,10 +12,8 @@ on:
         type: boolean
 
 jobs:
-  create-release:
+  check-version:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -29,19 +27,28 @@ jobs:
           then
             echo "Version $tag already exists"
             echo "::warning file=package.json,line=1::Version $tag already exists."
-            echo "skipped=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> $GITHUB_OUTPUT
           else
-            echo "Version $tag does not exist. Creating release..."
-            echo "skipped=false" >> $GITHUB_OUTPUT
-            echo "tag=$tag" >> $GITHUB_OUTPUT
+            echo "Version $tag does not exist."
+            echo "skip=false" >> $GITHUB_OUTPUT
           fi
+
+          echo "tag=$tag" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      skip: ${{ steps.version-check.outputs.skip }}
+      tag: ${{ steps.version-check.outputs.tag }}
 
-      - name: Check if needs to run
-        if: |
-          fromJSON(steps.version-check.outputs.skipped) && !fromJSON(inputs.force || false)
-        run: exit 0
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: [check-version]
+    if: |
+      !fromJSON(needs.check-version.outputs.skip) || fromJSON(inputs.force || false)
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
@@ -57,8 +64,8 @@ jobs:
       - name: Create Github Release
         uses: ncipollo/release-action@v1
         with:
-          name: ${{ steps.version-check.outputs.tag }}
-          tag: ${{ steps.version-check.outputs.tag }}
+          name: ${{ needs.check-version.outputs.tag }}
+          tag: ${{ needs.check-version.outputs.tag }}
           commit: ${{ github.ref_name }}
           generateReleaseNotes: true
           makeLatest: true
