@@ -25,7 +25,7 @@ import {
     CPC_SYSTEM_COMMAND_HEADER_SIZE,
     CPC_SYSTEM_REBOOT_MODE_BOOTLOADER,
 } from './consts.js'
-import { Transport, TransportEvent } from './serial.js'
+import { Transport, TransportEvent } from './transport.js'
 import { CpcSystemCommand, CpcSystemCommandId, CpcSystemStatus, Digit, FirmwareVersionShort, PortConf } from './types.js'
 import { computeCRC16 } from './utils.js'
 

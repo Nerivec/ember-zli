@@ -10,7 +10,7 @@ import { TCP_REGEX } from './consts.js'
 import { Cpc, CpcEvent } from './cpc.js'
 import { emberStart, emberStop } from './ember.js'
 import { FirmwareValidation } from './enums.js'
-import { Transport, TransportEvent } from './serial.js'
+import { Transport, TransportEvent } from './transport.js'
 import { AdapterModel, CpcSystemStatus, FirmwareFileMetadata, PortConf } from './types.js'
 import { XEvent, XExitStatus, XModemCRC } from './xmodem.js'
 
