@@ -22,7 +22,7 @@ jobs:
       - name: Check if version already exists
         id: version-check
         run: |
-          tag="v$(jq < package.json .version)"
+          tag="v$(jq -r < package.json .version)"
           exists=$(gh api repos/${{ github.repository }}/releases/tags/$tag >/dev/null 2>&1 && echo "true" || echo "")
 
           if [ -n "$exists" ];
