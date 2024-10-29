@@ -40,7 +40,7 @@ jobs:
 
       - name: Check if needs to run
         if: |
-          fromJSON(steps.version-check.outputs.skipped) && !fromJSON(inputs.force || "false")
+          fromJSON(steps.version-check.outputs.skipped) && !fromJSON(inputs.force || false)
         run: exit 0
 
       - uses: actions/setup-node@v4
