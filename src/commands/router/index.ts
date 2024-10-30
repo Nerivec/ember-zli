@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -36,7 +36,7 @@ import { EUI64, NodeId, PanId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 import { DataType } from 'zigbee-herdsman/dist/zspec/zcl/index.js'
 import { BuffaloZdo } from 'zigbee-herdsman/dist/zspec/zdo/buffaloZdo.js'
 
-import { DATA_FOLDER, DEFAULT_ROUTER_TOKENS_BACKUP_PATH, logger } from '../../index.js'
+import { DATA_FOLDER, DEFAULT_ROUTER_SCRIPT_MJS_PATH, DEFAULT_ROUTER_TOKENS_BACKUP_PATH, logger } from '../../index.js'
 import { APPLICATION_ZDO_SEQUENCE_MASK, DEFAULT_APS_OPTIONS, DEFAULT_ZDO_REQUEST_RADIUS } from '../../utils/consts.js'
 import {
     emberFullVersion,
@@ -597,27 +597,10 @@ export default class Router extends Command {
     }
 
     private async menuRunScript(): Promise<boolean> {
-        const files = readdirSync(DATA_FOLDER)
-        const fileChoices = []
-
-        for (const file of files) {
-            if (file.endsWith('.mjs')) {
-                fileChoices.push({ name: file, value: file })
-            }
-        }
-
-        if (fileChoices.length === 0) {
-            logger.error(`Found no mjs file in '${DATA_FOLDER}'.`)
-            return false
-        }
-
-        const jsFile = await select<string>({
-            choices: fileChoices,
-            message: 'File to run',
-        })
+        const jsFile = await browseToFile('File to run', DEFAULT_ROUTER_SCRIPT_MJS_PATH)
 
         try {
-            const scriptToRun = await import(pathToFileURL(join(DATA_FOLDER, jsFile)).toString())
+            const scriptToRun = await import(pathToFileURL(jsFile).toString())
 
             scriptToRun.default(this, logger)
         } catch (error) {

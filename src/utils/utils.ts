@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, renameSync, statSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
 
 import { input, select } from '@inquirer/prompts'
@@ -96,13 +96,14 @@ export const loadStackConfig = (): typeof DEFAULT_STACK_CONFIG => {
 }
 
 export const browseToFile = async (message: string, defaultValue: string, toWrite: boolean = false): Promise<string> => {
-    const choices: { name: string; value: number }[] = [
-        { name: `Use default (${defaultValue})`, value: 0 },
-        { name: `Enter path manually`, value: 1 },
-        { name: `Select in data folder (${DATA_FOLDER})`, value: 2 },
-    ]
-
-    const pathOpt = await select<number>({ choices, message })
+    const pathOpt = await select<number>({
+        choices: [
+            { name: `Use default (${defaultValue})`, value: 0 },
+            { name: `Enter path manually`, value: 1 },
+            { name: `Select in data folder (${DATA_FOLDER})`, value: 2 },
+        ],
+        message,
+    })
     let filepath: string = defaultValue
 
     switch (pathOpt) {
@@ -119,26 +120,25 @@ export const browseToFile = async (message: string, defaultValue: string, toWrit
 
         case 2: {
             const files = readdirSync(DATA_FOLDER)
-            const fileChoices = []
+            const fileChoices = [{ name: `Go back`, value: '-1' }]
 
             for (const file of files) {
                 if (extname(file) === extname(defaultValue)) {
-                    fileChoices.push({ name: file, value: file })
+                    const { mtime } = statSync(join(DATA_FOLDER, file))
+
+                    fileChoices.push({ name: `[${mtime.toISOString()}] ${file}`, value: file })
                 }
             }
 
-            if (fileChoices.length === 0) {
-                logger.error(`Found no file in '${DATA_FOLDER}'. Using default '${defaultValue}'.`)
-                break
+            let chosenFile = '-1'
+
+            if (fileChoices.length === 1) {
+                logger.error(`Found no file in '${DATA_FOLDER}'.`)
+            } else {
+                chosenFile = await select<string>({ choices: fileChoices, message })
             }
 
-            filepath = join(
-                DATA_FOLDER,
-                await select<string>({
-                    choices: fileChoices,
-                    message,
-                }),
-            )
+            filepath = chosenFile === '-1' ? await browseToFile(message, defaultValue, toWrite) : join(DATA_FOLDER, chosenFile)
 
             break
         }

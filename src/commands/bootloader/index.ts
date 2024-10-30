@@ -1,19 +1,16 @@
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readFileSync } from 'node:fs'
 
 import { input, select } from '@inquirer/prompts'
 import { Command } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
 
-import { DATA_FOLDER, logger } from '../../index.js'
+import { DEFAULT_FIRMWARE_GBL_PATH, logger } from '../../index.js'
 import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from '../../utils/bootloader.js'
 import { FirmwareValidation } from '../../utils/enums.js'
 import { FIRMWARE_LINKS } from '../../utils/firmware-links.js'
 import { getPortConf } from '../../utils/port.js'
 import { AdapterModel, FirmwareVariant } from '../../utils/types.js'
-
-const SUPPORTED_VERSIONS_REGEX = /(7\.4\.\d\.\d)|(8\.0\.\d\.\d)/
-const FIRMWARE_EXT = '.gbl'
+import { browseToFile } from '../../utils/utils.js'
 
 const clearNVM3SonoffZBDongleE: () => Buffer = () => {
     const start = 'eb17a603080000000000000300000000f40a0af41c00000000000000000000000000000000000000000000000000000000000000fd0303fd0480000000600b00'
@@ -96,26 +93,6 @@ export default class Bootloader extends Command {
         return this.exit(0)
     }
 
-    private async downloadFirmware(url: string): Promise<Buffer | undefined> {
-        try {
-            logger.info(`Downloading firmware from ${url}.`)
-
-            const response = await fetch(url)
-
-            if (!response.ok) {
-                throw new Error(`${response.status}`)
-            }
-
-            const arrayBuffer = await response.arrayBuffer()
-
-            return Buffer.from(arrayBuffer)
-        } catch (error) {
-            logger.error(`Failed to download firmware file from ${url} with error ${error}.`)
-        }
-
-        return undefined
-    }
-
     private async navigateMenu(gecko: GeckoBootloader): Promise<boolean> {
         const answer = await select<-1 | BootloaderMenu>({
             choices: [
@@ -141,7 +118,7 @@ export default class Bootloader extends Command {
             while (validFirmware !== FirmwareValidation.VALID) {
                 firmware = await this.selectFirmware(gecko)
 
-                validFirmware = await gecko.validateFirmware(firmware, SUPPORTED_VERSIONS_REGEX)
+                validFirmware = await gecko.validateFirmware(firmware)
 
                 if (validFirmware === FirmwareValidation.CANCELLED) {
                     return false
@@ -155,11 +132,31 @@ export default class Bootloader extends Command {
         return gecko.navigate(answer, firmware)
     }
 
+    private async downloadFirmware(url: string): Promise<Buffer | undefined> {
+        try {
+            logger.info(`Downloading firmware from ${url}.`)
+
+            const response = await fetch(url)
+
+            if (!response.ok) {
+                throw new Error(`${response.status}`)
+            }
+
+            const arrayBuffer = await response.arrayBuffer()
+
+            return Buffer.from(arrayBuffer)
+        } catch (error) {
+            logger.error(`Failed to download firmware file from ${url} with error ${error}.`)
+        }
+
+        return undefined
+    }
+
     private async selectFirmware(gecko: GeckoBootloader): Promise<Buffer | undefined> {
         const enum FirmwareSource {
             PRE_DEFINED = 0,
             URL = 1,
-            DATA_FOLDER = 2,
+            FILE = 2,
         }
         const firmwareSource = await select<FirmwareSource>({
             choices: [
@@ -169,7 +166,7 @@ export default class Bootloader extends Command {
                     disabled: gecko.adapterModel === undefined,
                 },
                 { name: 'Provide URL', value: FirmwareSource.URL },
-                { name: `Select file in data folder (${DATA_FOLDER})`, value: FirmwareSource.DATA_FOLDER },
+                { name: `Browse to file`, value: FirmwareSource.FILE },
             ],
             message: 'Firmware Source',
         })
@@ -239,27 +236,10 @@ export default class Bootloader extends Command {
                 return this.downloadFirmware(url)
             }
 
-            case FirmwareSource.DATA_FOLDER: {
-                const files = readdirSync(DATA_FOLDER)
-                const fileChoices = []
+            case FirmwareSource.FILE: {
+                const firmwareFile = await browseToFile('Firmware file', DEFAULT_FIRMWARE_GBL_PATH)
 
-                for (const file of files) {
-                    if (file.endsWith(FIRMWARE_EXT)) {
-                        fileChoices.push({ name: file, value: file })
-                    }
-                }
-
-                if (fileChoices.length === 0) {
-                    logger.error(`Found no firmware GBL file in '${DATA_FOLDER}'.`)
-                    return this.exit(1)
-                }
-
-                const firmwareFile = await select<string>({
-                    choices: fileChoices,
-                    message: 'Firmware file',
-                })
-
-                return readFileSync(join(DATA_FOLDER, firmwareFile))
+                return readFileSync(firmwareFile)
             }
         }
     }

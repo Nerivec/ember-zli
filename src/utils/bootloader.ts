@@ -71,6 +71,7 @@ const GBL_END_TAG = Buffer.from([0xfc, 0x04, 0x04, 0xfc])
 const GBL_METADATA_TAG = Buffer.from([0xf6, 0x08, 0x08, 0xf6])
 const VALID_FIRMWARE_CRC32 = 558161692
 
+const SUPPORTED_VERSIONS_REGEX = /(7\.4\.\d\.\d)|(8\.0\.\d\.\d)/
 const FORCE_RESET_SUPPORT_ADAPTERS: ReadonlyArray<AdapterModel> = ['Sonoff ZBDongle-E', 'Sonoff ZBDongle-E - ROUTER']
 const ALWAYS_FORCE_RESET_ADAPTERS: ReadonlyArray<(typeof FORCE_RESET_SUPPORT_ADAPTERS)[number]> = ['Sonoff ZBDongle-E - ROUTER']
 
@@ -238,7 +239,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
     }
 
-    public async validateFirmware(firmware: Buffer | undefined, supportedVersionsRegex: RegExp): Promise<FirmwareValidation> {
+    public async validateFirmware(firmware: Buffer | undefined): Promise<FirmwareValidation> {
         if (!firmware) {
             logger.error(`Cannot proceed without a firmware file.`, NS)
             return FirmwareValidation.INVALID
@@ -293,15 +294,18 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
             logger.info(`Firmware file metadata: ${JSON.stringify(recdMetadata)}`, NS)
 
-            if (!TCP_REGEX.test(this.portConf.path) && recdMetadata.baudrate !== this.portConf.baudRate) {
-                logger.warning(
-                    `Firmware file baudrate ${recdMetadata.baudrate} differs from your current port configuration of ${this.portConf.baudRate}.`,
-                    NS,
-                )
-            }
+            // checks irrelevant for router firmware
+            if (!recdMetadata.fw_type.includes('router')) {
+                if (!TCP_REGEX.test(this.portConf.path) && recdMetadata.baudrate !== this.portConf.baudRate) {
+                    logger.warning(
+                        `Firmware file baudrate ${recdMetadata.baudrate} differs from your current port configuration of ${this.portConf.baudRate}.`,
+                        NS,
+                    )
+                }
 
-            if (!recdMetadata.ezsp_version || !supportedVersionsRegex.test(recdMetadata.ezsp_version)) {
-                logger.warning(`Firmware file version is not recognized as currently supported by Zigbee2MQTT ember driver.`, NS)
+                if (!recdMetadata.ezsp_version || !SUPPORTED_VERSIONS_REGEX.test(recdMetadata.ezsp_version)) {
+                    logger.warning(`Firmware file version is not recognized as currently supported by Zigbee2MQTT ember driver.`, NS)
+                }
             }
 
             const proceed = await confirm({
