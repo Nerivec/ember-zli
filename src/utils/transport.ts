@@ -1,3 +1,5 @@
+import type { PortConf } from './types.js'
+
 import EventEmitter from 'node:events'
 import { Socket } from 'node:net'
 import { Readable } from 'node:stream'
@@ -6,7 +8,6 @@ import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
 import { logger } from '../index.js'
 import { CONFIG_HIGHWATER_MARK, TCP_REGEX } from './consts.js'
-import { PortConf } from './types.js'
 
 const NS = { namespace: 'serial' }
 

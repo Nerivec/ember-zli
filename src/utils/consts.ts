@@ -13,6 +13,8 @@ export const DEFAULT_APS_OPTIONS = EmberApsOption.RETRY | EmberApsOption.ENABLE_
 export const APPLICATION_ZDO_SEQUENCE_MASK = 0x7f
 export const DEFAULT_ZDO_REQUEST_RADIUS = 0xff
 
+export const TOUCHLINK_CHANNELS = [11, 15, 20, 25]
+
 export const CPC_PAYLOAD_LENGTH_MAX = 16
 export const CPC_SYSTEM_COMMAND_HEADER_SIZE = 4
 

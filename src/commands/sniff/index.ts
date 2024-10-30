@@ -137,14 +137,8 @@ export default class Sniff extends Command {
             return true
         }
 
-        const channelChoices: { name: string; value: number }[] = []
-
-        for (const channel of ZSpec.ALL_802_15_4_CHANNELS) {
-            channelChoices.push({ name: channel.toString(), value: channel })
-        }
-
         const channel = await select<number>({
-            choices: channelChoices,
+            choices: ZSpec.ALL_802_15_4_CHANNELS.map((c) => ({ name: c.toString(), value: c })),
             message: 'Channel to sniff',
         })
         const eui64 = await this.ezsp.ezspGetEui64()

@@ -1,3 +1,5 @@
+import type { BaudRate, PortConf, PortType } from './types.js'
+
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 
 import { confirm, input, select } from '@inquirer/prompts'
@@ -6,7 +8,6 @@ import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
 import { CONF_PORT_PATH, logger } from '../index.js'
 import { BAUDRATES, TCP_REGEX } from './consts.js'
-import { BaudRate, PortConf, PortType } from './types.js'
 
 export const getPortConfFile = async (): Promise<PortConf | undefined> => {
     if (!existsSync(CONF_PORT_PATH)) {

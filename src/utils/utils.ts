@@ -1,3 +1,5 @@
+import type { SelectChoices } from './types.js'
+
 import { existsSync, readdirSync, readFileSync, renameSync, statSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
 
@@ -120,13 +122,17 @@ export const browseToFile = async (message: string, defaultValue: string, toWrit
 
         case 2: {
             const files = readdirSync(DATA_FOLDER)
-            const fileChoices = [{ name: `Go back`, value: '-1' }]
+            const fileChoices: SelectChoices<string> = [{ name: `Go back`, value: '-1' }]
 
             for (const file of files) {
                 if (extname(file) === extname(defaultValue)) {
-                    const { mtime } = statSync(join(DATA_FOLDER, file))
+                    const { size, mtime, birthtime } = statSync(join(DATA_FOLDER, file))
 
-                    fileChoices.push({ name: `[${mtime.toISOString()}] ${file}`, value: file })
+                    fileChoices.push({
+                        name: file,
+                        value: file,
+                        description: `Size: ${size} bytes | Created: ${birthtime.toISOString()} | Last Modified: ${mtime.toISOString()}`,
+                    })
                 }
             }
 

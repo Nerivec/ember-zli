@@ -1,7 +1,18 @@
-import { EmberKeyData, EmberVersion } from 'zigbee-herdsman/dist/adapter/ember/types.js'
-import { EUI64 } from 'zigbee-herdsman/dist/zspec/tstypes.js'
+import type { checkbox, select } from '@inquirer/prompts'
+import type { EmberKeyData, EmberVersion } from 'zigbee-herdsman/dist/adapter/ember/types.js'
+import type { EUI64 } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 
 import { BAUDRATES } from './consts.js'
+import { CpcSystemCommandId } from './enums.js'
+
+// https://github.com/microsoft/TypeScript/issues/24509
+export type Mutable<T> = {
+    -readonly [P in keyof T]: T[P] extends ReadonlyArray<infer U> ? Mutable<U>[] : Mutable<T[P]>
+}
+
+// types from inquirer/prompts are not exported
+export type CheckboxChoices<Value> = Mutable<Parameters<typeof checkbox<Value>>[0]['choices']>
+export type SelectChoices<Value> = Mutable<Parameters<typeof select<Value>>[0]['choices']>
 
 export type AdapterModel =
     | 'Aeotec Zi-Stick (ZGA008)'
@@ -73,78 +84,6 @@ export type LinkKeyBackupData = {
     key: EmberKeyData
     outgoingFrameCounter: number
     incomingFrameCounter: number
-}
-
-/** Enumeration representing spinel protocol status code. uint32_t */
-export enum CpcSystemStatus {
-    /** Operation has completed successfully. */
-    OK = 0,
-    /** Operation has failed for some undefined reason. */
-    FAILURE = 1,
-    /** The given operation has not been implemented. */
-    UNIMPLEMENTED = 2,
-    /** An argument to the given operation is invalid. */
-    INVALID_ARGUMENT = 3,
-    /** The given operation is invalid for the current state of the device. */
-    INVALID_STATE = 4,
-    /** The given command is not recognized. */
-    INVALID_COMMAND = 5,
-    /** The given Spinel interface is not supported. */
-    INVALID_INTERFACE = 6,
-    /** An internal runtime error has occurred. */
-    INTERNAL_ERROR = 7,
-    /** A security or authentication error has occurred. */
-    SECURITY_ERROR = 8,
-    /** An error has occurred while parsing the command. */
-    PARSE_ERROR = 9,
-    /** The operation is in progress and will be completed asynchronously. */
-    IN_PROGRESS = 10,
-    /** The operation has been prevented due to memory pressure. */
-    NOMEM = 11,
-    /** The device is currently performing a mutually exclusive operation. */
-    BUSY = 12,
-    /** The given property is not recognized. */
-    PROP_NOT_FOUND = 13,
-    /** The packet was dropped. */
-    PACKET_DROPPED = 14,
-    /** The result of the operation is empty. */
-    EMPTY = 15,
-    /** The command was too large to fit in the internal buffer. */
-    CMD_TOO_BIG = 16,
-    /** The packet was not acknowledged. */
-    NO_ACK = 17,
-    /** The packet was not sent due to a CCA failure. */
-    CCA_FAILURE = 18,
-    /** The operation is already in progress or the property was already set to the given value. */
-    ALREADY = 19,
-    /** The given item could not be found in the property. */
-    ITEM_NOT_FOUND = 20,
-    /** The given command cannot be performed on this property. */
-    INVALID_COMMAND_FOR_PROP = 21,
-    // 22-111 : RESERVED
-    RESET_POWER_ON = 112,
-    RESET_EXTERNAL = 113,
-    RESET_SOFTWARE = 114,
-    RESET_FAULT = 115,
-    RESET_CRASH = 116,
-    RESET_ASSERT = 117,
-    RESET_OTHER = 118,
-    RESET_UNKNOWN = 119,
-    RESET_WATCHDOG = 120,
-    // 121-127 : RESERVED-RESET-CODES
-    // 128 - 15,359: UNALLOCATED
-    // 15,360 - 16,383: Vendor-specific
-    // 16,384 - 1,999,999: UNALLOCATED
-    // 2,000,000 - 2,097,151: Experimental Use Only (MUST NEVER be used in production!)
-}
-
-export enum CpcSystemCommandId {
-    NOOP = 0x00,
-    RESET = 0x01,
-    PROP_VALUE_GET = 0x02,
-    PROP_VALUE_SET = 0x03,
-    PROP_VALUE_IS = 0x06,
-    INVALID = 0xff,
 }
 
 export type CpcSystemCommand = {

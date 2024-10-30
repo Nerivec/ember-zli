@@ -1,3 +1,13 @@
+import type {
+    EmberInitialSecurityState,
+    EmberNetworkParameters,
+    EmberZigbeeNetwork,
+    SecManContext,
+} from 'zigbee-herdsman/dist/adapter/ember/types.js'
+import type { PanId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
+
+import type { ConfigValue, LinkKeyBackupData } from '../../utils/types.js'
+
 import { randomBytes } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 
@@ -20,10 +30,8 @@ import {
 import { EMBER_AES_HASH_BLOCK_SIZE, EMBER_ENCRYPTION_KEY_SIZE } from 'zigbee-herdsman/dist/adapter/ember/ezsp/consts.js'
 import { EzspConfigId, EzspDecisionBitmask, EzspDecisionId, EzspMfgTokenId, EzspPolicyId } from 'zigbee-herdsman/dist/adapter/ember/ezsp/enums.js'
 import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
-import { EmberInitialSecurityState, EmberNetworkParameters, EmberZigbeeNetwork, SecManContext } from 'zigbee-herdsman/dist/adapter/ember/types.js'
 import { initSecurityManagerContext } from 'zigbee-herdsman/dist/adapter/ember/utils/initters.js'
 import { toUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
-import { PanId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 
 import {
     DEFAULT_CONFIGURATION_YAML_PATH,
@@ -32,7 +40,7 @@ import {
     DEFAULT_TOKENS_BACKUP_PATH,
     logger,
 } from '../../index.js'
-import { CREATOR_STACK_RESTORED_EUI64 } from '../../utils/consts.js'
+import { CREATOR_STACK_RESTORED_EUI64, TOUCHLINK_CHANNELS } from '../../utils/consts.js'
 import {
     emberFullVersion,
     emberNetworkInit,
@@ -44,7 +52,6 @@ import {
 } from '../../utils/ember.js'
 import { NVM3ObjectKey } from '../../utils/enums.js'
 import { getPortConf } from '../../utils/port.js'
-import { ConfigValue, LinkKeyBackupData } from '../../utils/types.js'
 import { browseToFile, getBackupFromFile, toHex } from '../../utils/utils.js'
 
 const enum StackMenu {
@@ -1140,16 +1147,8 @@ export default class Stack extends Command {
             message: 'Duration of scan per channel',
         })
 
-        const channelChoices: { name: string; value: number; checked: boolean }[] = []
-        const touchlinkChannels = [11, 15, 20, 25]
-
-        for (const channel of ZSpec.ALL_802_15_4_CHANNELS) {
-            // only Touchlink-compatible channels checked by default
-            channelChoices.push({ name: channel.toString(), value: channel, checked: touchlinkChannels.includes(channel) })
-        }
-
         const channels = await checkbox<number>({
-            choices: channelChoices,
+            choices: ZSpec.ALL_802_15_4_CHANNELS.map((c) => ({ name: c.toString(), value: c, checked: TOUCHLINK_CHANNELS.includes(c) })),
             message: 'Channels to consider',
             required: true,
         })

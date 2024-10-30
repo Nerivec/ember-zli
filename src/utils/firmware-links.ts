@@ -1,4 +1,4 @@
-import { AdapterModel, FirmwareMetadata, FirmwareVariant } from './types.js'
+import type { AdapterModel, FirmwareMetadata, FirmwareVariant } from './types.js'
 
 export const FIRMWARE_LINKS: Record<FirmwareVariant, Record<AdapterModel, FirmwareMetadata>> = {
     recommended: {

@@ -1,6 +1,7 @@
+import type { EmberMulticastId } from 'zigbee-herdsman/dist/adapter/ember/types.js'
+import type { ClusterId, ProfileId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
+
 import { Zcl, ZSpec } from 'zigbee-herdsman'
-import { EmberMulticastId } from 'zigbee-herdsman/dist/adapter/ember/types.js'
-import { ClusterId, ProfileId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 
 type FixedEndpointInfo = {
     /** Actual Zigbee endpoint number. uint8_t */

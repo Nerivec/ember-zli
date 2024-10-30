@@ -1,3 +1,5 @@
+import type { AdapterModel, FirmwareVariant, SelectChoices } from '../../utils/types.js'
+
 import { readFileSync } from 'node:fs'
 
 import { input, select } from '@inquirer/prompts'
@@ -9,7 +11,6 @@ import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from '../../utils/bo
 import { FirmwareValidation } from '../../utils/enums.js'
 import { FIRMWARE_LINKS } from '../../utils/firmware-links.js'
 import { getPortConf } from '../../utils/port.js'
-import { AdapterModel, FirmwareVariant } from '../../utils/types.js'
 import { browseToFile } from '../../utils/utils.js'
 
 const clearNVM3SonoffZBDongleE: () => Buffer = () => {
@@ -46,9 +47,9 @@ export default class Bootloader extends Command {
         const portConf = await getPortConf()
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`)
 
-        const adapterModelChoices: { name: string; value: AdapterModel | undefined }[] = [{ name: 'Not in this list', value: undefined }]
+        const adapterModelChoices: SelectChoices<AdapterModel | undefined> = [{ name: 'Not in this list', value: undefined }]
 
-        for (const k of Object.keys(FIRMWARE_LINKS.recommended)) {
+        for (const k in FIRMWARE_LINKS.recommended) {
             adapterModelChoices.push({ name: k, value: k as AdapterModel })
         }
 

@@ -1,3 +1,12 @@
+import type {
+    EmberApsFrame,
+    EmberInitialSecurityState,
+    EmberMulticastId,
+    EmberMulticastTableEntry,
+    EmberZigbeeNetwork,
+} from 'zigbee-herdsman/dist/adapter/ember/types.js'
+import type { EUI64, NodeId, PanId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
+
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -25,14 +34,6 @@ import {
     SLStatus,
 } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
-import {
-    EmberApsFrame,
-    EmberInitialSecurityState,
-    EmberMulticastId,
-    EmberMulticastTableEntry,
-    EmberZigbeeNetwork,
-} from 'zigbee-herdsman/dist/adapter/ember/types.js'
-import { EUI64, NodeId, PanId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
 import { DataType } from 'zigbee-herdsman/dist/zspec/zcl/index.js'
 import { BuffaloZdo } from 'zigbee-herdsman/dist/zspec/zdo/buffaloZdo.js'
 
@@ -279,14 +280,12 @@ export default class Router extends Command {
             return true
         }
 
-        const channelChoices: { name: string; value: number; checked: boolean }[] = []
-
-        for (const channel of ZSpec.ALL_802_15_4_CHANNELS) {
-            channelChoices.push({ name: channel.toString(), value: channel, checked: ZSpec.PREFERRED_802_15_4_CHANNELS.includes(channel) })
-        }
-
         const channels = await checkbox<number>({
-            choices: channelChoices,
+            choices: ZSpec.ALL_802_15_4_CHANNELS.map((c) => ({
+                name: c.toString(),
+                value: c,
+                checked: ZSpec.PREFERRED_802_15_4_CHANNELS.includes(c),
+            })),
             message: 'Channels to scan',
             required: true,
         })
@@ -633,20 +632,11 @@ export default class Router extends Command {
 
         switch (source) {
             case Source.ZCL_LIST: {
-                const choices: { name: string; value: Zcl.ManufacturerCode }[] = []
-
-                for (const name of Object.keys(Zcl.ManufacturerCode)) {
-                    const value = Zcl.ManufacturerCode[name as keyof typeof Zcl.ManufacturerCode]
-
-                    if (typeof value !== 'number') {
-                        continue
-                    }
-
-                    choices.push({ name, value })
-                }
-
                 newCode = await select<Zcl.ManufacturerCode>({
-                    choices,
+                    choices: Object.keys(Zcl.ManufacturerCode).map((k) => ({
+                        name: k,
+                        value: Zcl.ManufacturerCode[k as keyof typeof Zcl.ManufacturerCode],
+                    })),
                     message: 'Select manufacturer',
                 })
 

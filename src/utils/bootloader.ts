@@ -1,3 +1,5 @@
+import type { AdapterModel, FirmwareFileMetadata, PortConf } from './types.js'
+
 import EventEmitter from 'node:events'
 
 import { confirm } from '@inquirer/prompts'
@@ -9,9 +11,8 @@ import { logger } from '../index.js'
 import { TCP_REGEX } from './consts.js'
 import { Cpc, CpcEvent } from './cpc.js'
 import { emberStart, emberStop } from './ember.js'
-import { FirmwareValidation } from './enums.js'
+import { CpcSystemStatus, FirmwareValidation } from './enums.js'
 import { Transport, TransportEvent } from './transport.js'
-import { AdapterModel, CpcSystemStatus, FirmwareFileMetadata, PortConf } from './types.js'
 import { XEvent, XExitStatus, XModemCRC } from './xmodem.js'
 
 const NS = { namespace: 'gecko' }
