@@ -1030,6 +1030,7 @@ export default class Stack extends Command {
             ],
             message: 'Source for the EUI64',
         })
+        let eui64Hex: string | undefined
         let eui64: Buffer | undefined
 
         switch (source) {
@@ -1043,12 +1044,13 @@ export default class Stack extends Command {
                 }
 
                 eui64 = backup.coordinatorIeeeAddress
+                eui64Hex = `0x${Buffer.from(eui64).reverse().toString('hex')}`
 
                 break
             }
 
             case Source.INPUT: {
-                const eui64Hex = await input({
+                eui64Hex = await input({
                     message: 'EUI64',
                     default: ZSpec.BLANK_EUI64,
                     validate(value) {
@@ -1071,7 +1073,7 @@ export default class Stack extends Command {
             return false
         }
 
-        logger.info(`Writing EUI64: ${eui64.toString('hex')}.`)
+        logger.info(`Writing EUI64 ${eui64Hex} as ${eui64.toString('hex')}.`)
 
         await ezsp.ezspSetTokenData(tokenKey, 0, { data: eui64, size: eui64.length })
 
