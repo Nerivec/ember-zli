@@ -76,7 +76,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/2.7.0 win32-x64 node-v20.15.0
+ember-zli/2.7.0 win32-x64 node-v22.11.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
