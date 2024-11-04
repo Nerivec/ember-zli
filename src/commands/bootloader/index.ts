@@ -130,7 +130,7 @@ export default class Bootloader extends Command {
             firmware = CLEAR_NVM3_BUFFERS[gecko.adapterModel!]!()
         }
 
-        return gecko.navigate(answer, firmware)
+        return await gecko.navigate(answer, firmware)
     }
 
     private async downloadFirmware(url: string): Promise<Buffer | undefined> {
@@ -218,7 +218,7 @@ export default class Bootloader extends Command {
                 })
 
                 // valid url from choices filtering
-                return this.downloadFirmware(FIRMWARE_LINKS[firmwareVariant][gecko.adapterModel!].url!)
+                return await this.downloadFirmware(FIRMWARE_LINKS[firmwareVariant][gecko.adapterModel!].url!)
             }
 
             case FirmwareSource.URL: {
@@ -234,7 +234,7 @@ export default class Bootloader extends Command {
                     },
                 })
 
-                return this.downloadFirmware(url)
+                return await this.downloadFirmware(url)
             }
 
             case FirmwareSource.FILE: {

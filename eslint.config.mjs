@@ -7,21 +7,25 @@ export default tseslint.config(
     ...tseslint.configs.recommended,
     prettier,
     {
-        files: ["**/*.ts", "**/*.tsx"],
+        files: ['**/*.ts', '**/*.tsx'],
         languageOptions: {
-            ecmaVersion: "latest",
-            sourceType: "script",
+            ecmaVersion: 'latest',
+            sourceType: 'script',
             parserOptions: {
                 project: true,
             },
         },
         rules: {
-            complexity: ["warn", 30],
-            "max-params": ["error", 10],
-            "@typescript-eslint/no-floating-promises": "error",
+            '@typescript-eslint/await-thenable': 'error',
+            '@typescript-eslint/ban-ts-comment': 'error',
+            '@typescript-eslint/explicit-function-return-type': 'error',
+            '@typescript-eslint/no-explicit-any': 'error',
+            '@typescript-eslint/no-unused-vars': 'error',
+            '@typescript-eslint/return-await': ['error', 'always'],
+            '@typescript-eslint/no-floating-promises': 'error',
         },
     },
     {
-        ignores: ["./eslint.config.mjs", "dist", "tmp"],
+        ignores: ['./eslint.config.mjs', 'dist', 'tmp'],
     },
 );

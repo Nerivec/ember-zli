@@ -771,51 +771,51 @@ export default class Router extends Command {
 
         switch (answer) {
             case RouterMenu.NETWORK_JOIN: {
-                return this.menuNetworkJoin()
+                return await this.menuNetworkJoin()
             }
 
             case RouterMenu.NETWORK_REJOIN: {
-                return this.menuNetworkRejoin()
+                return await this.menuNetworkRejoin()
             }
 
             case RouterMenu.NETWORK_LEAVE: {
-                return this.menuNetworkLeave()
+                return await this.menuNetworkLeave()
             }
 
             case RouterMenu.TOKENS_BACKUP: {
-                return this.menuTokensBackup()
+                return await this.menuTokensBackup()
             }
 
             case RouterMenu.TOKENS_RESTORE: {
-                return this.menuTokensRestore()
+                return await this.menuTokensRestore()
             }
 
             case RouterMenu.TOKENS_RESET: {
-                return this.menuTokensReset()
+                return await this.menuTokensReset()
             }
 
             case RouterMenu.NETWORK_INFO: {
-                return this.menuNetworkInfo()
+                return await this.menuNetworkInfo()
             }
 
             case RouterMenu.SET_MANUFACTURER_CODE: {
-                return this.menuSetManufacturerCode()
+                return await this.menuSetManufacturerCode()
             }
 
             case RouterMenu.READ_COUNTERS: {
-                return this.menuReadCounters()
+                return await this.menuReadCounters()
             }
 
             case RouterMenu.PING_COORDINATOR: {
-                return this.menuPingCoordinator()
+                return await this.menuPingCoordinator()
             }
 
             case RouterMenu.RELOAD_EVENT_HANDLERS: {
-                return this.menuReloadEventHandlers()
+                return await this.menuReloadEventHandlers()
             }
 
             case RouterMenu.RUN_SCRIPT: {
-                return this.menuRunScript()
+                return await this.menuRunScript()
             }
         }
 

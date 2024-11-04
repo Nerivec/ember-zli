@@ -107,7 +107,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
             this.portWriter.pipe(this.portSocket)
             this.portSocket.on('data', this.emitData.bind(this))
 
-            return new Promise((resolve, reject): void => {
+            return await new Promise((resolve, reject): void => {
                 const openError = async (err: Error): Promise<void> => {
                     reject(err)
                 }
@@ -166,7 +166,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
 
     public async serialSet(options: SetOptions, afterDelayMS?: number): Promise<void> {
         await new Promise<void>((resolve, reject) => {
-            const fn = () => this.portSerial?.set(options, (error) => (error ? reject(error) : resolve()))
+            const fn = (): void => this.portSerial?.set(options, (error) => (error ? reject(error) : resolve()))
 
             if (afterDelayMS) {
                 setTimeout(fn, afterDelayMS)

@@ -212,11 +212,11 @@ export class Cpc extends EventEmitter<CpcEventMap> {
             return undefined
         }
 
-        return this.waitForSequence(this.sequence, CPC_DEFAULT_COMMAND_TIMEOUT)
+        return await this.waitForSequence(this.sequence, CPC_DEFAULT_COMMAND_TIMEOUT)
     }
 
     public async start(): Promise<void> {
-        return this.transport.initPort()
+        return await this.transport.initPort()
     }
 
     public async stop(): Promise<void> {

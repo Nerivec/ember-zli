@@ -44,7 +44,7 @@ export let emberFullVersion: EmberFullVersion = {
 }
 
 export const waitForStackStatus = async (ezsp: Ezsp, status: SLStatus, timeout: number = 10000): Promise<void> =>
-    new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
         const timeoutHandle = setTimeout(() => {
             ezsp.removeListener('stackStatus', onStackStatus)
             return reject(new Error(`Timed out waiting for stack status '${SLStatus[status]}'.`))
@@ -81,7 +81,7 @@ export const emberStart = async (portConf: PortConf): Promise<Ezsp> => {
 export const emberStop = async (ezsp: Ezsp): Promise<void> => {
     // workaround to remove ASH COUNTERS logged on stop
     // @ts-expect-error workaround (overriding private)
-    ezsp.ash.logCounters = () => {}
+    ezsp.ash.logCounters = (): void => {}
 
     await ezsp.stop()
 }
@@ -147,7 +147,7 @@ export const emberNetworkInit = async (ezsp: Ezsp, wasConfigured: boolean = fals
         bitmask: EmberNetworkInitBitmask.PARENT_INFO_IN_TOKEN | EmberNetworkInitBitmask.END_DEVICE_REJOIN_ON_REBOOT,
     }
 
-    return ezsp.ezspNetworkInit(networkInitStruct)
+    return await ezsp.ezspNetworkInit(networkInitStruct)
 }
 
 export const emberNetworkConfig = async (

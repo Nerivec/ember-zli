@@ -106,11 +106,11 @@ export default class Utils extends Command {
 
         switch (answer) {
             case UtilsMenu.PARSE_TOKENS_BACKUP_FILE: {
-                return this.menuParseTokensBackupFile()
+                return await this.menuParseTokensBackupFile()
             }
 
             case UtilsMenu.PURGE_LOG_FILES: {
-                return this.menuPurgeLogFiles()
+                return await this.menuPurgeLogFiles()
             }
         }
 

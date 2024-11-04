@@ -1346,59 +1346,59 @@ homeassistant: ${enableExtHomeAssistant}
 
         switch (answer) {
             case StackMenu.STACK_INFO: {
-                return this.menuStackInfo()
+                return await this.menuStackInfo()
             }
 
             case StackMenu.STACK_CONFIG: {
-                return this.menuStackConfig(ezsp)
+                return await this.menuStackConfig(ezsp)
             }
 
             case StackMenu.NETWORK_INFO: {
-                return this.menuNetworkInfo(ezsp)
+                return await this.menuNetworkInfo(ezsp)
             }
 
             case StackMenu.NETWORK_SCAN: {
-                return this.menuNetworkScan(ezsp)
+                return await this.menuNetworkScan(ezsp)
             }
 
             case StackMenu.NETWORK_BACKUP: {
-                return this.menuNetworkBackup(ezsp)
+                return await this.menuNetworkBackup(ezsp)
             }
 
             case StackMenu.NETWORK_RESTORE: {
-                return this.menuNetworkRestore(ezsp)
+                return await this.menuNetworkRestore(ezsp)
             }
 
             case StackMenu.NETWORK_LEAVE: {
-                return this.menuNetworkLeave(ezsp)
+                return await this.menuNetworkLeave(ezsp)
             }
 
             case StackMenu.TOKENS_BACKUP: {
-                return this.menuTokensBackup(ezsp)
+                return await this.menuTokensBackup(ezsp)
             }
 
             case StackMenu.TOKENS_RESTORE: {
-                return this.menuTokensRestore(ezsp)
+                return await this.menuTokensRestore(ezsp)
             }
 
             case StackMenu.TOKENS_RESET: {
-                return this.menuTokensReset(ezsp)
+                return await this.menuTokensReset(ezsp)
             }
 
             case StackMenu.TOKENS_WRITE_EUI64: {
-                return this.menuTokensWriteEUI64(ezsp)
+                return await this.menuTokensWriteEUI64(ezsp)
             }
 
             case StackMenu.SECURITY_INFO: {
-                return this.menuSecurityInfo(ezsp)
+                return await this.menuSecurityInfo(ezsp)
             }
 
             case StackMenu.ZIGBEE2MQTT_ONBOARD: {
-                return this.menuZigbee2MQTTOnboard(ezsp)
+                return await this.menuZigbee2MQTTOnboard(ezsp)
             }
 
             case StackMenu.REPAIRS: {
-                return this.menuRepairs(ezsp)
+                return await this.menuRepairs(ezsp)
             }
         }
 

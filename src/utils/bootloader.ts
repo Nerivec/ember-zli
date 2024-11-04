@@ -185,15 +185,15 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     return true
                 }
 
-                return this.menuUploadGBL(firmware)
+                return await this.menuUploadGBL(firmware)
             }
 
             case BootloaderMenu.RUN: {
-                return this.menuRun()
+                return await this.menuRun()
             }
 
             case BootloaderMenu.INFO: {
-                return this.menuGetInfo()
+                return await this.menuGetInfo()
             }
 
             case BootloaderMenu.CLEAR_NVM3: {
@@ -214,7 +214,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     return false
                 }
 
-                return this.menuUploadGBL(firmware)
+                return await this.menuUploadGBL(firmware)
             }
         }
     }

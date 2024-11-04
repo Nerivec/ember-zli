@@ -244,7 +244,7 @@ export default class Sniff extends Command {
 
         switch (answer) {
             case SniffMenu.START_SNIFFING: {
-                return this.menuStartSniffing()
+                return await this.menuStartSniffing()
             }
         }
 
