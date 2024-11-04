@@ -3,7 +3,7 @@ import type { AdapterModel, FirmwareFileMetadata, PortConf } from './types.js'
 import EventEmitter from 'node:events'
 
 import { confirm } from '@inquirer/prompts'
-import CRC32 from 'crc-32'
+import {crc32} from 'zlib'
 
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 
@@ -258,7 +258,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             return FirmwareValidation.INVALID
         }
 
-        const computedCRC32 = CRC32.buf(firmware.subarray(0, endTagStart + 12), 0) // tag+length+crc32 (4+4+4)
+        const computedCRC32 = crc32(firmware.subarray(0, endTagStart + 12), 0) // tag+length+crc32 (4+4+4)
 
         if (computedCRC32 !== VALID_FIRMWARE_CRC32) {
             logger.error(`Firmware file invalid. Failed CRC validation (got ${computedCRC32}, expected ${VALID_FIRMWARE_CRC32}).`, NS)

@@ -14,9 +14,8 @@
     "@oclif/plugin-not-found": "^3",
     "@oclif/plugin-version": "^2",
     "cli-progress": "^3",
-    "crc-32": "^1",
     "winston": "^3",
-    "zigbee-herdsman": "2.1.5"
+    "zigbee-herdsman": "2.1.7"
   },
   "devDependencies": {
     "@eslint/js": "^9",
