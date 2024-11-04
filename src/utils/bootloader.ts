@@ -1,9 +1,9 @@
 import type { AdapterModel, FirmwareFileMetadata, PortConf } from './types.js'
 
 import EventEmitter from 'node:events'
+import { crc32 } from 'zlib'
 
 import { confirm } from '@inquirer/prompts'
-import {crc32} from 'zlib'
 
 import { SLStatus } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 
@@ -394,9 +394,18 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             return
         }
 
-        await this.transport.write(BOOTLOADER_KNOCK)
+        let res: boolean = false
 
-        const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail)
+        for (let i = 1; i < 3; i++) {
+            await this.transport.write(BOOTLOADER_KNOCK)
+
+            res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail && i == 2)
+
+            if (!res && i == 1 && this.transport.isSerial) {
+                // if failed first attempt, try second time with RTS/CTS enabled
+                await this.transport.serialSet({ rts: true, cts: true })
+            }
+        }
 
         if (!res) {
             await this.transport.close(fail) // emit closed based on if we want to fail on unsuccessful knock
