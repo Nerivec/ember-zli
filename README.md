@@ -10,57 +10,9 @@ Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
 > [!IMPORTANT]
 > `ember-zli` uses the `ember` driver from [zigbee-herdsman](https://github.com/Koenkk/zigbee-herdsman) under the hood. As such, it roughly has the same firmware requirements as [Zigbee2MQTT ember](https://www.zigbee2mqtt.io/guide/adapters/emberznet.html); firmware 7.4.x minimum.
 
-### Interactive Menus (with links to Wiki)
+### Available Interactive Menus
 
-#### Bootloader
-
-- [Get info](https://github.com/Nerivec/ember-zli/wiki/Bootloader#get-info)
-- [Update firmware](https://github.com/Nerivec/ember-zli/wiki/Bootloader#update-firmware)
-- [Clear NVM3](https://github.com/Nerivec/ember-zli/wiki/Bootloader#clear-nvm3)
-- [Exit bootloader](https://github.com/Nerivec/ember-zli/wiki/Bootloader#exit-bootloader)
-
-#### Router
-
-- [Join network](https://github.com/Nerivec/ember-zli/wiki/Router#join-network)
-- [Rejoin network](https://github.com/Nerivec/ember-zli/wiki/Router#rejoin-network)
-- [Leave network](https://github.com/Nerivec/ember-zli/wiki/Router#leave-network)
-- [Backup NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Router#backup-nvm3-tokens)
-- [Restore NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Router#restore-nvm3-tokens)
-- [Reset NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Router#reset-nvm3-tokens)
-- [Get network info](https://github.com/Nerivec/ember-zli/wiki/Router#get-network-info)
-- [Set manufacturer code](https://github.com/Nerivec/ember-zli/wiki/Router#set-manufacturer-code)
-- [Read counters](https://github.com/Nerivec/ember-zli/wiki/Router#read-counters)
-- [Ping coordinator](https://github.com/Nerivec/ember-zli/wiki/Router#ping-coordinator)
-- [Reload custom event handlers](https://github.com/Nerivec/ember-zli/wiki/Router#reload-custom-event-handlers)
-- [Run custom script](https://github.com/Nerivec/ember-zli/wiki/Router#run-custom-script)
-
-#### Sniff
-
-- [Start sniffing](https://github.com/Nerivec/ember-zli/wiki/Sniff#start-sniffing)
-
-#### Stack
-
-- [Get stack info](https://github.com/Nerivec/ember-zli/wiki/Stack#get-stack-info)
-- [Get stack config (firmware defaults)](https://github.com/Nerivec/ember-zli/wiki/Stack#get-stack-config-firmware-defaults)
-- [Get network info](https://github.com/Nerivec/ember-zli/wiki/Stack#get-network-info)
-- [Scan network](https://github.com/Nerivec/ember-zli/wiki/Stack#scan-network)
-  - [Channels usage / RSSI (11-26)](https://github.com/Nerivec/ember-zli/wiki/Stack#channels-usage--rssi-11-26)
-  - [Existing networks](https://github.com/Nerivec/ember-zli/wiki/Stack#existing-networks)
-- [Backup network](https://github.com/Nerivec/ember-zli/wiki/Stack#backup-network)
-- [Restore network](https://github.com/Nerivec/ember-zli/wiki/Stack#restore-network)
-- [Leave network](https://github.com/Nerivec/ember-zli/wiki/Stack#leave-network)
-- [Backup NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Stack#backup-nvm3-tokens)
-- [Restore NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Stack#restore-nvm3-tokens)
-- [Reset NVM3 tokens](https://github.com/Nerivec/ember-zli/wiki/Stack#reset-nvm3-tokens)
-- [Write EUI64 NVM3 token](https://github.com/Nerivec/ember-zli/wiki/Stack#write-eui64-nvm3-token)
-- [Get security info](https://github.com/Nerivec/ember-zli/wiki/Stack#get-security-info)
-- [Zigbee2MQTT Onboard (auto configuration)](https://github.com/Nerivec/ember-zli/wiki/Stack#zigbee2mqtt-onboard-auto-configuration)
-- [Repairs](https://github.com/Nerivec/ember-zli/wiki/Stack#repairs)
-  - [Check for EUI64 mismatch](https://github.com/Nerivec/ember-zli/wiki/Stack#check-for-eui64-mismatch)
-
-#### Utils
-
-- [Parse NVM3 tokens backup file](https://github.com/Nerivec/ember-zli/wiki/Utils#parse-nvm3-tokens-backup-file)
+See https://github.com/Nerivec/ember-zli/wiki
 
 # ToC
 
