@@ -9,7 +9,7 @@ import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 import { logger } from '../index.js'
 import { CONFIG_HIGHWATER_MARK, TCP_REGEX } from './consts.js'
 
-const NS = { namespace: 'serial' }
+const NS = { namespace: 'transport' }
 
 type SetOptions = {
     brk?: boolean
