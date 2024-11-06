@@ -100,7 +100,7 @@ export default class Bootloader extends Command {
                 { name: 'Get info', value: BootloaderMenu.INFO },
                 { name: 'Update firmware', value: BootloaderMenu.UPLOAD_GBL },
                 { name: 'Clear NVM3', value: BootloaderMenu.CLEAR_NVM3, disabled: !this.supportsClearNVM3(gecko.adapterModel) },
-                { name: 'Exit bootloader', value: BootloaderMenu.RUN },
+                { name: 'Exit bootloader (run firmware)', value: BootloaderMenu.RUN },
                 { name: 'Force close', value: -1 },
             ],
             message: 'Menu',

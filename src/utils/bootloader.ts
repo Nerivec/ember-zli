@@ -45,17 +45,22 @@ export enum BootloaderMenu {
 
 const CARRIAGE_RETURN = 0x0d
 const NEWLINE = 0x0a
+
 const BOOTLOADER_KNOCK = Buffer.from([NEWLINE])
+const BOOTLOADER_MENU_UPLOAD_GBL = Buffer.from([BootloaderMenu.UPLOAD_GBL])
+const BOOTLOADER_MENU_RUN = Buffer.from([BootloaderMenu.RUN])
+const BOOTLOADER_MENU_INFO = Buffer.from([BootloaderMenu.INFO])
+
 const BOOTLOADER_PROMPT = Buffer.from('BL >', 'ascii')
-const BOOTLOADER_INFO = Buffer.from('Bootloader v', 'ascii')
+const BOOTLOADER_VERSION = Buffer.from('Bootloader v', 'ascii')
 const BOOTLOADER_BEGIN_UPLOAD = Buffer.from('begin upload', 'ascii')
 const BOOTLOADER_UPLOAD_COMPLETE = Buffer.from('Serial upload complete', 'ascii')
 const BOOTLOADER_UPLOAD_ABORTED = Buffer.from('Serial upload aborted', 'ascii')
 
-const BOOTLOADER_KNOCK_TIMEOUT = 2000
-const BOOTLOADER_UPLOAD_TIMEOUT = 1500000
-const BOOTLOADER_UPLOAD_EXIT_TIMEOUT = 500
-const BOOTLOADER_CMD_EXEC_TIMEOUT = 200
+const BOOTLOADER_KNOCK_TIMEOUT = 1500
+const BOOTLOADER_UPLOAD_TIMEOUT = 1800000
+const BOOTLOADER_UPLOAD_EXIT_TIMEOUT = 1500
+const BOOTLOADER_CMD_EXEC_TIMEOUT = 500
 
 const GBL_START_TAG = Buffer.from([0xeb, 0x17, 0xa6, 0x03])
 /** Contains length+CRC32 and possibly padding after this. */
@@ -363,7 +368,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
     }
 
     private async knock(fail: boolean): Promise<void> {
-        logger.debug(`Knocking...`, NS)
+        logger.info(fail ? `Entering bootloader...` : `Trying to enter bootloader...`, NS)
 
         try {
             await this.transport.initPort()
@@ -376,7 +381,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     (await confirm({ message: 'Force reset into bootloader?', default: true }))
 
                 if (forceReset) {
-                    logger.debug(`Entering bootloader via force reset.`, NS)
+                    logger.debug(`Entering bootloader via force reset...`, NS)
 
                     await this.forceReset(false)
 
@@ -401,7 +406,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
             res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail && i == 2)
 
-            if (!res && i == 1 && this.transport.isSerial) {
+            if (res) {
+                break
+            } else if (i == 1 && this.transport.isSerial) {
                 // if failed first attempt, try second time with RTS/CTS enabled
                 await this.transport.serialSet({ rts: true, cts: true })
             }
@@ -423,7 +430,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.GETTING_INFO
 
-        await this.transport.write(Buffer.from([BootloaderMenu.INFO]))
+        await this.transport.write(BOOTLOADER_MENU_INFO)
 
         await this.waitForState(BootloaderState.GOT_INFO, BOOTLOADER_CMD_EXEC_TIMEOUT)
 
@@ -435,9 +442,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.RUNNING
 
-        await this.transport.write(Buffer.from([BootloaderMenu.RUN]))
+        await this.transport.write(BOOTLOADER_MENU_RUN)
 
-        const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_CMD_EXEC_TIMEOUT, false)
+        const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_CMD_EXEC_TIMEOUT, false, true)
 
         if (res) {
             // got menu back, failed to run
@@ -456,7 +463,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.BEGIN_UPLOAD
 
-        await this.transport.write(Buffer.from([BootloaderMenu.UPLOAD_GBL])) // start upload
+        await this.transport.write(BOOTLOADER_MENU_UPLOAD_GBL) // start upload
         await this.waitForState(BootloaderState.UPLOADING, BOOTLOADER_UPLOAD_EXIT_TIMEOUT)
         await this.waitForState(BootloaderState.UPLOADED, BOOTLOADER_UPLOAD_TIMEOUT)
 
@@ -505,7 +512,10 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     logger.error(`Firmware upload aborted.`, NS)
                 } else if (received.includes(BOOTLOADER_UPLOAD_COMPLETE)) {
                     logger.info(`Firmware upload completed.`, NS)
-                } else if (received.includes(BOOTLOADER_PROMPT)) {
+                }
+
+                // always check if got back prompt already (can be in same tx as above)
+                if (received.includes(BOOTLOADER_PROMPT)) {
                     this.resolveState(BootloaderState.IDLE)
                 }
 
@@ -513,7 +523,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             }
 
             case BootloaderState.RUNNING: {
-                const blv = received.indexOf(BOOTLOADER_INFO)
+                const blv = received.indexOf(BOOTLOADER_VERSION)
 
                 if (blv !== -1) {
                     const [blInfo] = this.readBootloaderInfo(received, blv)
@@ -527,7 +537,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             }
 
             case BootloaderState.GETTING_INFO: {
-                const blv = received.indexOf(BOOTLOADER_INFO)
+                const blv = received.indexOf(BOOTLOADER_VERSION)
 
                 if (blv !== -1) {
                     this.resolveState(BootloaderState.GOT_INFO)
@@ -621,7 +631,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         this.state = state
     }
 
-    private waitForState(state: BootloaderState, timeout: number = 5000, fail: boolean = true): Promise<boolean> {
+    private waitForState(state: BootloaderState, timeout: number = 5000, fail: boolean = true, expectingFail: boolean = false): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
             this.waiter = {
                 resolve,
@@ -635,7 +645,10 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                         return
                     }
 
-                    logger.debug(msg, NS)
+                    if (!expectingFail) {
+                        logger.debug(msg, NS)
+                    }
+
                     resolve(false)
                     this.waiter = undefined
                 }, timeout),
