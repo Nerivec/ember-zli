@@ -56,11 +56,18 @@ const BOOTLOADER_VERSION = Buffer.from('Bootloader v', 'ascii')
 const BOOTLOADER_BEGIN_UPLOAD = Buffer.from('begin upload', 'ascii')
 const BOOTLOADER_UPLOAD_COMPLETE = Buffer.from('Serial upload complete', 'ascii')
 const BOOTLOADER_UPLOAD_ABORTED = Buffer.from('Serial upload aborted', 'ascii')
+/**
+ * End of RSTACK frame
+ *   - `1ac102092a107e`
+ *   - CANCEL, RSTACK, version, RESET_BOOTLOADER, CRC, CRC, FLAG)
+ */
+const BOOTLOADER_FIRMWARE_RAN = Buffer.from('~', 'ascii')
 
 const BOOTLOADER_KNOCK_TIMEOUT = 1500
 const BOOTLOADER_UPLOAD_TIMEOUT = 1800000
 const BOOTLOADER_UPLOAD_EXIT_TIMEOUT = 1500
 const BOOTLOADER_CMD_EXEC_TIMEOUT = 500
+const BOOTLOADER_RUN_TIMEOUT = 2000
 
 const GBL_START_TAG = Buffer.from([0xeb, 0x17, 0xa6, 0x03])
 /** Contains length+CRC32 and possibly padding after this. */
@@ -444,13 +451,27 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         await this.transport.write(BOOTLOADER_MENU_RUN)
 
-        const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_CMD_EXEC_TIMEOUT, false, true)
+        // this is expected to fail (signals the firmware ran and bootloader was exited)
+        const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_RUN_TIMEOUT, false, true)
 
         if (res) {
             // got menu back, failed to run
-            logger.warning(`Failed to exit bootloader and run firmware. Trying pattern reset...`, NS)
+            logger.warning(`Failed to exit bootloader and run firmware.`, NS)
 
-            await this.forceReset(true)
+            if (this.adapterModel && FORCE_RESET_SUPPORT_ADAPTERS.includes(this.adapterModel)) {
+                logger.warning(`Failed to exit bootloader and run firmware. Trying force reset...`, NS)
+
+                await this.forceReset(true)
+            } else {
+                logger.warning(`You may need to unplug/replug your adapter to run the firmware.`, NS)
+            }
+        } else {
+            // @ts-expect-error changed by received serial data
+            if (this.state == BootloaderState.NOT_CONNECTED) {
+                logger.info(`Firmware ran, bootloader exited.`, NS)
+            } else {
+                logger.info(`Bootloader considered exited.`, NS)
+            }
         }
 
         return true
@@ -531,6 +552,8 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     logger.info(`Received bootloader info while trying to exit: ${blInfo}.`, NS)
                 } else if (received.includes(BOOTLOADER_PROMPT)) {
                     this.resolveState(BootloaderState.IDLE)
+                } else if (received.includes(BOOTLOADER_FIRMWARE_RAN)) {
+                    this.resolveState(BootloaderState.NOT_CONNECTED)
                 }
 
                 break
