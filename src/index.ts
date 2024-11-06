@@ -35,7 +35,7 @@ export const logger = createLogger({
     format: format.combine(
         format.errors({ stack: true }),
         format.timestamp({
-            format: new Date().toLocaleString('sv' /* uses ISO */, { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }) + '.SSS',
+            format: 'YYYY-MM-DD hh:mm:ss.SSS',
         }),
         format.printf((info) => `[${info.timestamp}] ${info.level}: \t${info.namespace ?? 'cli'}: ${info.message}`),
     ),
