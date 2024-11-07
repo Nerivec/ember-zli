@@ -554,6 +554,8 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     this.resolveState(BootloaderState.IDLE)
                 } else if (received.includes(BOOTLOADER_FIRMWARE_RAN)) {
                     this.resolveState(BootloaderState.NOT_CONNECTED)
+                } else {
+                    logger.debug(received.toString('ascii'), NS)
                 }
 
                 break
