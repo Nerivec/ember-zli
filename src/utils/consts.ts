@@ -1,5 +1,34 @@
+import type { AdapterModel } from './types.js'
+
 import { EmberApsOption } from 'zigbee-herdsman/dist/adapter/ember/enums.js'
 
+export const PRE_DEFINED_FIRMWARE_LINKS_URL = `https://github.com/Nerivec/ember-zli/raw/refs/heads/main/firmware-links.json`
+export const ADAPTER_MODELS: ReadonlyArray<AdapterModel> = [
+    'Aeotec Zi-Stick (ZGA008)',
+    'EasyIOT ZB-GW04 v1.1',
+    'EasyIOT ZB-GW04 v1.2',
+    'Nabu Casa SkyConnect',
+    'Nabu Casa Yellow',
+    'SMLight SLZB06-M',
+    'SMLight SLZB07',
+    'SMLight SLZB07mg24',
+    'Sonoff ZBDongle-E',
+    'SparkFun MGM240p',
+    'TubeZB MGM24',
+    'TubeZB MGM24PB',
+    'ROUTER - Aeotec Zi-Stick (ZGA008)',
+    'ROUTER - EasyIOT ZB-GW04 v1.1',
+    'ROUTER - EasyIOT ZB-GW04 v1.2',
+    'ROUTER - Nabu Casa SkyConnect',
+    'ROUTER - Nabu Casa Yellow',
+    'ROUTER - SMLight SLZB06-M',
+    'ROUTER - SMLight SLZB07',
+    'ROUTER - SMLight SLZB07mg24',
+    'ROUTER - Sonoff ZBDongle-E',
+    'ROUTER - SparkFun MGM240p',
+    'ROUTER - TubeZB MGM24',
+    'ROUTER - TubeZB MGM24PB',
+]
 export const TCP_REGEX = /^tcp:\/\/[\w.-]+:\d+$/
 export const BAUDRATES = [115200, 230400, 460800]
 /** Read/write max bytes count at stream level */

@@ -76,8 +76,8 @@ const GBL_METADATA_TAG = Buffer.from([0xf6, 0x08, 0x08, 0xf6])
 const VALID_FIRMWARE_CRC32 = 558161692
 
 const SUPPORTED_VERSIONS_REGEX = /(7\.4\.\d\.\d)|(8\.0\.\d\.\d)/
-const FORCE_RESET_SUPPORT_ADAPTERS: ReadonlyArray<AdapterModel> = ['Sonoff ZBDongle-E', 'Sonoff ZBDongle-E - ROUTER']
-const ALWAYS_FORCE_RESET_ADAPTERS: ReadonlyArray<(typeof FORCE_RESET_SUPPORT_ADAPTERS)[number]> = ['Sonoff ZBDongle-E - ROUTER']
+const FORCE_RESET_SUPPORT_ADAPTERS: ReadonlyArray<AdapterModel> = ['Sonoff ZBDongle-E', 'ROUTER - Sonoff ZBDongle-E']
+const ALWAYS_FORCE_RESET_ADAPTERS: ReadonlyArray<(typeof FORCE_RESET_SUPPORT_ADAPTERS)[number]> = ['ROUTER - Sonoff ZBDongle-E']
 
 export enum BootloaderEvent {
     FAILED = 'failed',
@@ -209,7 +209,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
                 const confirmed = await confirm({
                     default: false,
-                    message: 'Confirm NVM3 clearing? (Cannot be undone.)',
+                    message: 'Confirm NVM3 clearing? (Cannot be undone; will reset the adapter to factory defaults.)',
                 })
 
                 if (!confirmed) {
@@ -226,7 +226,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         switch (this.adapterModel) {
             // TODO: support per adapter
             case 'Sonoff ZBDongle-E':
-            case 'Sonoff ZBDongle-E - ROUTER': {
+            case 'ROUTER - Sonoff ZBDongle-E': {
                 await this.transport.serialSet({ dtr: false, rts: true })
                 await this.transport.serialSet({ dtr: true, rts: false }, 100)
 
@@ -380,7 +380,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         try {
             await this.transport.initPort()
 
-            // on first knock only, try pattern reset if supported
+            // try force reset if supported (only on initial non-fail knock)
             if (!fail && this.adapterModel && FORCE_RESET_SUPPORT_ADAPTERS.includes(this.adapterModel)) {
                 // XXX: always force reset Sonoff ZBDongle-E Router to prevent issues with EZSP 6.10.3 (can be removed once versions updated and no longer used)
                 const forceReset =
@@ -400,6 +400,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             }
         } catch (error) {
             logger.error(`Failed to open port: ${error}.`, NS)
+
             await this.transport.close(false, false) // force failed below
             this.emit(BootloaderEvent.FAILED)
 
@@ -459,7 +460,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             logger.warning(`Failed to exit bootloader and run firmware.`, NS)
 
             if (this.adapterModel && FORCE_RESET_SUPPORT_ADAPTERS.includes(this.adapterModel)) {
-                logger.warning(`Failed to exit bootloader and run firmware. Trying force reset...`, NS)
+                logger.warning(`Trying force reset...`, NS)
 
                 await this.forceReset(true)
             } else {

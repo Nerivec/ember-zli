@@ -18,16 +18,27 @@ export type AdapterModel =
     | 'Aeotec Zi-Stick (ZGA008)'
     | 'EasyIOT ZB-GW04 v1.1'
     | 'EasyIOT ZB-GW04 v1.2'
-    | 'Home Assistant SkyConnect'
-    | 'Home Assistant Yellow'
+    | 'Nabu Casa SkyConnect'
+    | 'Nabu Casa Yellow'
     | 'SMLight SLZB06-M'
     | 'SMLight SLZB07'
     | 'SMLight SLZB07mg24'
     | 'Sonoff ZBDongle-E'
-    | 'Sonoff ZBDongle-E - ROUTER'
     | 'SparkFun MGM240p'
     | 'TubeZB MGM24'
     | 'TubeZB MGM24PB'
+    | 'ROUTER - Aeotec Zi-Stick (ZGA008)'
+    | 'ROUTER - EasyIOT ZB-GW04 v1.1'
+    | 'ROUTER - EasyIOT ZB-GW04 v1.2'
+    | 'ROUTER - Nabu Casa SkyConnect'
+    | 'ROUTER - Nabu Casa Yellow'
+    | 'ROUTER - SMLight SLZB06-M'
+    | 'ROUTER - SMLight SLZB07'
+    | 'ROUTER - SMLight SLZB07mg24'
+    | 'ROUTER - Sonoff ZBDongle-E'
+    | 'ROUTER - SparkFun MGM240p'
+    | 'ROUTER - TubeZB MGM24'
+    | 'ROUTER - TubeZB MGM24PB'
 
 export type PortType = 'serial' | 'tcp'
 export type BaudRate = (typeof BAUDRATES)[number]
@@ -43,17 +54,11 @@ export type PortConf = {
 export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion
 export type ConfigValue = { [key: string]: string }
 
-export type FirmwareVariant = 'latest' | 'official' | 'recommended' | 'experimental'
+export type FirmwareVariant = 'official' | 'latest' | 'experimental'
 export type FirmwareVersion = `${number}.${number}.${number}.${number}`
 export type FirmwareVersionShort = `${number}.${number}.${number}`
 export type FirmwareFilename = `${string}.gbl`
 export type FirmwareURL = `https://${string}/${FirmwareFilename}`
-
-export type FirmwareMetadata = {
-    settings: Omit<PortConf, 'path' | 'xoff' | 'xon'>
-    url: FirmwareURL | undefined
-    version: FirmwareVersion
-}
 
 export type FirmwareFileMetadata = {
     metadata_version: number // 1
@@ -65,6 +70,8 @@ export type FirmwareFileMetadata = {
     ble_version?: FirmwareVersionShort // '8.1.0'
     cpc_version?: FirmwareVersion // '5.0.1'
 }
+
+export type FirmwareLinks = Record<FirmwareVariant, Partial<Record<AdapterModel, FirmwareURL>>>
 
 export type TokensInfo = {
     nvm3Key: string // keyof typeof NVM3ObjectKey
@@ -95,4 +102,42 @@ export type CpcSystemCommand = {
     length: number
     /** Command payload. uint8_t[PAYLOAD_LENGTH_MAX] */
     payload: Buffer
+}
+
+export type GithubReleaseAssetJson = {
+    url: string
+    id: number
+    node_id: string
+    name: string
+    label: null
+    uploader: Record<string, unknown>
+    content_type: string
+    state: string
+    size: number
+    download_count: number
+    created_at: string
+    updated_at: string
+    browser_download_url: string
+}
+
+export type GithubReleaseJson = {
+    url: string
+    assets_url: string
+    upload_url: string
+    html_url: string
+    id: number
+    author: Record<string, unknown>
+    node_id: string
+    tag_name: string
+    target_commitish: string
+    name: string
+    draft: false
+    prerelease: false
+    created_at: string
+    published_at: string
+    assets: GithubReleaseAssetJson[]
+    tarball_url: string
+    zipball_url: string
+    body: string
+    reactions: Record<string, unknown>
 }

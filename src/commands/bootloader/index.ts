@@ -1,4 +1,4 @@
-import type { AdapterModel, FirmwareVariant, SelectChoices } from '../../utils/types.js'
+import type { AdapterModel, FirmwareLinks, FirmwareVariant, SelectChoices } from '../../utils/types.js'
 
 import { readFileSync } from 'node:fs'
 
@@ -8,10 +8,10 @@ import { Presets, SingleBar } from 'cli-progress'
 
 import { DEFAULT_FIRMWARE_GBL_PATH, logger } from '../../index.js'
 import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from '../../utils/bootloader.js'
+import { ADAPTER_MODELS, PRE_DEFINED_FIRMWARE_LINKS_URL } from '../../utils/consts.js'
 import { FirmwareValidation } from '../../utils/enums.js'
-import { FIRMWARE_LINKS } from '../../utils/firmware-links.js'
 import { getPortConf } from '../../utils/port.js'
-import { browseToFile } from '../../utils/utils.js'
+import { browseToFile, fetchJson } from '../../utils/utils.js'
 
 const clearNVM3SonoffZBDongleE: () => Buffer = () => {
     const start = 'eb17a603080000000000000300000000f40a0af41c00000000000000000000000000000000000000000000000000000000000000fd0303fd0480000000600b00'
@@ -35,7 +35,7 @@ const clearNVM3SonoffZBDongleE: () => Buffer = () => {
 
 const CLEAR_NVM3_BUFFERS: Partial<Record<AdapterModel, () => Buffer>> = {
     'Sonoff ZBDongle-E': clearNVM3SonoffZBDongleE,
-    'Sonoff ZBDongle-E - ROUTER': clearNVM3SonoffZBDongleE,
+    'ROUTER - Sonoff ZBDongle-E': clearNVM3SonoffZBDongleE,
 }
 
 export default class Bootloader extends Command {
@@ -49,8 +49,8 @@ export default class Bootloader extends Command {
 
         const adapterModelChoices: SelectChoices<AdapterModel | undefined> = [{ name: 'Not in this list', value: undefined }]
 
-        for (const k in FIRMWARE_LINKS.recommended) {
-            adapterModelChoices.push({ name: k, value: k as AdapterModel })
+        for (const model of ADAPTER_MODELS) {
+            adapterModelChoices.push({ name: model, value: model })
         }
 
         const adapterModel = await select<AdapterModel | undefined>({
@@ -162,63 +162,54 @@ export default class Bootloader extends Command {
         const firmwareSource = await select<FirmwareSource>({
             choices: [
                 {
-                    name: 'Use pre-defined firmware (recommended or latest based on your adapter)',
+                    name: `Use pre-defined firmware (using ${PRE_DEFINED_FIRMWARE_LINKS_URL})`,
                     value: FirmwareSource.PRE_DEFINED,
                     disabled: gecko.adapterModel === undefined,
                 },
                 { name: 'Provide URL', value: FirmwareSource.URL },
                 { name: `Browse to file`, value: FirmwareSource.FILE },
             ],
-            message: 'Firmware Source',
+            message: 'Firmware source',
         })
 
         switch (firmwareSource) {
             case FirmwareSource.PRE_DEFINED: {
+                const firmwareLinks = await fetchJson<FirmwareLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL)
                 // valid adapterModel since select option disabled if not
-                const recommended = FIRMWARE_LINKS.recommended[gecko.adapterModel!]
-                const latest = FIRMWARE_LINKS.latest[gecko.adapterModel!]
-                const official = FIRMWARE_LINKS.official[gecko.adapterModel!]
-                const experimental = FIRMWARE_LINKS.experimental[gecko.adapterModel!]
+                const recommended = firmwareLinks.latest[gecko.adapterModel!]
+                const official = firmwareLinks.official[gecko.adapterModel!]
+                const experimental = firmwareLinks.experimental[gecko.adapterModel!]
                 const firmwareVariant = await select<FirmwareVariant>({
                     choices: [
                         {
-                            name: `Recommended for Zigbee2MQTT`,
-                            value: 'recommended',
-                            description: recommended.url
-                                ? `Version: ${recommended.version}, RTS/CTS: ${recommended.settings.rtscts}, URL: ${recommended.url}`
-                                : undefined,
-                            disabled: !recommended.url,
-                        },
-                        {
                             name: `Latest`,
                             value: 'latest',
-                            description: latest.url
-                                ? `Version: ${latest.version}, RTS/CTS: ${latest.settings.rtscts}, URL: ${latest.url}`
-                                : undefined,
-                            disabled: !latest.url,
+                            description: recommended ? recommended : undefined,
+                            disabled: !recommended,
                         },
                         {
                             name: `Latest from manufacturer`,
                             value: 'official',
-                            description: official.url
-                                ? `Version: ${official.version}, RTS/CTS: ${official.settings.rtscts}, URL: ${official.url}`
-                                : undefined,
-                            disabled: !official.url,
+                            description: official ? official : undefined,
+                            disabled: !official,
                         },
                         {
                             name: `Experimental`,
                             value: 'experimental',
-                            description: experimental.url
-                                ? `Version: ${experimental.version}, RTS/CTS: ${experimental.settings.rtscts}, URL: ${experimental.url}`
-                                : undefined,
-                            disabled: !experimental.url,
+                            description: experimental ? experimental : undefined,
+                            disabled: !experimental,
                         },
                     ],
                     message: 'Firmware version',
                 })
+                const firmwareUrl = firmwareLinks[firmwareVariant][gecko.adapterModel!]
 
-                // valid url from choices filtering
-                return await this.downloadFirmware(FIRMWARE_LINKS[firmwareVariant][gecko.adapterModel!].url!)
+                // just in case (and to pass linter)
+                if (!firmwareUrl) {
+                    return undefined
+                }
+
+                return await this.downloadFirmware(firmwareUrl)
             }
 
             case FirmwareSource.URL: {

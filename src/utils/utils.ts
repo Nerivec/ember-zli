@@ -212,3 +212,13 @@ export const computeCRC16CITTKermit = (data: Buffer, init: number = 0): Buffer =
 
     return Buffer.from([lowByte(crc), highByte(crc)])
 }
+
+export async function fetchJson<T>(pageUrl: string): Promise<T> {
+    const response = await fetch(pageUrl)
+
+    if (!response.ok || !response.body) {
+        throw new Error(`Invalid response from ${pageUrl} status=${response.status}.`)
+    }
+
+    return (await response.json()) as T
+}
