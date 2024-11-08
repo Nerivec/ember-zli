@@ -28,7 +28,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/2.8.3 win32-x64 node-v22.11.0
+ember-zli/2.9.0 win32-x64 node-v22.11.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
@@ -39,6 +39,7 @@ USAGE
 <!-- commands -->
 * [`ember-zli bootloader`](#ember-zli-bootloader)
 * [`ember-zli help [COMMAND]`](#ember-zli-help-command)
+* [`ember-zli monitor`](#ember-zli-monitor)
 * [`ember-zli router`](#ember-zli-router)
 * [`ember-zli sniff`](#ember-zli-sniff)
 * [`ember-zli stack`](#ember-zli-stack)
@@ -60,7 +61,7 @@ EXAMPLES
   $ ember-zli bootloader
 ```
 
-_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.8.3/src/commands/bootloader/index.ts)_
+_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.9.0/src/commands/bootloader/index.ts)_
 
 ## `ember-zli help [COMMAND]`
 
@@ -82,6 +83,23 @@ DESCRIPTION
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.16/src/commands/help.ts)_
 
+## `ember-zli monitor`
+
+Monitor the chosen port in the console.
+
+```
+USAGE
+  $ ember-zli monitor
+
+DESCRIPTION
+  Monitor the chosen port in the console.
+
+EXAMPLES
+  $ ember-zli monitor
+```
+
+_See code: [src/commands/monitor/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.9.0/src/commands/monitor/index.ts)_
+
 ## `ember-zli router`
 
 Use a coordinator firmware as a router and interact with the joined network.
@@ -97,7 +115,7 @@ EXAMPLES
   $ ember-zli router
 ```
 
-_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.8.3/src/commands/router/index.ts)_
+_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.9.0/src/commands/router/index.ts)_
 
 ## `ember-zli sniff`
 
@@ -114,7 +132,7 @@ EXAMPLES
   $ ember-zli sniff
 ```
 
-_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.8.3/src/commands/sniff/index.ts)_
+_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.9.0/src/commands/sniff/index.ts)_
 
 ## `ember-zli stack`
 
@@ -131,7 +149,7 @@ EXAMPLES
   $ ember-zli stack
 ```
 
-_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.8.3/src/commands/stack/index.ts)_
+_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.9.0/src/commands/stack/index.ts)_
 
 ## `ember-zli utils`
 
@@ -148,7 +166,7 @@ EXAMPLES
   $ ember-zli utils
 ```
 
-_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.8.3/src/commands/utils/index.ts)_
+_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v2.9.0/src/commands/utils/index.ts)_
 
 ## `ember-zli version`
 
