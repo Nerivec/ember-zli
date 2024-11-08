@@ -1,5 +1,5 @@
 {
-    "recommended": {
+    "latest": {
         "Aeotec Zi-Stick (ZGA008)": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20241106/zga008_zigbee_ncp_8.0.2.0_115200.gbl",
         "EasyIOT ZB-GW04 v1.1": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20241106/zb-gw04-1v1_zigbee_ncp_8.0.2.0_sw_flow_115200.gbl",
         "EasyIOT ZB-GW04 v1.2": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20241106/zb-gw04-1v2_zigbee_ncp_8.0.2.0_115200.gbl",
