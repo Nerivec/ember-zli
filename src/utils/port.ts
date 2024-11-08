@@ -1,13 +1,40 @@
-import type { BaudRate, PortConf, PortType } from './types.js'
+import type { BaudRate, PortConf, PortType, SelectChoices } from './types.js'
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 
 import { confirm, input, select } from '@inquirer/prompts'
+import { Bonjour } from 'bonjour-service'
 
 import { SerialPort } from 'zigbee-herdsman/dist/adapter/serialPort.js'
 
 import { CONF_PORT_PATH, logger } from '../index.js'
 import { BAUDRATES, TCP_REGEX } from './consts.js'
+
+async function findmDNSAdapters(): Promise<SelectChoices<string | undefined>> {
+    logger.info(`Starting mDNS discovery...`)
+
+    const bonjour = new Bonjour()
+    const adapters: SelectChoices<string | undefined> = [{ name: 'Not in this list', value: undefined }]
+    const browser = bonjour.find(null, (service) => {
+        if (service.txt && service.txt.radio_type === 'ezsp') {
+            logger.debug(`Found matching service: ${JSON.stringify(service)}`)
+
+            const path = `tcp://${service.addresses?.[0] ?? service.host}:${service.port}`
+
+            adapters.push({ name: `${service.name ?? service.txt.name ?? 'Unknown'} (${path})`, value: path })
+        }
+    })
+
+    browser.start()
+
+    return await new Promise((resolve) => {
+        setTimeout(() => {
+            browser.stop()
+            bonjour.destroy()
+            resolve(adapters)
+        }, 2000)
+    })
+}
 
 export const getPortConfFile = async (): Promise<PortConf | undefined> => {
     if (!existsSync(CONF_PORT_PATH)) {
@@ -128,12 +155,22 @@ export const getPortConf = async (): Promise<PortConf> => {
         }
 
         case 'tcp': {
-            path = await input({
-                message: `TCP path ('tcp://<host>:<port>')`,
-                validate(value) {
-                    return TCP_REGEX.test(value)
-                },
-            })
+            const discover = await confirm({ message: 'Try to discover adapter?', default: true })
+
+            if (discover) {
+                const choices = await findmDNSAdapters()
+
+                path = await select({ message: 'Select adapter', choices })
+            }
+
+            if (!discover || !path) {
+                path = await input({
+                    message: `TCP path ('tcp://<host>:<port>')`,
+                    validate(value) {
+                        return TCP_REGEX.test(value)
+                    },
+                })
+            }
 
             break
         }

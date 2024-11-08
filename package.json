@@ -13,6 +13,7 @@
     "@oclif/plugin-help": "^6",
     "@oclif/plugin-not-found": "^3",
     "@oclif/plugin-version": "^2",
+    "bonjour-service": "^1",
     "cli-progress": "^3",
     "winston": "^3",
     "zigbee-herdsman": "2.1.7"
