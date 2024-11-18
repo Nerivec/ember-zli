@@ -7,12 +7,14 @@ export default tseslint.config(
     ...tseslint.configs.recommended,
     prettier,
     {
-        files: ['**/*.ts', '**/*.tsx'],
+        files: ['**/*.ts'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'script',
             parserOptions: {
-                project: true,
+                projectService: {
+                    allowDefaultProject: ['eslint.config.mjs', 'prettier.config.mjs'],
+                },
             },
         },
         rules: {
@@ -26,6 +28,6 @@ export default tseslint.config(
         },
     },
     {
-        ignores: ['./eslint.config.mjs', 'dist', 'tmp'],
+        ignores: ['dist', 'tmp', 'coverage'],
     },
 );

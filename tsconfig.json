@@ -1,15 +1,19 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "module": "nodenext",
-    "outDir": "dist",
     "rootDir": "src",
-    "strict": true,
-    "target": "es2022",
+    "outDir": "dist",
+    "module": "nodenext",
     "moduleResolution": "nodenext",
-    "noUnusedLocals": true
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "esModuleInterop": true,
+    "declaration": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "composite": true,
+    "checkJs": true
   },
-  "include": ["./src/**/*", "./eslint.config.mjs", "./.prettierrc.js"],
+  "include": ["src/**/*"],
   "ts-node": {
     "esm": true
   }
