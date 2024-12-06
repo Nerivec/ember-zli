@@ -1,7 +1,7 @@
 {
   "name": "ember-zli",
   "description": "Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "author": "Nerivec",
   "bin": {
     "ember-zli": "bin/run.js"
@@ -16,7 +16,7 @@
     "bonjour-service": "^1",
     "cli-progress": "^3",
     "winston": "^3",
-    "zigbee-herdsman": "2.1.7"
+    "zigbee-herdsman": "3.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9",
@@ -29,7 +29,7 @@
     "@types/node": "^20",
     "eslint": "^9",
     "eslint-config-prettier": "^9",
-    "mocha": "^10",
+    "mocha": "^11",
     "oclif": "^4",
     "prettier": "^3",
     "shx": "^0",
@@ -77,16 +77,16 @@
     "url": "git+https://github.com/Nerivec/ember-zli.git"
   },
   "scripts": {
-    "build": "shx rm -rf dist && tsc -b",
+    "build": "shx rm -rf dist tsconfig.tsbuildinfo && tsc -b",
+    "build:run": "npm run build && npm run prepack && npm run postpack",
+    "update-fw-links": "node ./dist/utils/update-firmware-links.js",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint .",
     "postpack": "shx rm -f oclif.manifest.json",
     "xposttest": "npm run lint",
     "prepack": "oclif manifest && oclif readme",
     "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif readme && git add README.md",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "build:run": "npm run build && npm run prepack && npm run postpack",
-    "update-fw-links": "node ./dist/utils/update-firmware-links.js"
+    "version": "oclif readme && git add README.md"
   },
   "types": "dist/index.d.ts"
 }
