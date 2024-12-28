@@ -16,7 +16,7 @@
     "bonjour-service": "^1",
     "cli-progress": "^3",
     "winston": "^3",
-    "zigbee-herdsman": "3.0.1"
+    "zigbee-herdsman": "3.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9",
