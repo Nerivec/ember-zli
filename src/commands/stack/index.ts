@@ -986,7 +986,47 @@ export default class Stack extends Command {
 
     private async menuTokensRestore(ezsp: Ezsp): Promise<boolean> {
         const backupFile = await browseToFile('Tokens backup file location', DEFAULT_TOKENS_BACKUP_PATH)
-        const tokensBuf = Buffer.from(readFileSync(backupFile, 'utf8'), 'hex')
+        let tokensBuf = Buffer.from(readFileSync(backupFile, 'utf8'), 'hex')
+
+        {
+            // check for binding table corrupting NVM3 if size is too large (32 tested as "safe")
+            let bindingTableMod: undefined | { arraySizeOffset: number; clipStartOffset: number; clipEndOffset: number }
+            let readOffset: number = 0
+            const inTokenCount = tokensBuf.readUInt8(readOffset++)
+
+            for (let i = 0; i < inTokenCount; i++) {
+                const nvm3Key = tokensBuf.readUInt32LE(readOffset) // 4 bytes Token Key/Creator
+                readOffset += 4
+                const size = tokensBuf.readUInt8(readOffset++) // 1 byte token size
+                const arraySize = tokensBuf.readUInt8(readOffset++) // 1 byte array size.
+
+                if (nvm3Key === NVM3ObjectKey.STACK_BINDING_TABLE && arraySize > 32) {
+                    logger.warning(`Binding table is too large, which is known to corrupt NVM3, keeping only first 32 entries.`)
+
+                    bindingTableMod = {
+                        arraySizeOffset: readOffset - 1,
+                        clipStartOffset: readOffset + 32 * size,
+                        clipEndOffset: readOffset + arraySize * size,
+                    }
+                }
+
+                readOffset += arraySize * size
+            }
+
+            if (bindingTableMod) {
+                tokensBuf[bindingTableMod.arraySizeOffset] = 32
+
+                const tokensBufStart = tokensBuf.subarray(0, bindingTableMod.clipStartOffset)
+                const tokensBufEnd = tokensBuf.subarray(bindingTableMod.clipEndOffset)
+                tokensBuf = Buffer.concat([tokensBufStart, tokensBufEnd])
+                const saveFile = `${backupFile}-fixed.nvm3`
+
+                writeFileSync(saveFile, tokensBuf.toString('hex'), 'utf8')
+
+                logger.info(`Fixed tokens backup written to '${saveFile}'.`)
+            }
+        }
+
         const status = await EmberTokensManager.restoreTokens(ezsp, tokensBuf)
 
         if (status === SLStatus.OK) {
