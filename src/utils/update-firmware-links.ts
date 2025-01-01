@@ -11,6 +11,7 @@ const GITHUB_RELEASES_ENDPOINT = `/releases`
 const NABUCASA_REPO = `NabuCasa/silabs-firmware-builder`
 const DARKXST_REPO = `darkxst/silabs-firmware-builder`
 const NERIVEC_REPO = `Nerivec/silabs-firmware-builder`
+const NERIVEC_RECOVERY_REPO = `Nerivec/silabs-firmware-recovery`
 // const TUBE0013_REPO = `tube0013/silabs-firmware-builder`
 
 // const FIRMWARE_BOOTLOADER = `bootloader`
@@ -20,6 +21,7 @@ const FIRMWARE_ZIGBEE_ROUTER = `zigbee_router`
 const NABUCASA_RELEASE = await getLatestGithubRelease(NABUCASA_REPO)
 const DARKXST_RELEASE = await getLatestGithubRelease(DARKXST_REPO)
 const NERIVEC_RELEASE = await getLatestGithubRelease(NERIVEC_REPO)
+const NERIVEC_RECOVERY_RELEASE = await getLatestGithubRelease(NERIVEC_RECOVERY_REPO)
 // const TUBE0013_REPO = await getLatestGithubRelease(TUBE0013_REPO)
 
 async function getLatestGithubRelease(repo: string): Promise<GithubReleaseJson> {
@@ -28,8 +30,9 @@ async function getLatestGithubRelease(repo: string): Promise<GithubReleaseJson> 
     return response[0]
 }
 
-function findFirmware(release: GithubReleaseJson, model: string, type: string): string | undefined {
-    const firmware = release.assets.find((asset) => asset.name.startsWith(model) && asset.name.includes(type))
+function findFirmware(release: GithubReleaseJson, model: string, include: string | string[]): string | undefined {
+    const includeArr = Array.isArray(include) ? include : [include];
+    const firmware = release.assets.find((asset) => asset.name.startsWith(model) && includeArr.every((i) => asset.name.includes(i)))
 
     return firmware?.browser_download_url
 }
@@ -168,6 +171,123 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         // avoid matching on variants with `-`
         'ROUTER - TubeZB MGM24': findFirmware(NERIVEC_RELEASE, 'tubeszb-mgm24-', FIRMWARE_ZIGBEE_ROUTER),
         'ROUTER - TubeZB MGM24PB': findFirmware(NERIVEC_RELEASE, 'tubeszb-mgm24PB-', FIRMWARE_ZIGBEE_ROUTER),
+    },
+    nvm3_32768_clear: {
+        'Aeotec Zi-Stick (ZGA008)': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F1024IM32', ['nvm3_clear', '32768.gbl']),
+
+        'EasyIOT ZB-GW04 v1.1': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+        'EasyIOT ZB-GW04 v1.2': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+
+        'Nabu Casa SkyConnect': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F512IM32', ['nvm3_clear', '32768.gbl']),
+        'Nabu Casa Yellow': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM210PA32JIA', ['nvm3_clear', '32768.gbl']),
+
+        'SMLight SLZB06-M': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+        'SMLight SLZB07': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+        'SMLight SLZB07mg24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG24A020F1024IM40', ['nvm3_clear', '32768.gbl']),
+
+        'Sonoff ZBDongle-E': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+
+        'SparkFun MGM240p': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNA', ['nvm3_clear', '32768.gbl']),
+
+        'TubeZB MGM24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PA32VNN', ['nvm3_clear', '32768.gbl']),
+        'TubeZB MGM24PB': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNN', ['nvm3_clear', '32768.gbl']),
+
+        'ROUTER - Aeotec Zi-Stick (ZGA008)': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F1024IM32', ['nvm3_clear', '32768.gbl']),
+
+        'ROUTER - EasyIOT ZB-GW04 v1.1': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+        'ROUTER - EasyIOT ZB-GW04 v1.2': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+
+        'ROUTER - Nabu Casa SkyConnect': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F512IM32', ['nvm3_clear', '32768.gbl']),
+        'ROUTER - Nabu Casa Yellow': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM210PA32JIA', ['nvm3_clear', '32768.gbl']),
+
+        'ROUTER - SMLight SLZB06-M': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+        'ROUTER - SMLight SLZB07': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+        'ROUTER - SMLight SLZB07mg24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG24A020F1024IM40', ['nvm3_clear', '32768.gbl']),
+
+        'ROUTER - Sonoff ZBDongle-E': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '32768.gbl']),
+
+        'ROUTER - SparkFun MGM240p': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNA', ['nvm3_clear', '32768.gbl']),
+
+        'ROUTER - TubeZB MGM24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PA32VNN', ['nvm3_clear', '32768.gbl']),
+        'ROUTER - TubeZB MGM24PB': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNN', ['nvm3_clear', '32768.gbl']),
+    },
+    nvm3_40960_clear: {
+        'Aeotec Zi-Stick (ZGA008)': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F1024IM32', ['nvm3_clear', '40960.gbl']),
+
+        'EasyIOT ZB-GW04 v1.1': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+        'EasyIOT ZB-GW04 v1.2': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+
+        'Nabu Casa SkyConnect': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F512IM32', ['nvm3_clear', '40960.gbl']),
+        'Nabu Casa Yellow': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM210PA32JIA', ['nvm3_clear', '40960.gbl']),
+
+        'SMLight SLZB06-M': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+        'SMLight SLZB07': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+        'SMLight SLZB07mg24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG24A020F1024IM40', ['nvm3_clear', '40960.gbl']),
+
+        'Sonoff ZBDongle-E': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+
+        'SparkFun MGM240p': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNA', ['nvm3_clear', '40960.gbl']),
+
+        'TubeZB MGM24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PA32VNN', ['nvm3_clear', '40960.gbl']),
+        'TubeZB MGM24PB': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNN', ['nvm3_clear', '40960.gbl']),
+
+        'ROUTER - Aeotec Zi-Stick (ZGA008)': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F1024IM32', ['nvm3_clear', '40960.gbl']),
+
+        'ROUTER - EasyIOT ZB-GW04 v1.1': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+        'ROUTER - EasyIOT ZB-GW04 v1.2': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+
+        'ROUTER - Nabu Casa SkyConnect': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F512IM32', ['nvm3_clear', '40960.gbl']),
+        'ROUTER - Nabu Casa Yellow': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM210PA32JIA', ['nvm3_clear', '40960.gbl']),
+
+        'ROUTER - SMLight SLZB06-M': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+        'ROUTER - SMLight SLZB07': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+        'ROUTER - SMLight SLZB07mg24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG24A020F1024IM40', ['nvm3_clear', '40960.gbl']),
+
+        'ROUTER - Sonoff ZBDongle-E': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', ['nvm3_clear', '40960.gbl']),
+
+        'ROUTER - SparkFun MGM240p': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNA', ['nvm3_clear', '40960.gbl']),
+
+        'ROUTER - TubeZB MGM24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PA32VNN', ['nvm3_clear', '40960.gbl']),
+        'ROUTER - TubeZB MGM24PB': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNN', ['nvm3_clear', '40960.gbl']),
+    },
+    app_clear: {
+        'Aeotec Zi-Stick (ZGA008)': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F1024IM32', 'app_clear'),
+
+        'EasyIOT ZB-GW04 v1.1': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+        'EasyIOT ZB-GW04 v1.2': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+
+        'Nabu Casa SkyConnect': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F512IM32', 'app_clear'),
+        'Nabu Casa Yellow': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM210PA32JIA', 'app_clear'),
+
+        'SMLight SLZB06-M': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+        'SMLight SLZB07': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+        'SMLight SLZB07mg24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG24A020F1024IM40', 'app_clear'),
+
+        'Sonoff ZBDongle-E': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+
+        'SparkFun MGM240p': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNA', 'app_clear'),
+
+        'TubeZB MGM24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PA32VNN', 'app_clear'),
+        'TubeZB MGM24PB': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNN', 'app_clear'),
+
+        'ROUTER - Aeotec Zi-Stick (ZGA008)': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F1024IM32', 'app_clear'),
+
+        'ROUTER - EasyIOT ZB-GW04 v1.1': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+        'ROUTER - EasyIOT ZB-GW04 v1.2': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+
+        'ROUTER - Nabu Casa SkyConnect': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F512IM32', 'app_clear'),
+        'ROUTER - Nabu Casa Yellow': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM210PA32JIA', 'app_clear'),
+
+        'ROUTER - SMLight SLZB06-M': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+        'ROUTER - SMLight SLZB07': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+        'ROUTER - SMLight SLZB07mg24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG24A020F1024IM40', 'app_clear'),
+
+        'ROUTER - Sonoff ZBDongle-E': findFirmware(NERIVEC_RECOVERY_RELEASE, 'EFR32MG21A020F768IM32', 'app_clear'),
+
+        'ROUTER - SparkFun MGM240p': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNA', 'app_clear'),
+
+        'ROUTER - TubeZB MGM24': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PA32VNN', 'app_clear'),
+        'ROUTER - TubeZB MGM24PB': findFirmware(NERIVEC_RECOVERY_RELEASE, 'MGM240PB32VNN', 'app_clear'),
     },
 }
 
