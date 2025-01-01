@@ -54,7 +54,7 @@ export type PortConf = {
 export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion
 export type ConfigValue = { [key: string]: string }
 
-export type FirmwareVariant = 'official' | 'latest' | 'experimental'
+export type FirmwareVariant = 'official' | 'latest' | 'experimental' | 'nvm3_32768_clear' | 'nvm3_40960_clear' | 'app_clear'
 export type FirmwareVersion = `${number}.${number}.${number}.${number}`
 export type FirmwareVersionShort = `${number}.${number}.${number}`
 export type FirmwareFilename = `${string}.gbl`

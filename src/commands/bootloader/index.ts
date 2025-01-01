@@ -2,7 +2,7 @@ import type { AdapterModel, FirmwareLinks, FirmwareVariant, SelectChoices } from
 
 import { readFileSync } from 'node:fs'
 
-import { input, select } from '@inquirer/prompts'
+import { confirm, input, select } from '@inquirer/prompts'
 import { Command } from '@oclif/core'
 import { Presets, SingleBar } from 'cli-progress'
 
@@ -12,31 +12,6 @@ import { ADAPTER_MODELS, PRE_DEFINED_FIRMWARE_LINKS_URL } from '../../utils/cons
 import { FirmwareValidation } from '../../utils/enums.js'
 import { getPortConf } from '../../utils/port.js'
 import { browseToFile, fetchJson } from '../../utils/utils.js'
-
-const clearNVM3SonoffZBDongleE: () => Buffer = () => {
-    const start = 'eb17a603080000000000000300000000f40a0af41c00000000000000000000000000000000000000000000000000000000000000fd0303fd0480000000600b00'
-    const blankChunkStart = '01009ab2010000d0feffff0fffffffff0098'
-    const blankChunkLength = 8174
-    const end = 'fc0404fc040000004b83c4aa'
-
-    return Buffer.concat([
-        Buffer.from(start, 'hex'),
-        Buffer.from(blankChunkStart, 'hex'),
-        Buffer.alloc(blankChunkLength, 0xff),
-        Buffer.from(blankChunkStart, 'hex'),
-        Buffer.alloc(blankChunkLength, 0xff),
-        Buffer.from(blankChunkStart, 'hex'),
-        Buffer.alloc(blankChunkLength, 0xff),
-        Buffer.from(blankChunkStart, 'hex'),
-        Buffer.alloc(blankChunkLength, 0xff),
-        Buffer.from(end, 'hex'),
-    ])
-}
-
-const CLEAR_NVM3_BUFFERS: Partial<Record<AdapterModel, () => Buffer>> = {
-    'Sonoff ZBDongle-E': clearNVM3SonoffZBDongleE,
-    'ROUTER - Sonoff ZBDongle-E': clearNVM3SonoffZBDongleE,
-}
 
 export default class Bootloader extends Command {
     static override args = {}
@@ -99,7 +74,16 @@ export default class Bootloader extends Command {
             choices: [
                 { name: 'Get info', value: BootloaderMenu.INFO },
                 { name: 'Update firmware', value: BootloaderMenu.UPLOAD_GBL },
-                { name: 'Clear NVM3', value: BootloaderMenu.CLEAR_NVM3, disabled: !this.supportsClearNVM3(gecko.adapterModel) },
+                {
+                    name: 'Clear NVM3 (https://github.com/Nerivec/silabs-firmware-recovery?tab=readme-ov-file#nvm3-clear)',
+                    value: BootloaderMenu.CLEAR_NVM3,
+                    disabled: !gecko.adapterModel,
+                },
+                {
+                    name: 'Clear APP (https://github.com/Nerivec/silabs-firmware-recovery?tab=readme-ov-file#app-clear)',
+                    value: BootloaderMenu.CLEAR_APP,
+                    disabled: !gecko.adapterModel,
+                },
                 { name: 'Exit bootloader (run firmware)', value: BootloaderMenu.RUN },
                 { name: 'Force close', value: -1 },
             ],
@@ -126,8 +110,39 @@ export default class Bootloader extends Command {
                 }
             }
         } else if (answer === BootloaderMenu.CLEAR_NVM3) {
-            // adapterModel is defined here since menu is disabled if not supported, same for the value in the object
-            firmware = CLEAR_NVM3_BUFFERS[gecko.adapterModel!]!()
+            const confirmed = await confirm({
+                default: false,
+                message: `Confirm adapter is: ${gecko.adapterModel}?`,
+            })
+
+            if (!confirmed) {
+                logger.warning(`Cancelled NVM3 clearing.`)
+                return false
+            }
+
+            const nvm3Size = await select<number>({
+                choices: [
+                    { name: '32768', value: 32768 },
+                    { name: '40960', value: 40960 },
+                ],
+                message: 'NVM3 Size (https://github.com/Nerivec/silabs-firmware-recovery?tab=readme-ov-file#nvm3-clear)',
+            })
+            const firmwareLinks = await fetchJson<FirmwareLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL)
+            const variant = nvm3Size === 32768 ? `nvm3_32768_clear` : `nvm3_40960_clear`
+            firmware = await this.downloadFirmware(firmwareLinks[variant][gecko.adapterModel!]!)
+        } else if (answer === BootloaderMenu.CLEAR_APP) {
+            const confirmed = await confirm({
+                default: false,
+                message: `Confirm adapter is: ${gecko.adapterModel}?`,
+            })
+
+            if (!confirmed) {
+                logger.warning(`Cancelled APP clearing.`)
+                return false
+            }
+
+            const firmwareLinks = await fetchJson<FirmwareLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL)
+            firmware = await this.downloadFirmware(firmwareLinks.app_clear[gecko.adapterModel!]!)
         }
 
         return await gecko.navigate(answer, firmware)
@@ -234,19 +249,5 @@ export default class Bootloader extends Command {
                 return readFileSync(firmwareFile)
             }
         }
-    }
-
-    private supportsClearNVM3(adapterModel?: AdapterModel): boolean {
-        if (!adapterModel) {
-            return false
-        }
-
-        for (const key in CLEAR_NVM3_BUFFERS) {
-            if (key === adapterModel) {
-                return true
-            }
-        }
-
-        return false
     }
 }

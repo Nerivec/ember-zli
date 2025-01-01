@@ -31,7 +31,7 @@ async function getLatestGithubRelease(repo: string): Promise<GithubReleaseJson> 
 }
 
 function findFirmware(release: GithubReleaseJson, model: string, include: string | string[]): string | undefined {
-    const includeArr = Array.isArray(include) ? include : [include];
+    const includeArr = Array.isArray(include) ? include : [include]
     const firmware = release.assets.find((asset) => asset.name.startsWith(model) && includeArr.every((i) => asset.name.includes(i)))
 
     return firmware?.browser_download_url

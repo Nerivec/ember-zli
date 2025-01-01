@@ -40,6 +40,7 @@ export enum BootloaderMenu {
     UPLOAD_GBL = 0x31,
     RUN = 0x32,
     INFO = 0x33,
+    CLEAR_APP = 0xfe,
     CLEAR_NVM3 = 0xff,
 }
 
@@ -197,6 +198,28 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
             case BootloaderMenu.INFO: {
                 return await this.menuGetInfo()
+            }
+
+            case BootloaderMenu.CLEAR_APP: {
+                if (firmware === undefined) {
+                    logger.error(`Navigating to clear APP requires a valid firmware.`, NS)
+                    await this.transport.close(false) // don't emit closed since we're returning true which will close anyway
+
+                    return true
+                }
+
+                const confirmed = await confirm({
+                    default: false,
+                    message:
+                        'Confirm APP clearing? (Cannot be undone; will erase the entire firmware (including NVM3). You MUST flash a new one afterwards.)',
+                })
+
+                if (!confirmed) {
+                    logger.warning(`Cancelled APP clearing.`, NS)
+                    return false
+                }
+
+                return await this.menuUploadGBL(firmware)
             }
 
             case BootloaderMenu.CLEAR_NVM3: {
