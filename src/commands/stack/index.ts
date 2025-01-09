@@ -1351,8 +1351,10 @@ advanced:
     network_key: [${Array.from(state.networkKey.contents)}]
     channel: ${actualNetParams.radioChannel}
     transmit_power: ${actualNetParams.radioTxPower}
-frontend: ${enableExtFrontend}
-homeassistant: ${enableExtHomeAssistant}
+frontend:
+    enabled: ${enableExtFrontend}
+homeassistant:
+    enabled: ${enableExtHomeAssistant}
 `
 
         writeFileSync(saveFile, yaml, 'utf8')
