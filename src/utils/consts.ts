@@ -30,7 +30,7 @@ export const ADAPTER_MODELS: ReadonlyArray<AdapterModel> = [
     'ROUTER - TubeZB MGM24PB',
 ]
 export const TCP_REGEX = /^tcp:\/\/[\w.-]+:\d+$/
-export const BAUDRATES = [115200, 230400, 460800]
+export const BAUDRATES = [115200, 230400, 460800, 921600]
 /** Read/write max bytes count at stream level */
 export const CONFIG_HIGHWATER_MARK = 256
 
