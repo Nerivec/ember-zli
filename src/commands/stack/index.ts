@@ -32,6 +32,7 @@ import { EzspConfigId, EzspDecisionBitmask, EzspDecisionId, EzspMfgTokenId, Ezsp
 import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
 import { initSecurityManagerContext } from 'zigbee-herdsman/dist/adapter/ember/utils/initters.js'
 import { toUnifiedBackup } from 'zigbee-herdsman/dist/utils/backup.js'
+import { eui64LEBufferToHex } from 'zigbee-herdsman/dist/zspec/utils.js'
 
 import {
     DEFAULT_CONFIGURATION_YAML_PATH,
@@ -1041,11 +1042,15 @@ export default class Stack extends Command {
     private async menuTokensWriteEUI64(ezsp: Ezsp): Promise<boolean> {
         let tokenKey: number | undefined
 
+        const currentEUI64 = await ezsp.ezspGetEui64()
+
+        logger.info(`Current EUI64: ${currentEUI64} (${Buffer.from(currentEUI64.slice(2), 'hex').reverse().toString('hex')}).`)
+
         for (const key of [NVM3ObjectKey.STACK_RESTORED_EUI64, CREATOR_STACK_RESTORED_EUI64]) {
             const [status, tokenData] = await ezsp.ezspGetTokenData(key, 0)
 
             if (status === SLStatus.OK) {
-                logger.debug(`Restored EUI64 token (${key}): ${tokenData.data.toString('hex')}.`)
+                logger.info(`Current restored EUI64 token (${key}): ${eui64LEBufferToHex(tokenData.data)} (${tokenData.data.toString('hex')}).`)
 
                 tokenKey = key
                 break
@@ -1113,9 +1118,13 @@ export default class Stack extends Command {
             return false
         }
 
-        logger.info(`Writing EUI64 ${eui64Hex} as ${eui64.toString('hex')}.`)
+        logger.info(`Writing EUI64 ${eui64Hex} (${eui64.toString('hex')}).`)
 
-        await ezsp.ezspSetTokenData(tokenKey, 0, { data: eui64, size: eui64.length })
+        const status = await ezsp.ezspSetTokenData(tokenKey, 0, { data: eui64, size: eui64.length })
+
+        if (status !== SLStatus.OK) {
+            logger.error(`Failed to write EUI64 with status=${SLStatus[status]}.`)
+        }
 
         return true
     }
