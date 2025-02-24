@@ -4,24 +4,24 @@ import type {
     EmberMulticastId,
     EmberMulticastTableEntry,
     EmberZigbeeNetwork,
-} from 'zigbee-herdsman/dist/adapter/ember/types.js'
-import type { EUI64, NodeId, PanId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
+} from "zigbee-herdsman/dist/adapter/ember/types.js";
+import type { EUI64, NodeId, PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
-import { checkbox, confirm, input, select } from '@inquirer/prompts'
-import { Command } from '@oclif/core'
-import { Presets, SingleBar } from 'cli-progress'
-import { Logger } from 'winston'
+import { checkbox, confirm, input, select } from "@inquirer/prompts";
+import { Command } from "@oclif/core";
+import { Presets, SingleBar } from "cli-progress";
+import type { Logger } from "winston";
 
-import { Zcl, Zdo, ZSpec } from 'zigbee-herdsman'
-import { DEFAULT_STACK_CONFIG } from 'zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js'
-import { EmberTokensManager } from 'zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js'
-import { EMBER_MIN_BROADCAST_ADDRESS, STACK_PROFILE_ZIGBEE_PRO } from 'zigbee-herdsman/dist/adapter/ember/consts.js'
+import { ZSpec, Zcl, Zdo } from "zigbee-herdsman";
+import { DEFAULT_STACK_CONFIG } from "zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js";
+import { EmberTokensManager } from "zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js";
+import { EMBER_MIN_BROADCAST_ADDRESS, STACK_PROFILE_ZIGBEE_PRO } from "zigbee-herdsman/dist/adapter/ember/consts.js";
 import {
-    EmberApsOption,
+    type EmberApsOption,
     EmberCounterType,
     EmberExtendedSecurityBitmask,
     EmberIncomingMessageType,
@@ -32,13 +32,13 @@ import {
     EzspNetworkScanType,
     EzspStatus,
     SLStatus,
-} from 'zigbee-herdsman/dist/adapter/ember/enums.js'
-import { Ezsp } from 'zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js'
-import { DataType } from 'zigbee-herdsman/dist/zspec/zcl/index.js'
-import { BuffaloZdo } from 'zigbee-herdsman/dist/zspec/zdo/buffaloZdo.js'
+} from "zigbee-herdsman/dist/adapter/ember/enums.js";
+import type { Ezsp } from "zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js";
+import type { DataType } from "zigbee-herdsman/dist/zspec/zcl/index.js";
+import { BuffaloZdo } from "zigbee-herdsman/dist/zspec/zdo/buffaloZdo.js";
 
-import { DATA_FOLDER, DEFAULT_ROUTER_SCRIPT_MJS_PATH, DEFAULT_ROUTER_TOKENS_BACKUP_PATH, logger } from '../../index.js'
-import { APPLICATION_ZDO_SEQUENCE_MASK, DEFAULT_APS_OPTIONS, DEFAULT_ZDO_REQUEST_RADIUS } from '../../utils/consts.js'
+import { DATA_FOLDER, DEFAULT_ROUTER_SCRIPT_MJS_PATH, DEFAULT_ROUTER_TOKENS_BACKUP_PATH, logger } from "../../index.js";
+import { APPLICATION_ZDO_SEQUENCE_MASK, DEFAULT_APS_OPTIONS, DEFAULT_ZDO_REQUEST_RADIUS } from "../../utils/consts.js";
 import {
     emberFullVersion,
     emberNetworkConfig,
@@ -48,10 +48,10 @@ import {
     emberStart,
     emberStop,
     waitForStackStatus,
-} from '../../utils/ember.js'
-import { getPortConf } from '../../utils/port.js'
-import { ROUTER_FIXED_ENDPOINTS } from '../../utils/router-endpoints.js'
-import { browseToFile, loadStackConfig, toHex } from '../../utils/utils.js'
+} from "../../utils/ember.js";
+import { getPortConf } from "../../utils/port.js";
+import { ROUTER_FIXED_ENDPOINTS } from "../../utils/router-endpoints.js";
+import { browseToFile, loadStackConfig, toHex } from "../../utils/utils.js";
 
 type CustomEventHandlers = {
     onIncomingMessage?: (
@@ -62,7 +62,7 @@ type CustomEventHandlers = {
         lastHopLqi: number,
         sender: NodeId,
         messageContents: Buffer,
-    ) => Promise<void>
+    ) => Promise<void>;
     onMessageSent?: (
         cmd: Command,
         logger: Logger,
@@ -71,8 +71,8 @@ type CustomEventHandlers = {
         indexOrDestination: number,
         apsFrame: EmberApsFrame,
         messageTag: number,
-    ) => Promise<void>
-    onStackStatus?: (cmd: Command, logger: Logger, status: SLStatus) => Promise<void>
+    ) => Promise<void>;
+    onStackStatus?: (cmd: Command, logger: Logger, status: SLStatus) => Promise<void>;
     onTouchlinkMessage?: (
         cmd: Command,
         logger: Logger,
@@ -81,11 +81,11 @@ type CustomEventHandlers = {
         groupId: null | number,
         lastHopLqi: number,
         messageContents: Buffer,
-    ) => Promise<void>
-    onZDOResponse?: (cmd: Command, logger: Logger, apsFrame: EmberApsFrame, sender: NodeId, messageContents: Buffer) => Promise<void>
-}
+    ) => Promise<void>;
+    onZDOResponse?: (cmd: Command, logger: Logger, apsFrame: EmberApsFrame, sender: NodeId, messageContents: Buffer) => Promise<void>;
+};
 
-const enum RouterMenu {
+enum RouterMenu {
     NETWORK_JOIN = 0,
     NETWORK_REJOIN = 1,
     NETWORK_LEAVE = 2,
@@ -111,14 +111,14 @@ enum RouterState {
 }
 
 export default class Router extends Command {
-    static override args = {}
-    static override description = 'Use a coordinator firmware as a router and interact with the joined network.'
-    static override examples = ['<%= config.bin %> <%= command.id %>']
-    static override flags = {}
+    static override args = {};
+    static override description = "Use a coordinator firmware as a router and interact with the joined network.";
+    static override examples = ["<%= config.bin %> <%= command.id %>"];
+    static override flags = {};
 
-    public ezsp: Ezsp | undefined
-    public multicastTable: EmberMulticastId[] = []
-    public routerState: RouterState = RouterState.UNKNOWN
+    public ezsp: Ezsp | undefined;
+    public multicastTable: EmberMulticastId[] = [];
+    public routerState: RouterState = RouterState.UNKNOWN;
 
     private customEventHandlers: CustomEventHandlers = {
         onIncomingMessage: undefined,
@@ -126,69 +126,69 @@ export default class Router extends Command {
         onStackStatus: undefined,
         onTouchlinkMessage: undefined,
         onZDOResponse: undefined,
-    }
+    };
 
-    private manufacturerCode: Zcl.ManufacturerCode = Zcl.ManufacturerCode.SILICON_LABORATORIES
-    private stackConfig: typeof DEFAULT_STACK_CONFIG = DEFAULT_STACK_CONFIG
-    private zdoRequestSequence: number = 0
+    private manufacturerCode: Zcl.ManufacturerCode = Zcl.ManufacturerCode.SILICON_LABORATORIES;
+    private stackConfig: typeof DEFAULT_STACK_CONFIG = DEFAULT_STACK_CONFIG;
+    private zdoRequestSequence = 0;
 
     public async run(): Promise<void> {
         // const {flags} = await this.parse(Router)
-        const portConf = await getPortConf()
-        logger.debug(`Using port conf: ${JSON.stringify(portConf)}`)
+        const portConf = await getPortConf();
+        logger.debug(`Using port conf: ${JSON.stringify(portConf)}`);
 
-        this.ezsp = await emberStart(portConf)
+        this.ezsp = await emberStart(portConf);
 
-        this.ezsp.on('ncpNeedsResetAndInit', (status: EzspStatus): void => {
-            logger.error(`Adapter needs restarting: status=${EzspStatus[status]}`)
+        this.ezsp.on("ncpNeedsResetAndInit", (status: EzspStatus): void => {
+            logger.error(`Adapter needs restarting: status=${EzspStatus[status]}`);
 
-            return this.exit(1)
-        })
-        this.ezsp.on('incomingMessage', this.onIncomingMessage.bind(this))
-        this.ezsp.on('messageSent', this.onMessageSent.bind(this))
-        this.ezsp.on('stackStatus', this.onStackStatus.bind(this))
-        this.ezsp.on('touchlinkMessage', this.onTouchlinkMessage.bind(this))
-        this.ezsp.on('zdoResponse', this.onZDOResponse.bind(this))
+            this.exit(1);
+        });
+        this.ezsp.on("incomingMessage", this.onIncomingMessage.bind(this));
+        this.ezsp.on("messageSent", this.onMessageSent.bind(this));
+        this.ezsp.on("stackStatus", this.onStackStatus.bind(this));
+        this.ezsp.on("touchlinkMessage", this.onTouchlinkMessage.bind(this));
+        this.ezsp.on("zdoResponse", this.onZDOResponse.bind(this));
 
-        await this.loadCustomEventHandlers()
+        await this.loadCustomEventHandlers();
 
-        this.stackConfig = loadStackConfig()
+        this.stackConfig = loadStackConfig();
 
-        await emberNetworkConfig(this.ezsp, this.stackConfig, this.manufacturerCode)
-        await emberRegisterFixedEndpoints(this.ezsp, this.multicastTable /* IN/OUT */, true)
+        await emberNetworkConfig(this.ezsp, this.stackConfig, this.manufacturerCode);
+        await emberRegisterFixedEndpoints(this.ezsp, this.multicastTable /* IN/OUT */, true);
 
-        let exit: boolean = false
+        let exit = false;
 
         while (!exit) {
-            exit = await this.navigateMenu()
+            exit = await this.navigateMenu();
 
             if (exit && this.routerState === RouterState.RUNNING) {
-                exit = await confirm({ message: 'Router is currently running. Confirm exit?', default: false })
+                exit = await confirm({ message: "Router is currently running. Confirm exit?", default: false });
             }
         }
 
-        await emberStop(this.ezsp)
+        await emberStop(this.ezsp);
 
-        return this.exit(0)
+        return this.exit(0);
     }
 
     private async loadCustomEventHandlers(): Promise<void> {
         for (const handler in this.customEventHandlers) {
-            const handlerFile = join(DATA_FOLDER, `${handler}.mjs`)
+            const handlerFile = join(DATA_FOLDER, `${handler}.mjs`);
 
             if (existsSync(handlerFile)) {
                 try {
-                    const importedScript = await import(pathToFileURL(handlerFile).toString())
+                    const importedScript = await import(pathToFileURL(handlerFile).toString());
 
-                    if (typeof importedScript.default !== 'function') {
-                        throw new TypeError(`Not a function.`)
+                    if (typeof importedScript.default !== "function") {
+                        throw new TypeError("Not a function.");
                     }
 
-                    this.customEventHandlers[handler as keyof CustomEventHandlers] = importedScript.default
+                    this.customEventHandlers[handler as keyof CustomEventHandlers] = importedScript.default;
 
-                    logger.info(`Loaded custom handler for '${handler}'.`)
+                    logger.info(`Loaded custom handler for '${handler}'.`);
                 } catch (error) {
-                    logger.error(`Failed to load custom handler for '${handler}'. ${error}`)
+                    logger.error(`Failed to load custom handler for '${handler}'. ${error}`);
                 }
             }
         }
@@ -196,88 +196,88 @@ export default class Router extends Command {
 
     private async menuNetworkInfo(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        const [npStatus, nodeType, netParams] = await this.ezsp.ezspGetNetworkParameters()
+        const [npStatus, nodeType, netParams] = await this.ezsp.ezspGetNetworkParameters();
 
         if (npStatus !== SLStatus.OK) {
-            logger.error(`Failed to get network parameters with status=${SLStatus[npStatus]}.`)
-            return true
+            logger.error(`Failed to get network parameters with status=${SLStatus[npStatus]}.`);
+            return true;
         }
 
-        const eui64 = await this.ezsp.ezspGetEui64()
-        const nodeId = await this.ezsp.ezspGetNodeId()
+        const eui64 = await this.ezsp.ezspGetEui64();
+        const nodeId = await this.ezsp.ezspGetNodeId();
 
-        logger.info(`Node ID=${toHex(nodeId)}/${nodeId} EUI64=${eui64} type=${EmberNodeType[nodeType]}.`)
-        logger.info(`Network parameters:`)
-        logger.info(`  - PAN ID: ${netParams.panId} (${toHex(netParams.panId)})`)
-        logger.info(`  - Extended PAN ID: ${netParams.extendedPanId}`)
-        logger.info(`  - Radio Channel: ${netParams.radioChannel}`)
-        logger.info(`  - Radio Power: ${netParams.radioTxPower} dBm`)
-        logger.info(`  - Preferred Channels: ${ZSpec.Utils.uint32MaskToChannels(netParams.channels).join(',')}`)
+        logger.info(`Node ID=${toHex(nodeId)}/${nodeId} EUI64=${eui64} type=${EmberNodeType[nodeType]}.`);
+        logger.info("Network parameters:");
+        logger.info(`  - PAN ID: ${netParams.panId} (${toHex(netParams.panId)})`);
+        logger.info(`  - Extended PAN ID: ${netParams.extendedPanId}`);
+        logger.info(`  - Radio Channel: ${netParams.radioChannel}`);
+        logger.info(`  - Radio Power: ${netParams.radioTxPower} dBm`);
+        logger.info(`  - Preferred Channels: ${ZSpec.Utils.uint32MaskToChannels(netParams.channels).join(",")}`);
 
-        return false
+        return false;
     }
 
     private async menuNetworkJoin(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        let status = await emberNetworkInit(this.ezsp, true)
-        const notJoined = status === SLStatus.NOT_JOINED
+        let status = await emberNetworkInit(this.ezsp, true);
+        const notJoined = status === SLStatus.NOT_JOINED;
 
-        this.setRouterState(notJoined ? RouterState.NOT_JOINED : RouterState.UNKNOWN)
+        this.setRouterState(notJoined ? RouterState.NOT_JOINED : RouterState.UNKNOWN);
 
         if (!notJoined && status !== SLStatus.OK) {
-            logger.error(`Failed network init request with status=${SLStatus[status]}.`)
-            return true
+            logger.error(`Failed network init request with status=${SLStatus[status]}.`);
+            return true;
         }
 
         if (!notJoined) {
-            const overwrite = await confirm({ default: false, message: 'A network is present in the adapter. Leave and continue join?' })
+            const overwrite = await confirm({ default: false, message: "A network is present in the adapter. Leave and continue join?" });
 
             if (!overwrite) {
-                logger.info(`Join cancelled.`)
-                return false
+                logger.info("Join cancelled.");
+                return false;
             }
 
-            const status = await this.ezsp.ezspLeaveNetwork()
+            const status = await this.ezsp.ezspLeaveNetwork();
 
             if (status !== SLStatus.OK) {
-                logger.error(`Failed to leave network with status=${SLStatus[status]}.`)
-                return true
+                logger.error(`Failed to leave network with status=${SLStatus[status]}.`);
+                return true;
             }
 
-            await waitForStackStatus(this.ezsp, SLStatus.NETWORK_DOWN)
+            await waitForStackStatus(this.ezsp, SLStatus.NETWORK_DOWN);
         }
 
         // set desired tx power before scan
         const radioTxPower = Number.parseInt(
             await input({
-                default: '5',
-                message: 'Radio transmit power [-128-127]',
+                default: "5",
+                message: "Radio transmit power [-128-127]",
                 validate(value) {
                     if (/\./.test(value)) {
-                        return false
+                        return false;
                     }
 
-                    const v = Number.parseInt(value, 10)
+                    const v = Number.parseInt(value, 10);
 
-                    return v >= -128 && v <= 127
+                    return v >= -128 && v <= 127;
                 },
             }),
             10,
-        )
+        );
 
-        status = await this.ezsp.ezspSetRadioPower(radioTxPower)
+        status = await this.ezsp.ezspSetRadioPower(radioTxPower);
 
         if (status !== SLStatus.OK) {
-            logger.error(`Failed to set transmit power to '${radioTxPower}' status=${SLStatus[status]}.`)
-            return true
+            logger.error(`Failed to set transmit power to '${radioTxPower}' status=${SLStatus[status]}.`);
+            return true;
         }
 
         const channels = await checkbox<number>({
@@ -286,76 +286,76 @@ export default class Router extends Command {
                 value: c,
                 checked: ZSpec.PREFERRED_802_15_4_CHANNELS.includes(c),
             })),
-            message: 'Channels to scan',
+            message: "Channels to scan",
             required: true,
-        })
+        });
 
-        const progressBar = new SingleBar({ clearOnComplete: true, format: '{bar} {percentage}% | ETA: {eta}s' }, Presets.shades_classic)
-        const duration = 4
+        const progressBar = new SingleBar({ clearOnComplete: true, format: "{bar} {percentage}% | ETA: {eta}s" }, Presets.shades_classic);
+        const duration = 4;
         // a symbol is 16 microseconds, a scan period is 960 symbols
-        const totalTime = (((2 ** duration + 1) * (16 * 960)) / 1000) * channels.length
-        let scanCompleted: (value: PromiseLike<void> | void) => void
-        const joinableNetworks: { networkFound: EmberZigbeeNetwork; lastHopLqi: number; lastHopRssi: number }[] = []
+        const totalTime = (((2 ** duration + 1) * (16 * 960)) / 1000) * channels.length;
+        let scanCompleted: (value: PromiseLike<void> | void) => void;
+        const joinableNetworks: { networkFound: EmberZigbeeNetwork; lastHopLqi: number; lastHopRssi: number }[] = [];
         // NOTE: expanding zigbee-herdsman
-        const ezspNetworkFoundHandlerOriginal = this.ezsp.ezspNetworkFoundHandler
-        const ezspScanCompleteHandlerOriginal = this.ezsp.ezspScanCompleteHandler
+        const ezspNetworkFoundHandlerOriginal = this.ezsp.ezspNetworkFoundHandler;
+        const ezspScanCompleteHandlerOriginal = this.ezsp.ezspScanCompleteHandler;
 
         this.ezsp.ezspNetworkFoundHandler = (networkFound: EmberZigbeeNetwork, lastHopLqi: number, lastHopRssi: number): void => {
-            logger.debug(`ezspNetworkFoundHandler: ${JSON.stringify({ networkFound, lastHopLqi, lastHopRssi })}`)
+            logger.debug(`ezspNetworkFoundHandler: ${JSON.stringify({ networkFound, lastHopLqi, lastHopRssi })}`);
 
             // don't want networks we can't join or wrong profile
             if (networkFound.allowingJoin && networkFound.stackProfile === STACK_PROFILE_ZIGBEE_PRO) {
-                joinableNetworks.push({ networkFound, lastHopLqi, lastHopRssi })
+                joinableNetworks.push({ networkFound, lastHopLqi, lastHopRssi });
             }
-        }
+        };
 
         this.ezsp.ezspScanCompleteHandler = (channel: number, status: SLStatus): void => {
-            logger.debug(`ezspScanCompleteHandler: ${JSON.stringify({ channel, status })}`)
-            progressBar.stop()
-            clearInterval(progressInterval)
+            logger.debug(`ezspScanCompleteHandler: ${JSON.stringify({ channel, status })}`);
+            progressBar.stop();
+            clearInterval(progressInterval);
 
             if (status === SLStatus.OK) {
                 if (scanCompleted) {
-                    scanCompleted()
+                    scanCompleted();
                 }
             } else {
-                logger.error(`Failed to scan ${channel} with status=${SLStatus[status]}.`)
+                logger.error(`Failed to scan ${channel} with status=${SLStatus[status]}.`);
             }
-        }
+        };
 
-        const startScanStatus = await this.ezsp.ezspStartScan(EzspNetworkScanType.ACTIVE_SCAN, ZSpec.Utils.channelsToUInt32Mask(channels), duration)
+        const startScanStatus = await this.ezsp.ezspStartScan(EzspNetworkScanType.ACTIVE_SCAN, ZSpec.Utils.channelsToUInt32Mask(channels), duration);
 
         if (startScanStatus !== SLStatus.OK) {
-            logger.error(`Failed start scan request with status=${SLStatus[startScanStatus]}.`)
+            logger.error(`Failed start scan request with status=${SLStatus[startScanStatus]}.`);
             // restore zigbee-herdsman default
-            this.ezsp.ezspNetworkFoundHandler = ezspNetworkFoundHandlerOriginal
-            this.ezsp.ezspScanCompleteHandler = ezspScanCompleteHandlerOriginal
-            return true
+            this.ezsp.ezspNetworkFoundHandler = ezspNetworkFoundHandlerOriginal;
+            this.ezsp.ezspScanCompleteHandler = ezspScanCompleteHandlerOriginal;
+            return true;
         }
 
-        progressBar.start(totalTime, 0)
+        progressBar.start(totalTime, 0);
 
         const progressInterval = setInterval(() => {
-            progressBar.increment(500)
-        }, 500)
+            progressBar.increment(500);
+        }, 500);
 
         await new Promise<void>((resolve) => {
-            scanCompleted = resolve
-        })
+            scanCompleted = resolve;
+        });
 
         // restore zigbee-herdsman default
-        this.ezsp.ezspNetworkFoundHandler = ezspNetworkFoundHandlerOriginal
-        this.ezsp.ezspScanCompleteHandler = ezspScanCompleteHandlerOriginal
+        this.ezsp.ezspNetworkFoundHandler = ezspNetworkFoundHandlerOriginal;
+        this.ezsp.ezspScanCompleteHandler = ezspScanCompleteHandlerOriginal;
 
         if (joinableNetworks.length === 0) {
-            logger.error(`Found no network available to join.`)
-            return false
+            logger.error("Found no network available to join.");
+            return false;
         }
 
         // sort network found by RSSI
-        joinableNetworks.sort((a, b) => b.lastHopLqi - a.lastHopLqi)
+        joinableNetworks.sort((a, b) => b.lastHopLqi - a.lastHopLqi);
 
-        const networkChoices = []
+        const networkChoices = [];
 
         for (const { networkFound, lastHopLqi, lastHopRssi } of joinableNetworks) {
             networkChoices.push({
@@ -363,11 +363,11 @@ export default class Router extends Command {
                     `PAN ID: ${networkFound.panId} | Ext PAN ID: ${networkFound.extendedPanId} | ` +
                     `Channel: ${networkFound.channel} | LQI: ${lastHopLqi} | RSSI: ${lastHopRssi}`,
                 value: networkFound,
-            })
+            });
         }
 
-        const networkToJoin = await select<EmberZigbeeNetwork>({ choices: networkChoices, message: 'Available networks' })
-        const defaultLinkKey = Buffer.from(ZSpec.INTEROPERABILITY_LINK_KEY)
+        const networkToJoin = await select<EmberZigbeeNetwork>({ choices: networkChoices, message: "Available networks" });
+        const defaultLinkKey = Buffer.from(ZSpec.INTEROPERABILITY_LINK_KEY);
         const state: EmberInitialSecurityState = {
             bitmask:
                 EmberInitialSecurityBitmask.TRUST_CENTER_GLOBAL_LINK_KEY |
@@ -378,35 +378,35 @@ export default class Router extends Command {
             networkKey: { contents: Buffer.alloc(16) }, // blank
             networkKeySequenceNumber: 0,
             preconfiguredTrustCenterEui64: ZSpec.BLANK_EUI64,
-        }
+        };
 
-        status = await this.ezsp.ezspSetInitialSecurityState(state)
+        status = await this.ezsp.ezspSetInitialSecurityState(state);
 
         if (status !== SLStatus.OK) {
-            logger.error(`Failed to set initial security state with status=${SLStatus[status]}.`)
-            return true
+            logger.error(`Failed to set initial security state with status=${SLStatus[status]}.`);
+            return true;
         }
 
         const extended: EmberExtendedSecurityBitmask =
-            EmberExtendedSecurityBitmask.JOINER_GLOBAL_LINK_KEY | EmberExtendedSecurityBitmask.EXT_NO_FRAME_COUNTER_RESET
-        status = await this.ezsp.ezspSetExtendedSecurityBitmask(extended)
+            EmberExtendedSecurityBitmask.JOINER_GLOBAL_LINK_KEY | EmberExtendedSecurityBitmask.EXT_NO_FRAME_COUNTER_RESET;
+        status = await this.ezsp.ezspSetExtendedSecurityBitmask(extended);
 
         if (status !== SLStatus.OK) {
-            logger.error(`Failed to set extended security bitmask to ${extended} with status=${SLStatus[status]}.`)
-            return true
+            logger.error(`Failed to set extended security bitmask to ${extended} with status=${SLStatus[status]}.`);
+            return true;
         }
 
-        status = await this.ezsp.ezspClearKeyTable()
+        status = await this.ezsp.ezspClearKeyTable();
 
         if (status !== SLStatus.OK) {
-            logger.error(`Failed to clear key table with status=${SLStatus[status]}.`)
+            logger.error(`Failed to clear key table with status=${SLStatus[status]}.`);
         }
 
-        status = await this.ezsp.ezspImportTransientKey(ZSpec.BLANK_EUI64, { contents: defaultLinkKey })
+        status = await this.ezsp.ezspImportTransientKey(ZSpec.BLANK_EUI64, { contents: defaultLinkKey });
 
         if (status !== SLStatus.OK) {
-            logger.error(`Failed to import transient key with status=${SLStatus[status]}.`)
-            return true
+            logger.error(`Failed to import transient key with status=${SLStatus[status]}.`);
+            return true;
         }
 
         status = await this.ezsp.ezspJoinNetwork(EmberNodeType.ROUTER, {
@@ -418,134 +418,134 @@ export default class Router extends Command {
             nwkManagerId: 0,
             nwkUpdateId: networkToJoin.nwkUpdateId,
             channels: ZSpec.ALL_802_15_4_CHANNELS_MASK,
-        })
+        });
 
         if (status !== SLStatus.OK) {
-            logger.error(`Failed to join specified network with status=${SLStatus[status]}.`)
-            return true
+            logger.error(`Failed to join specified network with status=${SLStatus[status]}.`);
+            return true;
         }
 
-        await waitForStackStatus(this.ezsp, SLStatus.NETWORK_UP)
-        await emberSetConcentrator(this.ezsp, this.stackConfig)
-        this.setRouterState(RouterState.RUNNING)
+        await waitForStackStatus(this.ezsp, SLStatus.NETWORK_UP);
+        await emberSetConcentrator(this.ezsp, this.stackConfig);
+        this.setRouterState(RouterState.RUNNING);
 
-        const permitJoining = await confirm({ default: true, message: 'Permit joining to extend network?' })
+        const permitJoining = await confirm({ default: true, message: "Permit joining to extend network?" });
 
         if (permitJoining) {
-            const [status] = await this.permitJoining(180, true)
+            const [status] = await this.permitJoining(180, true);
 
             if (status !== SLStatus.OK) {
-                logger.error(`Failed to permit joining with status=${SLStatus[status]}.`)
+                logger.error(`Failed to permit joining with status=${SLStatus[status]}.`);
             }
         }
 
-        return false
+        return false;
     }
 
     private async menuNetworkLeave(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
         const confirmed = await confirm({
             default: false,
-            message: 'Confirm leave network? (Cannot be undone without a backup.)',
-        })
+            message: "Confirm leave network? (Cannot be undone without a backup.)",
+        });
 
         if (!confirmed) {
-            logger.info(`Network leave cancelled.`)
-            return false
+            logger.info("Network leave cancelled.");
+            return false;
         }
 
         if (this.routerState !== RouterState.RUNNING) {
-            const initStatus = await emberNetworkInit(this.ezsp, true)
+            const initStatus = await emberNetworkInit(this.ezsp, true);
 
             if (initStatus === SLStatus.NOT_JOINED) {
-                logger.info(`No network present.`)
-                return false
+                logger.info("No network present.");
+                return false;
             }
 
             if (initStatus !== SLStatus.OK) {
-                logger.error(`Failed network init request with status=${SLStatus[initStatus]}.`)
-                return true
+                logger.error(`Failed network init request with status=${SLStatus[initStatus]}.`);
+                return true;
             }
 
-            await waitForStackStatus(this.ezsp, SLStatus.NETWORK_UP)
+            await waitForStackStatus(this.ezsp, SLStatus.NETWORK_UP);
             // NOTE: explicitly not set since we don't want to consider this "running"
             // this.setRouterState(RouterState.RUNNING)
         }
 
-        const leaveStatus = await this.ezsp.ezspLeaveNetwork()
+        const leaveStatus = await this.ezsp.ezspLeaveNetwork();
 
         if (leaveStatus !== SLStatus.OK) {
-            logger.error(`Failed to leave network with status=${SLStatus[leaveStatus]}.`)
-            return true
+            logger.error(`Failed to leave network with status=${SLStatus[leaveStatus]}.`);
+            return true;
         }
 
-        await waitForStackStatus(this.ezsp, SLStatus.NETWORK_DOWN)
-        this.setRouterState(RouterState.NOT_JOINED)
-        logger.info(`Left network.`)
+        await waitForStackStatus(this.ezsp, SLStatus.NETWORK_DOWN);
+        this.setRouterState(RouterState.NOT_JOINED);
+        logger.info("Left network.");
 
-        return false
+        return false;
     }
 
     private async menuNetworkRejoin(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        const initStatus = await emberNetworkInit(this.ezsp, true)
-        const notJoined = initStatus === SLStatus.NOT_JOINED
+        const initStatus = await emberNetworkInit(this.ezsp, true);
+        const notJoined = initStatus === SLStatus.NOT_JOINED;
 
-        this.setRouterState(notJoined ? RouterState.NOT_JOINED : RouterState.UNKNOWN)
+        this.setRouterState(notJoined ? RouterState.NOT_JOINED : RouterState.UNKNOWN);
 
         if (!notJoined && initStatus !== SLStatus.OK) {
-            logger.error(`Failed network init request with status=${SLStatus[initStatus]}.`)
-            return true
+            logger.error(`Failed network init request with status=${SLStatus[initStatus]}.`);
+            return true;
         }
 
         if (notJoined) {
-            logger.info(`No network present in the adapter, cannot rejoin.`)
-            return false
+            logger.info("No network present in the adapter, cannot rejoin.");
+            return false;
         }
 
-        await waitForStackStatus(this.ezsp, SLStatus.NETWORK_UP)
-        await emberSetConcentrator(this.ezsp, this.stackConfig)
+        await waitForStackStatus(this.ezsp, SLStatus.NETWORK_UP);
+        await emberSetConcentrator(this.ezsp, this.stackConfig);
 
-        const [npStatus, nodeType, netParams] = await this.ezsp.ezspGetNetworkParameters()
+        const [npStatus, nodeType, netParams] = await this.ezsp.ezspGetNetworkParameters();
 
         if (npStatus !== SLStatus.OK) {
-            logger.error(`Failed to get network parameters with status=${SLStatus[npStatus]}.`)
-            return true
+            logger.error(`Failed to get network parameters with status=${SLStatus[npStatus]}.`);
+            return true;
         }
 
         if (nodeType !== EmberNodeType.ROUTER) {
-            logger.error(`Current network is not router: nodeType=${EmberNodeType[nodeType]}`)
-            return true
+            logger.error(`Current network is not router: nodeType=${EmberNodeType[nodeType]}`);
+            return true;
         }
 
-        logger.info(`Current adapter network: ${JSON.stringify(netParams)}`)
-        this.setRouterState(RouterState.RUNNING)
+        logger.info(`Current adapter network: ${JSON.stringify(netParams)}`);
+        this.setRouterState(RouterState.RUNNING);
 
-        const permitJoining = await confirm({ default: true, message: 'Permit joining to extend network?' })
+        const permitJoining = await confirm({ default: true, message: "Permit joining to extend network?" });
 
         if (permitJoining) {
-            const [status] = await this.permitJoining(180, true)
+            const [status] = await this.permitJoining(180, true);
 
             if (status !== SLStatus.OK) {
-                logger.error(`Failed to permit joining with status=${SLStatus[status]}.`)
+                logger.error(`Failed to permit joining with status=${SLStatus[status]}.`);
             }
         }
 
-        return false
+        return false;
     }
 
     private async menuPingCoordinator(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
         const [status] = await this.ezsp.send(
@@ -561,74 +561,74 @@ export default class Router extends Command {
                 sequence: 0,
             },
             // type 'readResponse', cluster 'genBasic', data '{"zclVersion":8}'
-            Buffer.from('1801010000002008', 'hex'),
+            Buffer.from("1801010000002008", "hex"),
             0,
             0,
-        )
+        );
 
         if (status !== SLStatus.OK) {
-            logger.error(`Failed to ping coordinator with status=${SLStatus[status]}.`)
+            logger.error(`Failed to ping coordinator with status=${SLStatus[status]}.`);
         }
 
-        return false
+        return false;
     }
 
     private async menuReadCounters(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        const alsoClear = await confirm({ message: 'Clear counters after read?', default: true })
-        const counters = alsoClear ? await this.ezsp.ezspReadAndClearCounters() : await this.ezsp.ezspReadCounters()
+        const alsoClear = await confirm({ message: "Clear counters after read?", default: true });
+        const counters = alsoClear ? await this.ezsp.ezspReadAndClearCounters() : await this.ezsp.ezspReadCounters();
 
         for (let i = 0; i < EmberCounterType.COUNT; i++) {
-            logger.info(`Counter ${EmberCounterType[i]}=${counters[i]}`)
+            logger.info(`Counter ${EmberCounterType[i]}=${counters[i]}`);
         }
 
-        return false
+        return false;
     }
 
     private async menuReloadEventHandlers(): Promise<boolean> {
-        await this.loadCustomEventHandlers()
+        await this.loadCustomEventHandlers();
 
-        return false
+        return false;
     }
 
     private async menuRunScript(): Promise<boolean> {
-        const jsFile = await browseToFile('File to run', DEFAULT_ROUTER_SCRIPT_MJS_PATH)
+        const jsFile = await browseToFile("File to run", DEFAULT_ROUTER_SCRIPT_MJS_PATH);
 
         try {
-            const scriptToRun = await import(pathToFileURL(jsFile).toString())
+            const scriptToRun = await import(pathToFileURL(jsFile).toString());
 
-            scriptToRun.default(this, logger)
+            scriptToRun.default(this, logger);
         } catch (error) {
-            logger.error(error)
+            logger.error(error);
         }
 
-        return false
+        return false;
     }
 
     private async menuSetManufacturerCode(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        const enum Source {
+        enum Source {
             ZCL_LIST = 0,
             INPUT = 1,
         }
         const source = await select<-1 | Source>({
             choices: [
-                { name: 'From ZCL list (long)', value: Source.ZCL_LIST },
-                { name: 'From manual input', value: Source.INPUT },
-                { name: 'Go Back', value: -1 },
+                { name: "From ZCL list (long)", value: Source.ZCL_LIST },
+                { name: "From manual input", value: Source.INPUT },
+                { name: "Go Back", value: -1 },
             ],
-            message: 'Source for the manufacturer code',
-        })
+            message: "Source for the manufacturer code",
+        });
 
-        let newCode: Zcl.ManufacturerCode = this.manufacturerCode
+        let newCode: Zcl.ManufacturerCode = this.manufacturerCode;
 
         switch (source) {
             case Source.ZCL_LIST: {
@@ -637,189 +637,189 @@ export default class Router extends Command {
                         name: k,
                         value: Zcl.ManufacturerCode[k as keyof typeof Zcl.ManufacturerCode],
                     })),
-                    message: 'Select manufacturer',
-                })
+                    message: "Select manufacturer",
+                });
 
-                break
+                break;
             }
 
             case Source.INPUT: {
                 newCode = Number.parseInt(
                     await input({
                         default: Zcl.ManufacturerCode.SILICON_LABORATORIES.toString(),
-                        message: 'Code [0-65535/0x0000-0xFFFF]',
+                        message: "Code [0-65535/0x0000-0xFFFF]",
                         validate(value) {
                             if (/\./.test(value)) {
-                                return false
+                                return false;
                             }
 
-                            const v = Number.parseInt(value, value.startsWith('0x') ? 16 : 10)
-                            return v >= 0 && v <= 65535
+                            const v = Number.parseInt(value, value.startsWith("0x") ? 16 : 10);
+                            return v >= 0 && v <= 65535;
                         },
                     }),
                     10,
-                )
+                );
 
-                break
+                break;
             }
 
             case -1: {
-                return false
+                return false;
             }
         }
 
-        this.manufacturerCode = newCode
+        this.manufacturerCode = newCode;
 
-        await this.ezsp.ezspSetManufacturerCode(newCode)
+        await this.ezsp.ezspSetManufacturerCode(newCode);
 
-        return false
+        return false;
     }
 
     private async menuTokensBackup(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        const saveFile = await browseToFile('Router tokens backup save file', DEFAULT_ROUTER_TOKENS_BACKUP_PATH, true)
-        const eui64 = await this.ezsp.ezspGetEui64()
-        const tokensBuf = await EmberTokensManager.saveTokens(this.ezsp, Buffer.from(eui64.slice(2 /* 0x */), 'hex').reverse())
+        const saveFile = await browseToFile("Router tokens backup save file", DEFAULT_ROUTER_TOKENS_BACKUP_PATH, true);
+        const eui64 = await this.ezsp.ezspGetEui64();
+        const tokensBuf = await EmberTokensManager.saveTokens(this.ezsp, Buffer.from(eui64.slice(2 /* 0x */), "hex").reverse());
 
         if (tokensBuf) {
-            writeFileSync(saveFile, tokensBuf.toString('hex'), 'utf8')
+            writeFileSync(saveFile, tokensBuf.toString("hex"), "utf8");
 
-            logger.info(`Tokens backup written to '${saveFile}'.`)
+            logger.info(`Tokens backup written to '${saveFile}'.`);
         } else {
-            logger.error(`Failed to backup tokens.`)
+            logger.error("Failed to backup tokens.");
         }
 
-        return false
+        return false;
     }
 
     private async menuTokensReset(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
         const confirmed = await confirm({
             default: false,
-            message: 'Confirm tokens reset? (Cannot be undone without a backup.)',
-        })
+            message: "Confirm tokens reset? (Cannot be undone without a backup.)",
+        });
 
         if (!confirmed) {
-            logger.info(`Tokens reset cancelled.`)
-            return false
+            logger.info("Tokens reset cancelled.");
+            return false;
         }
 
         const options = await checkbox<string>({
             choices: [
-                { name: 'Exclude network and APS outgoing frame counter tokens?', value: 'excludeOutgoingFC', checked: false },
-                { name: 'Exclude stack boot counter token?', value: 'excludeBootCounter', checked: false },
+                { name: "Exclude network and APS outgoing frame counter tokens?", value: "excludeOutgoingFC", checked: false },
+                { name: "Exclude stack boot counter token?", value: "excludeBootCounter", checked: false },
             ],
-            message: 'Reset options',
-        })
+            message: "Reset options",
+        });
 
-        await this.ezsp.ezspTokenFactoryReset(options.includes('excludeOutgoingFC'), options.includes('excludeBootCounter'))
+        await this.ezsp.ezspTokenFactoryReset(options.includes("excludeOutgoingFC"), options.includes("excludeBootCounter"));
 
-        return true
+        return true;
     }
 
     private async menuTokensRestore(): Promise<boolean> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        const backupFile = await browseToFile('Router tokens backup file location', DEFAULT_ROUTER_TOKENS_BACKUP_PATH)
-        const tokensBuf = Buffer.from(readFileSync(backupFile, 'utf8'), 'hex')
-        const status = await EmberTokensManager.restoreTokens(this.ezsp, tokensBuf)
+        const backupFile = await browseToFile("Router tokens backup file location", DEFAULT_ROUTER_TOKENS_BACKUP_PATH);
+        const tokensBuf = Buffer.from(readFileSync(backupFile, "utf8"), "hex");
+        const status = await EmberTokensManager.restoreTokens(this.ezsp, tokensBuf);
 
         if (status === SLStatus.OK) {
-            logger.info(`Restored router tokens.`)
+            logger.info("Restored router tokens.");
         } else {
-            logger.error(`Failed to restore router tokens.`)
+            logger.error("Failed to restore router tokens.");
         }
 
-        return true
+        return true;
     }
 
     private async navigateMenu(): Promise<boolean> {
-        const notRunning = this.routerState !== RouterState.RUNNING
+        const notRunning = this.routerState !== RouterState.RUNNING;
         const answer = await select<-1 | RouterMenu>({
             choices: [
-                { name: 'Join network', value: RouterMenu.NETWORK_JOIN },
+                { name: "Join network", value: RouterMenu.NETWORK_JOIN },
                 {
-                    name: 'Rejoin network',
+                    name: "Rejoin network",
                     value: RouterMenu.NETWORK_REJOIN,
                     disabled: this.routerState === RouterState.NOT_JOINED || this.routerState !== RouterState.UNKNOWN,
                 },
-                { name: 'Leave network', value: RouterMenu.NETWORK_LEAVE },
-                { name: 'Backup NVM3 tokens', value: RouterMenu.TOKENS_BACKUP },
-                { name: 'Restore NVM3 tokens', value: RouterMenu.TOKENS_RESTORE },
-                { name: 'Reset NVM3 tokens', value: RouterMenu.TOKENS_RESET },
-                { name: 'Get network info', value: RouterMenu.NETWORK_INFO, disabled: notRunning },
-                { name: 'Set manufacturer code', value: RouterMenu.SET_MANUFACTURER_CODE, disabled: notRunning },
-                { name: 'Read counters', value: RouterMenu.PING_COORDINATOR, disabled: notRunning },
-                { name: 'Ping coordinator', value: RouterMenu.READ_COUNTERS, disabled: notRunning },
-                { name: 'Reload custom event handlers', value: RouterMenu.RELOAD_EVENT_HANDLERS },
-                { name: 'Run custom script', value: RouterMenu.RUN_SCRIPT, disabled: notRunning },
-                { name: 'Exit', value: -1 },
+                { name: "Leave network", value: RouterMenu.NETWORK_LEAVE },
+                { name: "Backup NVM3 tokens", value: RouterMenu.TOKENS_BACKUP },
+                { name: "Restore NVM3 tokens", value: RouterMenu.TOKENS_RESTORE },
+                { name: "Reset NVM3 tokens", value: RouterMenu.TOKENS_RESET },
+                { name: "Get network info", value: RouterMenu.NETWORK_INFO, disabled: notRunning },
+                { name: "Set manufacturer code", value: RouterMenu.SET_MANUFACTURER_CODE, disabled: notRunning },
+                { name: "Read counters", value: RouterMenu.PING_COORDINATOR, disabled: notRunning },
+                { name: "Ping coordinator", value: RouterMenu.READ_COUNTERS, disabled: notRunning },
+                { name: "Reload custom event handlers", value: RouterMenu.RELOAD_EVENT_HANDLERS },
+                { name: "Run custom script", value: RouterMenu.RUN_SCRIPT, disabled: notRunning },
+                { name: "Exit", value: -1 },
             ],
-            message: 'Menu',
-        })
+            message: "Menu",
+        });
 
         switch (answer) {
             case RouterMenu.NETWORK_JOIN: {
-                return await this.menuNetworkJoin()
+                return await this.menuNetworkJoin();
             }
 
             case RouterMenu.NETWORK_REJOIN: {
-                return await this.menuNetworkRejoin()
+                return await this.menuNetworkRejoin();
             }
 
             case RouterMenu.NETWORK_LEAVE: {
-                return await this.menuNetworkLeave()
+                return await this.menuNetworkLeave();
             }
 
             case RouterMenu.TOKENS_BACKUP: {
-                return await this.menuTokensBackup()
+                return await this.menuTokensBackup();
             }
 
             case RouterMenu.TOKENS_RESTORE: {
-                return await this.menuTokensRestore()
+                return await this.menuTokensRestore();
             }
 
             case RouterMenu.TOKENS_RESET: {
-                return await this.menuTokensReset()
+                return await this.menuTokensReset();
             }
 
             case RouterMenu.NETWORK_INFO: {
-                return await this.menuNetworkInfo()
+                return await this.menuNetworkInfo();
             }
 
             case RouterMenu.SET_MANUFACTURER_CODE: {
-                return await this.menuSetManufacturerCode()
+                return await this.menuSetManufacturerCode();
             }
 
             case RouterMenu.READ_COUNTERS: {
-                return await this.menuReadCounters()
+                return await this.menuReadCounters();
             }
 
             case RouterMenu.PING_COORDINATOR: {
-                return await this.menuPingCoordinator()
+                return await this.menuPingCoordinator();
             }
 
             case RouterMenu.RELOAD_EVENT_HANDLERS: {
-                return await this.menuReloadEventHandlers()
+                return await this.menuReloadEventHandlers();
             }
 
             case RouterMenu.RUN_SCRIPT: {
-                return await this.menuRunScript()
+                return await this.menuRunScript();
             }
         }
 
-        return true // exit
+        return true; // exit
     }
 
     private async onIncomingMessage(
@@ -837,71 +837,70 @@ export default class Router extends Command {
             apsFrame.destinationEndpoint === ROUTER_FIXED_ENDPOINTS[0].endpoint &&
             apsFrame.sourceEndpoint === ROUTER_FIXED_ENDPOINTS[0].endpoint
         ) {
-            const header = Zcl.Header.fromBuffer(messageContents)
+            const header = Zcl.Header.fromBuffer(messageContents);
 
             if (
-                header &&
-                header.isGlobal &&
+                header?.isGlobal &&
                 header.frameControl.direction === Zcl.Direction.CLIENT_TO_SERVER &&
                 header.commandIdentifier === Zcl.Foundation.read.ID
             ) {
                 // handle replying to Z2M interview + ping attribute reads
-                const frame = Zcl.Frame.fromBuffer(apsFrame.clusterId, header, messageContents, {})
+                const frame = Zcl.Frame.fromBuffer(apsFrame.clusterId, header, messageContents, {});
                 const replyPayload: { attrId: number; status: Zcl.Status; dataType?: DataType; attrData?: number | string } = {
                     attrId: frame.payload[0].attrId,
                     status: Zcl.Status.SUCCESS,
                     dataType: undefined,
                     attrData: undefined,
-                }
+                };
 
                 switch (replyPayload.attrId) {
                     case Zcl.Clusters.genBasic.attributes.zclVersion.ID: {
-                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.zclVersion.type
-                        replyPayload.attrData = 8 // DataType.UINT8
-                        break
+                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.zclVersion.type;
+                        replyPayload.attrData = 8; // DataType.UINT8
+                        break;
                     }
 
                     case Zcl.Clusters.genBasic.attributes.appVersion.ID: {
-                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.appVersion.type
-                        replyPayload.attrData = emberFullVersion.ezsp // DataType.UINT8
-                        break
+                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.appVersion.type;
+                        replyPayload.attrData = emberFullVersion.ezsp; // DataType.UINT8
+                        break;
                     }
 
                     case Zcl.Clusters.genBasic.attributes.stackVersion.ID: {
-                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.stackVersion.type
-                        replyPayload.attrData = emberFullVersion.major // DataType.UINT8
-                        break
+                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.stackVersion.type;
+                        replyPayload.attrData = emberFullVersion.major; // DataType.UINT8
+                        break;
                     }
 
                     case Zcl.Clusters.genBasic.attributes.manufacturerName.ID: {
-                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.manufacturerName.type
-                        replyPayload.attrData = Zcl.ManufacturerCode[this.manufacturerCode] // DataType.CHAR_STR
-                        break
+                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.manufacturerName.type;
+                        replyPayload.attrData = Zcl.ManufacturerCode[this.manufacturerCode]; // DataType.CHAR_STR
+                        break;
                     }
 
                     case Zcl.Clusters.genBasic.attributes.modelId.ID: {
-                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.modelId.type
-                        replyPayload.attrData = 'Ember ZLI Router' // DataType.CHAR_STR
-                        break
+                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.modelId.type;
+                        replyPayload.attrData = "Ember ZLI Router"; // DataType.CHAR_STR
+                        break;
                     }
 
                     case Zcl.Clusters.genBasic.attributes.dateCode.ID: {
-                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.dateCode.type
-                        replyPayload.attrData = emberFullVersion.revision // DataType.CHAR_STR
-                        break
+                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.dateCode.type;
+                        replyPayload.attrData = emberFullVersion.revision; // DataType.CHAR_STR
+                        break;
                     }
 
                     case Zcl.Clusters.genBasic.attributes.powerSource.ID: {
-                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.powerSource.type
+                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.powerSource.type;
                         // Mains
-                        replyPayload.attrData = 1 // DataType.ENUM8
-                        break
+                        replyPayload.attrData = 1; // DataType.ENUM8
+                        break;
                     }
 
                     case Zcl.Clusters.genBasic.attributes.swBuildId.ID: {
-                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.swBuildId.type
-                        replyPayload.attrData = emberFullVersion.revision // DataType.CHAR_STR
-                        break
+                        replyPayload.dataType = Zcl.Clusters.genBasic.attributes.swBuildId.type;
+                        replyPayload.attrData = emberFullVersion.revision; // DataType.CHAR_STR
+                        break;
                     }
                 }
 
@@ -916,23 +915,23 @@ export default class Router extends Command {
                         Zcl.Clusters.genBasic.ID,
                         [replyPayload], // repetitive strategy, wrap in array
                         {},
-                    )
+                    );
 
                     logger.debug(
                         `~~~> [ZCL to=${ZSpec.COORDINATOR_ADDRESS} apsFrame=${JSON.stringify(apsFrame)} header=${JSON.stringify(zclFrame.header)}]`,
-                    )
+                    );
 
                     try {
-                        await this.ezsp!.send(EmberOutgoingMessageType.DIRECT, ZSpec.COORDINATOR_ADDRESS, apsFrame, zclFrame.toBuffer(), 0, 0)
+                        await this.ezsp!.send(EmberOutgoingMessageType.DIRECT, ZSpec.COORDINATOR_ADDRESS, apsFrame, zclFrame.toBuffer(), 0, 0);
                     } catch (error) {
-                        logger.debug(error)
+                        logger.debug(error);
                     }
                 }
             }
         }
 
         if (this.customEventHandlers.onIncomingMessage) {
-            await this.customEventHandlers.onIncomingMessage(this, logger, type, apsFrame, lastHopLqi, sender, messageContents)
+            await this.customEventHandlers.onIncomingMessage(this, logger, type, apsFrame, lastHopLqi, sender, messageContents);
         }
     }
 
@@ -948,9 +947,9 @@ export default class Router extends Command {
                 // no ACK was received from the destination
                 logger.error(
                     `Delivery of ${EmberOutgoingMessageType[type]} failed for '${indexOrDestination}' [apsFrame=${JSON.stringify(apsFrame)} messageTag=${messageTag}]`,
-                )
+                );
 
-                break
+                break;
             }
 
             case SLStatus.OK: {
@@ -961,49 +960,49 @@ export default class Router extends Command {
                     !this.multicastTable.includes(apsFrame.groupId)
                 ) {
                     // workaround for devices using multicast for state update (coordinator passthrough)
-                    const tableIdx = this.multicastTable.length
+                    const tableIdx = this.multicastTable.length;
                     const multicastEntry: EmberMulticastTableEntry = {
                         multicastId: apsFrame.groupId,
                         endpoint: ROUTER_FIXED_ENDPOINTS[0].endpoint,
                         networkIndex: ROUTER_FIXED_ENDPOINTS[0].networkIndex,
-                    }
+                    };
                     // set immediately to avoid potential race
-                    this.multicastTable.push(multicastEntry.multicastId)
+                    this.multicastTable.push(multicastEntry.multicastId);
 
                     try {
-                        const status = await this.ezsp!.ezspSetMulticastTableEntry(tableIdx, multicastEntry)
+                        const status = await this.ezsp!.ezspSetMulticastTableEntry(tableIdx, multicastEntry);
 
                         if (status !== SLStatus.OK) {
                             throw new Error(
                                 `Failed to register group '${multicastEntry.multicastId}' in multicast table with status=${SLStatus[status]}.`,
-                            )
+                            );
                         }
 
-                        logger.debug(`Registered multicast table entry (${tableIdx}): ${JSON.stringify(multicastEntry)}.`)
+                        logger.debug(`Registered multicast table entry (${tableIdx}): ${JSON.stringify(multicastEntry)}.`);
                     } catch (error) {
                         // remove to allow retry on next occurrence
-                        this.multicastTable.splice(tableIdx, 1)
-                        logger.error(`${error}`)
+                        this.multicastTable.splice(tableIdx, 1);
+                        logger.error(`${error}`);
                     }
                 }
 
-                break
+                break;
             }
         }
         // shouldn't be any other status
 
         if (this.customEventHandlers.onMessageSent) {
-            await this.customEventHandlers.onMessageSent(this, logger, status, type, indexOrDestination, apsFrame, messageTag)
+            await this.customEventHandlers.onMessageSent(this, logger, status, type, indexOrDestination, apsFrame, messageTag);
         }
     }
 
     private async onStackStatus(status: SLStatus): Promise<void> {
         if (status === SLStatus.NETWORK_DOWN) {
-            this.setRouterState(RouterState.NOT_JOINED)
+            this.setRouterState(RouterState.NOT_JOINED);
         }
 
         if (this.customEventHandlers.onStackStatus) {
-            await this.customEventHandlers.onStackStatus(this, logger, status)
+            await this.customEventHandlers.onStackStatus(this, logger, status);
         }
     }
 
@@ -1015,13 +1014,13 @@ export default class Router extends Command {
         messageContents: Buffer,
     ): Promise<void> {
         if (this.customEventHandlers.onTouchlinkMessage) {
-            await this.customEventHandlers.onTouchlinkMessage(this, logger, sourcePanId, sourceAddress, groupId, lastHopLqi, messageContents)
+            await this.customEventHandlers.onTouchlinkMessage(this, logger, sourcePanId, sourceAddress, groupId, lastHopLqi, messageContents);
         }
     }
 
     private async onZDOResponse(apsFrame: EmberApsFrame, sender: NodeId, messageContents: Buffer): Promise<void> {
         if (this.customEventHandlers.onZDOResponse) {
-            await this.customEventHandlers.onZDOResponse(this, logger, apsFrame, sender, messageContents)
+            await this.customEventHandlers.onZDOResponse(this, logger, apsFrame, sender, messageContents);
         }
     }
 
@@ -1030,28 +1029,28 @@ export default class Router extends Command {
         broadcastMgmtPermitJoin: boolean,
     ): Promise<[SLStatus, apsFrame: EmberApsFrame | undefined, messageTag: number | undefined]> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        let status = await this.ezsp.ezspPermitJoining(duration)
-        let apsFrame: EmberApsFrame | undefined
-        let messageTag: number | undefined
+        let status = await this.ezsp.ezspPermitJoining(duration);
+        let apsFrame: EmberApsFrame | undefined;
+        let messageTag: number | undefined;
 
-        logger.debug(`Permit joining for ${duration} sec. status=${[status]}`)
+        logger.debug(`Permit joining for ${duration} sec. status=${[status]}`);
 
         if (broadcastMgmtPermitJoin) {
             // `authentication`: TC significance always 1 (zb specs)
-            const zdoPayload = BuffaloZdo.buildRequest(true, Zdo.ClusterId.PERMIT_JOINING_REQUEST, duration, 1, [])
-            ;[status, apsFrame, messageTag] = await this.sendZDORequest(
+            const zdoPayload = BuffaloZdo.buildRequest(true, Zdo.ClusterId.PERMIT_JOINING_REQUEST, duration, 1, []);
+            [status, apsFrame, messageTag] = await this.sendZDORequest(
                 ZSpec.BroadcastAddress.DEFAULT,
                 Zdo.ClusterId.PERMIT_JOINING_REQUEST,
                 zdoPayload,
                 DEFAULT_APS_OPTIONS,
-            )
+            );
         }
 
-        return [status, apsFrame, messageTag]
+        return [status, apsFrame, messageTag];
     }
 
     private async sendZDORequest(
@@ -1061,13 +1060,13 @@ export default class Router extends Command {
         options: EmberApsOption,
     ): Promise<[SLStatus, apsFrame: EmberApsFrame | undefined, messageTag: number | undefined]> {
         if (!this.ezsp) {
-            logger.error(`Invalid state, no EZSP layer available.`)
-            return this.exit(1)
+            logger.error("Invalid state, no EZSP layer available.");
+            return this.exit(1);
         }
 
-        this.zdoRequestSequence = ++this.zdoRequestSequence & APPLICATION_ZDO_SEQUENCE_MASK
-        const messageTag = this.zdoRequestSequence
-        messageContents[0] = messageTag
+        this.zdoRequestSequence = ++this.zdoRequestSequence & APPLICATION_ZDO_SEQUENCE_MASK;
+        const messageTag = this.zdoRequestSequence;
+        messageContents[0] = messageTag;
 
         const apsFrame: EmberApsFrame = {
             profileId: Zdo.ZDO_PROFILE_ID,
@@ -1077,7 +1076,7 @@ export default class Router extends Command {
             options,
             groupId: 0,
             sequence: 0, // set by stack
-        }
+        };
 
         if (
             destination === ZSpec.BroadcastAddress.DEFAULT ||
@@ -1086,8 +1085,8 @@ export default class Router extends Command {
         ) {
             logger.debug(
                 `~~~> [ZDO ${Zdo.ClusterId[clusterId]} BROADCAST to=${destination} messageTag=${messageTag} ` +
-                    `messageContents=${messageContents.toString('hex')}]`,
-            )
+                    `messageContents=${messageContents.toString("hex")}]`,
+            );
 
             const [status, apsSequence] = await this.ezsp.ezspSendBroadcast(
                 ZSpec.NULL_NODE_ID, // alias
@@ -1097,17 +1096,17 @@ export default class Router extends Command {
                 DEFAULT_ZDO_REQUEST_RADIUS,
                 messageTag,
                 messageContents,
-            )
-            apsFrame.sequence = apsSequence
+            );
+            apsFrame.sequence = apsSequence;
 
-            logger.debug(`~~~> [SENT ZDO type=BROADCAST apsSequence=${apsSequence} messageTag=${messageTag} status=${SLStatus[status]}`)
-            return [status, apsFrame, messageTag]
+            logger.debug(`~~~> [SENT ZDO type=BROADCAST apsSequence=${apsSequence} messageTag=${messageTag} status=${SLStatus[status]}`);
+            return [status, apsFrame, messageTag];
         }
 
         logger.debug(
             `~~~> [ZDO ${Zdo.ClusterId[clusterId]} UNICAST to=${destination} messageTag=${messageTag} ` +
-                `messageContents=${messageContents.toString('hex')}]`,
-        )
+                `messageContents=${messageContents.toString("hex")}]`,
+        );
 
         const [status, apsSequence] = await this.ezsp.ezspSendUnicast(
             EmberOutgoingMessageType.DIRECT,
@@ -1115,20 +1114,20 @@ export default class Router extends Command {
             apsFrame,
             messageTag,
             messageContents,
-        )
-        apsFrame.sequence = apsSequence
+        );
+        apsFrame.sequence = apsSequence;
 
-        logger.debug(`~~~> [SENT ZDO type=DIRECT apsSequence=${apsSequence} messageTag=${messageTag} status=${SLStatus[status]}`)
-        return [status, apsFrame, messageTag]
+        logger.debug(`~~~> [SENT ZDO type=DIRECT apsSequence=${apsSequence} messageTag=${messageTag} status=${SLStatus[status]}`);
+        return [status, apsFrame, messageTag];
     }
 
     private setRouterState(newState: RouterState): void {
         if (newState === this.routerState) {
-            return
+            return;
         }
 
-        logger.info(`Router state changed: previous=${RouterState[this.routerState]} new=${RouterState[newState]}.`)
+        logger.info(`Router state changed: previous=${RouterState[this.routerState]} new=${RouterState[newState]}.`);
 
-        this.routerState = newState
+        this.routerState = newState;
     }
 }

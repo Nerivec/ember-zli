@@ -1,26 +1,26 @@
-import type { EmberMulticastId } from 'zigbee-herdsman/dist/adapter/ember/types.js'
-import type { ClusterId, ProfileId } from 'zigbee-herdsman/dist/zspec/tstypes.js'
+import type { EmberMulticastId } from "zigbee-herdsman/dist/adapter/ember/types.js";
+import type { ClusterId, ProfileId } from "zigbee-herdsman/dist/zspec/tstypes.js";
 
-import { Zcl, ZSpec } from 'zigbee-herdsman'
+import { ZSpec, Zcl } from "zigbee-herdsman";
 
 type FixedEndpointInfo = {
     /** Actual Zigbee endpoint number. uint8_t */
-    endpoint: number
+    endpoint: number;
     /** Profile ID of the device on this endpoint. */
-    profileId: ProfileId
+    profileId: ProfileId;
     /** Device ID of the device on this endpoint. uint16_t */
-    deviceId: number
+    deviceId: number;
     /** Version of the device. uint8_t */
-    deviceVersion: number
+    deviceVersion: number;
     /** List of server clusters. */
-    inClusterList: readonly ClusterId[]
+    inClusterList: readonly ClusterId[];
     /** List of client clusters. */
-    outClusterList: readonly ClusterId[]
+    outClusterList: readonly ClusterId[];
     /** Network index for this endpoint. uint8_t */
-    networkIndex: number
+    networkIndex: number;
     /** Multicast group IDs to register in the multicast table */
-    multicastIds: readonly EmberMulticastId[]
-}
+    multicastIds: readonly EmberMulticastId[];
+};
 
 /**
  * List of endpoints to register.
@@ -52,4 +52,4 @@ export const ROUTER_FIXED_ENDPOINTS: readonly FixedEndpointInfo[] = [
         networkIndex: 0x00,
         multicastIds: [0x0b84],
     },
-]
+];

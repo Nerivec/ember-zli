@@ -1,92 +1,62 @@
 {
-  "name": "ember-zli",
-  "description": "Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver",
-  "version": "2.10.2",
-  "author": "Nerivec",
-  "bin": {
-    "ember-zli": "bin/run.js"
-  },
-  "bugs": "https://github.com/Nerivec/ember-zli/issues",
-  "dependencies": {
-    "@inquirer/prompts": "^7",
-    "@oclif/core": "^4",
-    "@oclif/plugin-help": "^6",
-    "@oclif/plugin-not-found": "^3",
-    "@oclif/plugin-version": "^2",
-    "bonjour-service": "^1",
-    "cli-progress": "^3",
-    "winston": "^3",
-    "zigbee-herdsman": "3.2.6"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9",
-    "@ianvs/prettier-plugin-sort-imports": "^4",
-    "@oclif/prettier-config": "^0",
-    "@oclif/test": "^4",
-    "@types/cli-progress": "^3",
-    "@types/eslint__js": "^8",
-    "@types/mocha": "^10",
-    "@types/node": "^20",
-    "eslint": "^9",
-    "eslint-config-prettier": "^10",
-    "mocha": "^11",
-    "oclif": "^4",
-    "prettier": "^3",
-    "shx": "^0",
-    "ts-node": "^10",
-    "typescript": "^5",
-    "typescript-eslint": "^8"
-  },
-  "engines": {
-    "node": ">=20.15.0"
-  },
-  "files": [
-    "/bin",
-    "/dist",
-    "/oclif.manifest.json"
-  ],
-  "homepage": "https://github.com/Nerivec/ember-zli",
-  "keywords": [
-    "zigbee2mqtt",
-    "z2m",
-    "zigbee-herdsman",
-    "herdsman",
-    "ember",
-    "emberznet",
-    "ezsp",
-    "silabs",
-    "zigbee"
-  ],
-  "license": "GPL-3.0-or-later",
-  "main": "dist/index.js",
-  "type": "module",
-  "oclif": {
-    "bin": "ember-zli",
-    "dirname": "ember-zli",
-    "commands": "./dist/commands",
-    "plugins": [
-      "@oclif/plugin-help",
-      "@oclif/plugin-version",
-      "@oclif/plugin-not-found"
-    ],
-    "topicSeparator": " ",
-    "topics": {}
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Nerivec/ember-zli.git"
-  },
-  "scripts": {
-    "build": "shx rm -rf dist tsconfig.tsbuildinfo && tsc -b",
-    "build:run": "npm run build && npm run prepack && npm run postpack",
-    "update-fw-links": "node ./dist/utils/update-firmware-links.js",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "lint": "eslint .",
-    "postpack": "shx rm -f oclif.manifest.json",
-    "xposttest": "npm run lint",
-    "prepack": "oclif manifest && oclif readme",
-    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif readme && git add README.md"
-  },
-  "types": "dist/index.d.ts"
+    "name": "ember-zli",
+    "description": "Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver",
+    "version": "2.10.2",
+    "author": "Nerivec",
+    "bin": {
+        "ember-zli": "bin/run.js"
+    },
+    "bugs": "https://github.com/Nerivec/ember-zli/issues",
+    "dependencies": {
+        "@inquirer/prompts": "^7",
+        "@oclif/core": "^4",
+        "@oclif/plugin-help": "^6",
+        "@oclif/plugin-not-found": "^3",
+        "@oclif/plugin-version": "^2",
+        "bonjour-service": "^1",
+        "cli-progress": "^3",
+        "winston": "^3",
+        "zigbee-herdsman": "3.2.6"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "1.9.4",
+        "@types/cli-progress": "^3",
+        "@types/node": "^20",
+        "oclif": "^4",
+        "shx": "^0",
+        "ts-node": "^10",
+        "typescript": "^5"
+    },
+    "engines": {
+        "node": ">=20.15.0"
+    },
+    "files": ["/bin", "/dist", "/oclif.manifest.json"],
+    "homepage": "https://github.com/Nerivec/ember-zli",
+    "keywords": ["zigbee2mqtt", "z2m", "zigbee-herdsman", "herdsman", "ember", "emberznet", "ezsp", "silabs", "zigbee"],
+    "license": "GPL-3.0-or-later",
+    "main": "dist/index.js",
+    "type": "module",
+    "oclif": {
+        "bin": "ember-zli",
+        "dirname": "ember-zli",
+        "commands": "./dist/commands",
+        "plugins": ["@oclif/plugin-help", "@oclif/plugin-version", "@oclif/plugin-not-found"],
+        "topicSeparator": " ",
+        "topics": {}
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Nerivec/ember-zli.git"
+    },
+    "scripts": {
+        "build": "shx rm -rf dist tsconfig.tsbuildinfo && tsc -b",
+        "build:run": "npm run build && npm run prepack && npm run postpack",
+        "update-fw-links": "node ./dist/utils/update-firmware-links.js",
+        "check": "biome check --write",
+        "check:ci": "biome check",
+        "postpack": "shx rm -f oclif.manifest.json",
+        "prepack": "oclif manifest && oclif readme",
+        "version": "oclif readme && git add README.md"
+    },
+    "types": "dist/index.d.ts"
 }
