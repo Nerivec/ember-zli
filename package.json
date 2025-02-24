@@ -16,7 +16,7 @@
     "bonjour-service": "^1",
     "cli-progress": "^3",
     "winston": "^3",
-    "zigbee-herdsman": "3.2.1"
+    "zigbee-herdsman": "3.2.6"
   },
   "devDependencies": {
     "@eslint/js": "^9",
@@ -28,7 +28,7 @@
     "@types/mocha": "^10",
     "@types/node": "^20",
     "eslint": "^9",
-    "eslint-config-prettier": "^9",
+    "eslint-config-prettier": "^10",
     "mocha": "^11",
     "oclif": "^4",
     "prettier": "^3",
