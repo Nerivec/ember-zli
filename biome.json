@@ -7,7 +7,7 @@
     },
     "files": {
         "ignoreUnknown": false,
-        "ignore": []
+        "ignore": ["./firmware-links.json"]
     },
     "formatter": {
         "enabled": true,
