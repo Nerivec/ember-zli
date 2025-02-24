@@ -1,20 +1,20 @@
 {
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "target": "ESNext",
-    "lib": ["ESNext"],
-    "esModuleInterop": true,
-    "declaration": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "composite": true,
-    "checkJs": true
-  },
-  "include": ["src/**/*"],
-  "ts-node": {
-    "esm": true
-  }
+    "compilerOptions": {
+        "rootDir": "src",
+        "outDir": "dist",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "target": "ESNext",
+        "lib": ["ESNext"],
+        "esModuleInterop": true,
+        "declaration": true,
+        "strict": true,
+        "noUnusedLocals": true,
+        "composite": true,
+        "checkJs": true
+    },
+    "include": ["src/**/*"],
+    "ts-node": {
+        "esm": true
+    }
 }
