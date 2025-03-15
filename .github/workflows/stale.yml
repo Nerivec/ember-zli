@@ -4,13 +4,15 @@ on:
     - cron: '30 4 * * *'
 
 permissions:
-  # contents: write # only for delete-branch option
-  issues: write
-  pull-requests: write
+  contents: read
 
 jobs:
   stale:
     runs-on: ubuntu-latest
+    permissions:
+      # contents: write # only for delete-branch option
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/stale@v9
         with:
