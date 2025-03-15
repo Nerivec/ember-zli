@@ -1,10 +1,10 @@
 name: Publish package to npmjs
 
 on:
-  workflow_run:
-    workflows: [Create tag and tarballs release]
-    types:
-      - completed
+  # workflow_run:
+  #   workflows: [Create tag and tarballs release]
+  #   types:
+  #     - completed
   workflow_dispatch:
 
 permissions:
