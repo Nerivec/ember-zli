@@ -20,8 +20,8 @@ type SetOptions = {
 };
 
 class TransportWriter extends Readable {
-    public writeBytes(bytesToWrite: Buffer): void {
-        this.emit("data", bytesToWrite);
+    public writeBuffer(buffer: Buffer): void {
+        this.emit("data", buffer);
     }
 
     public _read(): void {}
@@ -89,7 +89,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
         }
     }
 
-    public async initPort(): Promise<void> {
+    public async initPort(customPortWriter?: TransportWriter): Promise<void> {
         // will do nothing if nothing's open
         await this.close(false);
 
@@ -102,7 +102,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
             this.portSocket.setNoDelay(true);
             this.portSocket.setKeepAlive(true, 15000);
 
-            this.portWriter = new TransportWriter({ highWaterMark: CONFIG_HIGHWATER_MARK });
+            this.portWriter = customPortWriter ?? new TransportWriter({ highWaterMark: CONFIG_HIGHWATER_MARK });
 
             this.portWriter.pipe(this.portSocket);
             this.portSocket.on("data", this.emitData.bind(this));
@@ -150,7 +150,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
         logger.debug(`Opening serial port with ${JSON.stringify(serialOpts)}`, NS);
 
         this.portSerial = new SerialPort(serialOpts);
-        this.portWriter = new TransportWriter({ highWaterMark: CONFIG_HIGHWATER_MARK });
+        this.portWriter = customPortWriter ?? new TransportWriter({ highWaterMark: CONFIG_HIGHWATER_MARK });
 
         this.portWriter.pipe(this.portSerial);
         this.portSerial.on("data", this.emitData.bind(this));
@@ -176,13 +176,13 @@ export class Transport extends EventEmitter<SerialEventMap> {
         });
     }
 
-    public async write(buffer: Buffer): Promise<void> {
+    public write(buffer: Buffer): void {
         if (this.portWriter === undefined) {
             logger.error("No port available to write.", NS);
             this.emit(TransportEvent.FAILED);
         } else {
             logger.debug(`Sending transport data: ${buffer.toString("hex")}.`, NS);
-            this.portWriter.writeBytes(buffer);
+            this.portWriter.writeBuffer(buffer);
         }
     }
 

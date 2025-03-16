@@ -206,7 +206,7 @@ export class Cpc extends EventEmitter<CpcEventMap> {
 
         buffer.writeUInt16LE(frameChecksum, i);
 
-        await this.transport.write(buffer);
+        this.transport.write(buffer);
 
         if (noResponse) {
             return undefined;
