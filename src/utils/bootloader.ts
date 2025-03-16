@@ -3,7 +3,7 @@ import type { AdapterModel, FirmwareFileMetadata, PortConf } from "./types.js";
 import EventEmitter from "node:events";
 import { crc32 } from "node:zlib";
 
-import { confirm } from "@inquirer/prompts";
+import { confirm, select } from "@inquirer/prompts";
 
 import { SLStatus } from "zigbee-herdsman/dist/adapter/ember/enums.js";
 
@@ -12,6 +12,7 @@ import { TCP_REGEX } from "./consts.js";
 import { Cpc, CpcEvent } from "./cpc.js";
 import { emberStart, emberStop } from "./ember.js";
 import { CpcSystemStatus, FirmwareValidation } from "./enums.js";
+import { MinimalSpinel } from "./spinel.js";
 import { Transport, TransportEvent } from "./transport.js";
 import { XEvent, type XExitStatus, XModemCRC } from "./xmodem.js";
 
@@ -88,6 +89,12 @@ export enum BootloaderEvent {
     UPLOAD_PROGRESS = "uploadProgress",
 }
 
+enum FirmwareType {
+    EMBERZNET_NCP = 0,
+    OPENTHREAD_RCP = 1,
+    MULTIPROTOCOL_RCP = 2,
+}
+
 interface GeckoBootloaderEventMap {
     [BootloaderEvent.CLOSED]: [];
     [BootloaderEvent.FAILED]: [];
@@ -151,15 +158,28 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         // @ts-expect-error changed by received serial data
         if (this.state !== BootloaderState.IDLE) {
             // not already in bootloader, so launch it, then knock again
-            const isRCP = await confirm({
-                default: false,
-                message: "Is currently installed firmware RCP (multiprotocol)?",
+            const currentFirmwareType = await select<FirmwareType>({
+                choices: [
+                    { name: "EmberZNet NCP (a.k.a. zigbee_ncp, ncp-uart-hw, EZSP NCP)", value: FirmwareType.EMBERZNET_NCP },
+                    { name: "OpenThread RCP (a.k.a. openthread_rcp, ot-rcp)", value: FirmwareType.OPENTHREAD_RCP },
+                    { name: "Multiprotocol RCP (a.k.a. rcp-uart-802154)", value: FirmwareType.MULTIPROTOCOL_RCP },
+                ],
+                message: "Currently installed firmware",
             });
 
-            if (isRCP) {
-                await this.cpcLaunch();
-            } else {
-                await this.ezspLaunch();
+            switch (currentFirmwareType) {
+                case FirmwareType.EMBERZNET_NCP: {
+                    await this.ezspLaunch();
+                    break;
+                }
+                case FirmwareType.OPENTHREAD_RCP: {
+                    await this.spinelLaunch();
+                    break;
+                }
+                case FirmwareType.MULTIPROTOCOL_RCP: {
+                    await this.cpcLaunch();
+                    break;
+                }
             }
 
             // this time will fail if not successful since exhausted all possible ways
@@ -397,6 +417,26 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         await emberStop(ezsp);
     }
 
+    private async spinelLaunch(): Promise<void> {
+        logger.debug("Launching bootloader from Spinel...", NS);
+
+        const spinel = new MinimalSpinel(this.portConf);
+
+        await spinel.start();
+
+        try {
+            await spinel.driver.resetIntoBootloader();
+            await new Promise((resolve) => setTimeout(resolve, 200));
+        } catch (error) {
+            logger.error(`Unable to launch bootloader from Spinel: ${error}`, NS);
+            this.emit(BootloaderEvent.FAILED);
+            return;
+        }
+
+        // free serial
+        await spinel.stop();
+    }
+
     private async knock(fail: boolean): Promise<void> {
         logger.info(fail ? "Entering bootloader..." : "Trying to enter bootloader...", NS);
 
@@ -433,7 +473,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         let res = false;
 
         for (let i = 1; i < 3; i++) {
-            await this.transport.write(BOOTLOADER_KNOCK);
+            this.transport.write(BOOTLOADER_KNOCK);
 
             res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail && i === 2);
 
@@ -463,7 +503,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.GETTING_INFO;
 
-        await this.transport.write(BOOTLOADER_MENU_INFO);
+        this.transport.write(BOOTLOADER_MENU_INFO);
 
         await this.waitForState(BootloaderState.GOT_INFO, BOOTLOADER_CMD_EXEC_TIMEOUT);
 
@@ -475,7 +515,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.RUNNING;
 
-        await this.transport.write(BOOTLOADER_MENU_RUN);
+        this.transport.write(BOOTLOADER_MENU_RUN);
 
         // this is expected to fail (signals the firmware ran and bootloader was exited)
         const res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_RUN_TIMEOUT, false, true);
@@ -510,7 +550,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.BEGIN_UPLOAD;
 
-        await this.transport.write(BOOTLOADER_MENU_UPLOAD_GBL); // start upload
+        this.transport.write(BOOTLOADER_MENU_UPLOAD_GBL); // start upload
         await this.waitForState(BootloaderState.UPLOADING, BOOTLOADER_UPLOAD_EXIT_TIMEOUT);
         await this.waitForState(BootloaderState.UPLOADED, BOOTLOADER_UPLOAD_TIMEOUT);
 
@@ -518,7 +558,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         if (!res) {
             // force back to menu if not automatically back to it already
-            await this.transport.write(BOOTLOADER_KNOCK);
+            this.transport.write(BOOTLOADER_KNOCK);
             await this.waitForState(BootloaderState.IDLE, BOOTLOADER_UPLOAD_EXIT_TIMEOUT);
         }
 
@@ -618,7 +658,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
     private async onXModemData(data: Buffer, progressPc: number): Promise<void> {
         this.emit(BootloaderEvent.UPLOAD_PROGRESS, progressPc);
-        await this.transport.write(data);
+        this.transport.write(data);
     }
 
     private async onXModemStart(): Promise<void> {
