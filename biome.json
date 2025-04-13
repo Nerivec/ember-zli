@@ -7,7 +7,7 @@
     },
     "files": {
         "ignoreUnknown": false,
-        "ignore": ["./firmware-links.json"]
+        "ignore": ["./firmware-links.json", "package.json", "package-lock.json"]
     },
     "formatter": {
         "enabled": true,
