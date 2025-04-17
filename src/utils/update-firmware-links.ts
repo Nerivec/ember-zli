@@ -103,7 +103,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         "SMLight SLZB07mg24": findFirmware(DARKXST_RELEASE, "slzb07Mg24", FIRMWARE_ZIGBEE_NCP),
 
         "Sonoff ZBDongle-E":
-            "https://github.com/itead/Sonoff_Zigbee_Dongle_Firmware/raw/refs/heads/master/Dongle-E/NCP_7.4.3/ncp-uart-sw_EZNet7.4.3_V1.0.0.gbl",
+            "https://github.com/itead/Sonoff_Zigbee_Dongle_Firmware/raw/refs/heads/master/Dongle-E/NCP_7.4.4/ncp-uart-sw_EZNet7.4.4_V1.0.0.gbl",
 
         "SparkFun MGM240p": undefined,
 
