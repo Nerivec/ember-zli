@@ -5,7 +5,7 @@ import type {
     EmberMulticastTableEntry,
     EmberZigbeeNetwork,
 } from "zigbee-herdsman/dist/adapter/ember/types.js";
-import type { EUI64, NodeId, PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
+import type { Eui64, NodeId, PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -77,7 +77,7 @@ type CustomEventHandlers = {
         cmd: Command,
         logger: Logger,
         sourcePanId: PanId,
-        sourceAddress: EUI64,
+        sourceAddress: Eui64,
         groupId: null | number,
         lastHopLqi: number,
         messageContents: Buffer,
@@ -1008,7 +1008,7 @@ export default class Router extends Command {
 
     private async onTouchlinkMessage(
         sourcePanId: PanId,
-        sourceAddress: EUI64,
+        sourceAddress: Eui64,
         groupId: null | number,
         lastHopLqi: number,
         messageContents: Buffer,

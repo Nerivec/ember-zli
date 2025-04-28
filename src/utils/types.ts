@@ -1,6 +1,6 @@
 import type { checkbox, select } from "@inquirer/prompts";
 import type { EmberKeyData, EmberVersion } from "zigbee-herdsman/dist/adapter/ember/types.js";
-import type { EUI64 } from "zigbee-herdsman/dist/zspec/tstypes.js";
+import type { Eui64 } from "zigbee-herdsman/dist/zspec/tstypes.js";
 
 import type { BAUDRATES } from "./consts.js";
 import type { CpcSystemCommandId } from "./enums.js";
@@ -89,7 +89,7 @@ export type TokensInfo = {
  *   This key may be hashed and not the actual link key currently in use.
  */
 export type LinkKeyBackupData = {
-    deviceEui64: EUI64;
+    deviceEui64: Eui64;
     key: EmberKeyData;
     outgoingFrameCounter: number;
     incomingFrameCounter: number;
