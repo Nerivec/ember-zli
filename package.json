@@ -16,7 +16,7 @@
         "bonjour-service": "^1.3.0",
         "cli-progress": "^3.12.0",
         "winston": "^3.17.0",
-        "zigbee-herdsman": "4.0.2",
+        "zigbee-herdsman": "4.1.0",
         "zigbee-on-host": "0.1.11"
     },
     "devDependencies": {
