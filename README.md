@@ -5,7 +5,7 @@ Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
 [![Version](https://img.shields.io/npm/v/ember-zli.svg)](https://npmjs.org/package/ember-zli)
-[![Downloads/week](https://img.shields.io/npm/dw/ember-zli.svg)](https://npmjs.org/package/ember-zli)
+[![Downloads](https://img.shields.io/npm/dt/ember-zli.svg)](https://npmjs.org/package/ember-zli)
 
 > [!IMPORTANT]
 > `ember-zli` uses the `ember` driver from [zigbee-herdsman](https://github.com/Koenkk/zigbee-herdsman) under the hood. As such, it roughly has the same firmware requirements as [Zigbee2MQTT ember](https://www.zigbee2mqtt.io/guide/adapters/emberznet.html); firmware 7.4.x minimum.
