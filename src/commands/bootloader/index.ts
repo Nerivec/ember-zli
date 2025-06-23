@@ -1,16 +1,13 @@
-import type { AdapterModel, FirmwareLinks, FirmwareVariant, SelectChoices } from "../../utils/types.js";
-
 import { readFileSync } from "node:fs";
-
 import { confirm, input, select } from "@inquirer/prompts";
 import { Command } from "@oclif/core";
 import { Presets, SingleBar } from "cli-progress";
-
 import { DEFAULT_FIRMWARE_GBL_PATH, logger } from "../../index.js";
 import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from "../../utils/bootloader.js";
 import { ADAPTER_MODELS, PRE_DEFINED_FIRMWARE_LINKS_URL } from "../../utils/consts.js";
 import { FirmwareValidation } from "../../utils/enums.js";
 import { getPortConf } from "../../utils/port.js";
+import type { AdapterModel, FirmwareLinks, FirmwareVariant, SelectChoices } from "../../utils/types.js";
 import { browseToFile, fetchJson } from "../../utils/utils.js";
 
 export default class Bootloader extends Command {
@@ -95,7 +92,7 @@ export default class Bootloader extends Command {
             return true;
         }
 
-        let firmware: Buffer | undefined = undefined;
+        let firmware: Buffer | undefined;
 
         if (answer === BootloaderMenu.UPLOAD_GBL) {
             let validFirmware: FirmwareValidation = FirmwareValidation.INVALID;

@@ -1,8 +1,4 @@
-import type { EmberMulticastId, EmberMulticastTableEntry, EmberNetworkInitStruct } from "zigbee-herdsman/dist/adapter/ember/types.js";
-
-import type { EmberFullVersion, PortConf } from "./types.js";
-
-import { ZSpec, type Zcl } from "zigbee-herdsman";
+import { type Zcl, ZSpec } from "zigbee-herdsman";
 import type { DEFAULT_STACK_CONFIG } from "zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js";
 import { FIXED_ENDPOINTS } from "zigbee-herdsman/dist/adapter/ember/adapter/endpoints.js";
 import {
@@ -25,11 +21,12 @@ import {
 import { EZSP_MIN_PROTOCOL_VERSION, EZSP_PROTOCOL_VERSION, EZSP_STACK_TYPE_MESH } from "zigbee-herdsman/dist/adapter/ember/ezsp/consts.js";
 import { EzspConfigId, EzspDecisionId, EzspPolicyId, EzspValueId } from "zigbee-herdsman/dist/adapter/ember/ezsp/enums.js";
 import { Ezsp } from "zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js";
+import type { EmberMulticastId, EmberMulticastTableEntry, EmberNetworkInitStruct } from "zigbee-herdsman/dist/adapter/ember/types.js";
 import { lowHighBytes } from "zigbee-herdsman/dist/adapter/ember/utils/math.js";
-
 import { logger } from "../index.js";
 import { NVM3ObjectKey } from "./enums.js";
 import { ROUTER_FIXED_ENDPOINTS } from "./router-endpoints.js";
+import type { EmberFullVersion, PortConf } from "./types.js";
 
 const NS = { namespace: "ember" };
 export let emberFullVersion: EmberFullVersion = {

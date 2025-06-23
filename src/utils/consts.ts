@@ -1,6 +1,5 @@
-import type { AdapterModel } from "./types.js";
-
 import { EmberApsOption } from "zigbee-herdsman/dist/adapter/ember/enums.js";
+import type { AdapterModel } from "./types.js";
 
 export const PRE_DEFINED_FIRMWARE_LINKS_URL = "https://github.com/Nerivec/ember-zli/raw/refs/heads/main/firmware-links.json";
 export const ADAPTER_MODELS: ReadonlyArray<AdapterModel> = [

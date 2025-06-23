@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, rmSync } from "node:fs";
+import { readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 import { select } from "@inquirer/prompts";

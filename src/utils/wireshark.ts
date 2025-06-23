@@ -183,7 +183,7 @@ export const createPcapFileHeader = (magicNumber: number = PCAP_MAGIC_NUMBER_MS)
 
 export const createPcapPacketRecordMs = (packetData: Buffer): Buffer => {
     const packetHeader = Buffer.alloc(16);
-    const timestamp = (new Date().getTime() * 1000) / 1000000;
+    const timestamp = (Date.now() * 1000) / 1000000;
     const timestampSec = Math.trunc(timestamp);
 
     /** 32-bit unsigned integer that represents the number of seconds that have elapsed since 1970-01-01 00:00:00 UTC */
