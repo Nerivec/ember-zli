@@ -1,12 +1,7 @@
-import type { AdapterModel, FirmwareFileMetadata, PortConf } from "./types.js";
-
 import EventEmitter from "node:events";
 import { crc32 } from "node:zlib";
-
 import { confirm, select } from "@inquirer/prompts";
-
 import { SLStatus } from "zigbee-herdsman/dist/adapter/ember/enums.js";
-
 import { logger } from "../index.js";
 import { TCP_REGEX } from "./consts.js";
 import { Cpc, CpcEvent } from "./cpc.js";
@@ -14,6 +9,7 @@ import { emberStart, emberStop } from "./ember.js";
 import { CpcSystemStatus, FirmwareValidation } from "./enums.js";
 import { MinimalSpinel } from "./spinel.js";
 import { Transport, TransportEvent } from "./transport.js";
+import type { AdapterModel, FirmwareFileMetadata, PortConf } from "./types.js";
 import { XEvent, type XExitStatus, XModemCRC } from "./xmodem.js";
 
 const NS = { namespace: "gecko" };

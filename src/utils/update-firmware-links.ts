@@ -1,7 +1,6 @@
-import type { AdapterModel, FirmwareVariant, GithubReleaseJson } from "./types.js";
-
 import { writeFileSync } from "node:fs";
 import path from "node:path";
+import type { AdapterModel, FirmwareVariant, GithubReleaseJson } from "./types.js";
 
 import { fetchJson } from "./utils.js";
 

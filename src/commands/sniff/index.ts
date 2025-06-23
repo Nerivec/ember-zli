@@ -1,5 +1,5 @@
-import { type Socket, createSocket } from "node:dgram";
-import { type WriteStream, createWriteStream, existsSync } from "node:fs";
+import { createSocket, type Socket } from "node:dgram";
+import { createWriteStream, existsSync, type WriteStream } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -15,7 +15,7 @@ import { DATA_FOLDER, DEFAULT_PCAP_PATH, logger } from "../../index.js";
 import { emberStart, emberStop } from "../../utils/ember.js";
 import { getPortConf } from "../../utils/port.js";
 import { browseToFile, computeCRC16CITTKermit } from "../../utils/utils.js";
-import { PCAP_MAGIC_NUMBER_MS, createPcapFileHeader, createPcapPacketRecordMs, createWiresharkZEPFrame } from "../../utils/wireshark.js";
+import { createPcapFileHeader, createPcapPacketRecordMs, createWiresharkZEPFrame, PCAP_MAGIC_NUMBER_MS } from "../../utils/wireshark.js";
 
 enum SniffMenu {
     START_SNIFFING = 0,

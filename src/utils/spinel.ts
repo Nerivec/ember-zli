@@ -1,11 +1,8 @@
-import type { PortConf } from "./types.js";
-
 import EventEmitter from "node:events";
-
 import { OTRCPDriver } from "zigbee-on-host";
-
 import { DATA_FOLDER, logger } from "../index.js";
 import { Transport, TransportEvent } from "./transport.js";
+import type { PortConf } from "./types.js";
 
 const NS = { namespace: "spinel" };
 

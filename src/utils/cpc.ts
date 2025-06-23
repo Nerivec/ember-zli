@@ -1,9 +1,5 @@
-import type { CpcSystemCommand, FirmwareVersionShort, PortConf } from "./types.js";
-
 import EventEmitter from "node:events";
-
 import { EzspBuffalo } from "zigbee-herdsman/dist/adapter/ember/ezsp/buffalo.js";
-
 import { logger } from "../index.js";
 import {
     CPC_DEFAULT_COMMAND_TIMEOUT,
@@ -29,6 +25,7 @@ import {
 } from "./consts.js";
 import { CpcSystemCommandId, CpcSystemStatus } from "./enums.js";
 import { Transport, TransportEvent } from "./transport.js";
+import type { CpcSystemCommand, FirmwareVersionShort, PortConf } from "./types.js";
 import { computeCRC16 } from "./utils.js";
 
 const NS = { namespace: "cpc" };

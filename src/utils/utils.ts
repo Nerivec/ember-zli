@@ -1,18 +1,14 @@
-import type { SelectChoices } from "./types.js";
-
-import { existsSync, readFileSync, readdirSync, renameSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, renameSync, statSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
-
 import { input, select } from "@inquirer/prompts";
-
 import { DEFAULT_STACK_CONFIG } from "zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js";
 import { IEEE802154CcaMode } from "zigbee-herdsman/dist/adapter/ember/enums.js";
 import { halCommonCrc16, highByte, lowByte } from "zigbee-herdsman/dist/adapter/ember/utils/math.js";
-import type { UnifiedBackupStorage } from "zigbee-herdsman/dist/models/backup-storage-unified.js";
 import type { Backup } from "zigbee-herdsman/dist/models/backup.js";
+import type { UnifiedBackupStorage } from "zigbee-herdsman/dist/models/backup-storage-unified.js";
 import { fromUnifiedBackup } from "zigbee-herdsman/dist/utils/backup.js";
-
 import { CONF_STACK, DATA_FOLDER, logger } from "../index.js";
+import type { SelectChoices } from "./types.js";
 
 // @from zigbee2mqtt-frontend
 export const toHex = (input: number, padding = 4): string => {

@@ -1,22 +1,11 @@
-import type {
-    EmberApsFrame,
-    EmberInitialSecurityState,
-    EmberMulticastId,
-    EmberMulticastTableEntry,
-    EmberZigbeeNetwork,
-} from "zigbee-herdsman/dist/adapter/ember/types.js";
-import type { Eui64, NodeId, PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
-
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-
 import { checkbox, confirm, input, select } from "@inquirer/prompts";
 import { Command } from "@oclif/core";
 import { Presets, SingleBar } from "cli-progress";
 import type { Logger } from "winston";
-
-import { ZSpec, Zcl, Zdo } from "zigbee-herdsman";
+import { Zcl, Zdo, ZSpec } from "zigbee-herdsman";
 import { DEFAULT_STACK_CONFIG } from "zigbee-herdsman/dist/adapter/ember/adapter/emberAdapter.js";
 import { EmberTokensManager } from "zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js";
 import { EMBER_MIN_BROADCAST_ADDRESS, STACK_PROFILE_ZIGBEE_PRO } from "zigbee-herdsman/dist/adapter/ember/consts.js";
@@ -34,6 +23,14 @@ import {
     SLStatus,
 } from "zigbee-herdsman/dist/adapter/ember/enums.js";
 import type { Ezsp } from "zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js";
+import type {
+    EmberApsFrame,
+    EmberInitialSecurityState,
+    EmberMulticastId,
+    EmberMulticastTableEntry,
+    EmberZigbeeNetwork,
+} from "zigbee-herdsman/dist/adapter/ember/types.js";
+import type { Eui64, NodeId, PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
 import type { DataType } from "zigbee-herdsman/dist/zspec/zcl/index.js";
 import { BuffaloZdo } from "zigbee-herdsman/dist/zspec/zdo/buffaloZdo.js";
 

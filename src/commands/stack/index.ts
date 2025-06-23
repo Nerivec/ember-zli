@@ -1,20 +1,8 @@
-import type {
-    EmberInitialSecurityState,
-    EmberNetworkParameters,
-    EmberZigbeeNetwork,
-    SecManContext,
-} from "zigbee-herdsman/dist/adapter/ember/types.js";
-import type { PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
-
-import type { ConfigValue, LinkKeyBackupData } from "../../utils/types.js";
-
 import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
-
 import { checkbox, confirm, input, select } from "@inquirer/prompts";
 import { Command } from "@oclif/core";
 import { Presets, SingleBar } from "cli-progress";
-
 import { ZSpec } from "zigbee-herdsman";
 import { EmberTokensManager } from "zigbee-herdsman/dist/adapter/ember/adapter/tokensManager.js";
 import {
@@ -24,16 +12,22 @@ import {
     EmberLibraryId,
     EmberNodeType,
     EzspNetworkScanType,
-    SLStatus,
     SecManKeyType,
+    SLStatus,
 } from "zigbee-herdsman/dist/adapter/ember/enums.js";
 import { EMBER_AES_HASH_BLOCK_SIZE, EMBER_ENCRYPTION_KEY_SIZE } from "zigbee-herdsman/dist/adapter/ember/ezsp/consts.js";
 import { EzspConfigId, EzspDecisionBitmask, EzspDecisionId, EzspMfgTokenId, EzspPolicyId } from "zigbee-herdsman/dist/adapter/ember/ezsp/enums.js";
 import type { Ezsp } from "zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js";
+import type {
+    EmberInitialSecurityState,
+    EmberNetworkParameters,
+    EmberZigbeeNetwork,
+    SecManContext,
+} from "zigbee-herdsman/dist/adapter/ember/types.js";
 import { initSecurityManagerContext } from "zigbee-herdsman/dist/adapter/ember/utils/initters.js";
 import { toUnifiedBackup } from "zigbee-herdsman/dist/utils/backup.js";
+import type { PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
 import { eui64LEBufferToHex } from "zigbee-herdsman/dist/zspec/utils.js";
-
 import {
     DEFAULT_CONFIGURATION_YAML_PATH,
     DEFAULT_NETWORK_BACKUP_PATH,
@@ -53,6 +47,7 @@ import {
 } from "../../utils/ember.js";
 import { NVM3ObjectKey } from "../../utils/enums.js";
 import { getPortConf } from "../../utils/port.js";
+import type { ConfigValue, LinkKeyBackupData } from "../../utils/types.js";
 import { browseToFile, getBackupFromFile, toHex } from "../../utils/utils.js";
 
 enum StackMenu {
@@ -853,7 +848,7 @@ export default class Stack extends Command {
     }
 
     private async menuStackConfig(ezsp: Ezsp): Promise<boolean> {
-        let saveFile: string | undefined = undefined;
+        let saveFile: string | undefined;
 
         if (await confirm({ default: false, message: "Save to file? (Only print if not)" })) {
             saveFile = await browseToFile("Config save location (JSON)", DEFAULT_STACK_CONFIG_PATH, true);

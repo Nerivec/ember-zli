@@ -1,14 +1,10 @@
-import type { BaudRate, PortConf, PortType, SelectChoices } from "./types.js";
-
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-
 import { confirm, input, select } from "@inquirer/prompts";
 import { Bonjour } from "bonjour-service";
-
 import { SerialPort } from "zigbee-herdsman/dist/adapter/serialPort.js";
-
 import { CONF_PORT_PATH, logger } from "../index.js";
 import { BAUDRATES, TCP_REGEX } from "./consts.js";
+import type { BaudRate, PortConf, PortType, SelectChoices } from "./types.js";
 
 async function findmDNSAdapters(): Promise<SelectChoices<string | undefined>> {
     logger.info("Starting mDNS discovery...");
