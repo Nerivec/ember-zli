@@ -20,7 +20,7 @@
         "zigbee-on-host": "0.1.12"
     },
     "devDependencies": {
-        "@biomejs/biome": "2.0.4",
+        "@biomejs/biome": "2.0.6",
         "@types/cli-progress": "^3.11.6",
         "@types/node": "^24.0.7",
         "oclif": "^4.20.1",
