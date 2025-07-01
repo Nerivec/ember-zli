@@ -43,54 +43,6 @@ function findFirmware(release: GithubReleaseJson, model: string, include: string
 }
 
 const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undefined>> = {
-    latest: {
-        //-- FIRMWARE_ZIGBEE_NCP
-        "Aeotec Zi-Stick (ZGA008)": findFirmware(DARKXST_RELEASE, "zga008", FIRMWARE_ZIGBEE_NCP),
-
-        "EasyIOT ZB-GW04 v1.1": findFirmware(DARKXST_RELEASE, "zb-gw04-1v1", FIRMWARE_ZIGBEE_NCP),
-        "EasyIOT ZB-GW04 v1.2": findFirmware(DARKXST_RELEASE, "zb-gw04-1v2", FIRMWARE_ZIGBEE_NCP),
-
-        "Nabu Casa SkyConnect": findFirmware(NABUCASA_RELEASE, "skyconnect", FIRMWARE_ZIGBEE_NCP),
-        "Nabu Casa Yellow": findFirmware(NABUCASA_RELEASE, "yellow", FIRMWARE_ZIGBEE_NCP),
-
-        "SMLight SLZB06-M": findFirmware(DARKXST_RELEASE, "slzb06m", FIRMWARE_ZIGBEE_NCP),
-        "SMLight SLZB06mg24": findFirmware(DARKXST_RELEASE, "slzb06Mg24", FIRMWARE_ZIGBEE_NCP),
-        // avoid matching on mg24 variant with `_`
-        "SMLight SLZB07": findFirmware(DARKXST_RELEASE, "slzb07_", FIRMWARE_ZIGBEE_NCP),
-        "SMLight SLZB07mg24": findFirmware(DARKXST_RELEASE, "slzb07Mg24", FIRMWARE_ZIGBEE_NCP),
-
-        "Sonoff ZBDongle-E": findFirmware(DARKXST_RELEASE, "zbdonglee", FIRMWARE_ZIGBEE_NCP),
-
-        "SparkFun MGM240p": findFirmware(DARKXST_RELEASE, "mgm240p", FIRMWARE_ZIGBEE_NCP),
-
-        // avoid matching on PB variant with `-`
-        "TubeZB MGM24":
-            "https://github.com/tube0013/tube_gateways/raw/refs/heads/main/models/current/tubeszb-efr32-MGM24/firmware/mgm24/ncp/4.4.4/tubeszb-mgm24-hw-max_ncp-uart-hw_7.4.4.0.gbl", // findFirmware(TUBE0013_RELEASE, 'mgm24-', FIRMWARE_ZIGBEE_NCP),
-        "TubeZB MGM24PB": undefined, // findFirmware(TUBE0013_RELEASE, 'mgm24pb-', FIRMWARE_ZIGBEE_NCP),
-
-        //-- FIRMWARE_ZIGBEE_ROUTER
-        "ROUTER - Aeotec Zi-Stick (ZGA008)": undefined, // findFirmware(DARKXST_RELEASE, 'zga008', FIRMWARE_ZIGBEE_ROUTER),
-
-        "ROUTER - EasyIOT ZB-GW04 v1.1": undefined, // findFirmware(DARKXST_RELEASE, 'zb-gw04-1v1', FIRMWARE_ZIGBEE_ROUTER),
-        "ROUTER - EasyIOT ZB-GW04 v1.2": undefined, // findFirmware(DARKXST_RELEASE, 'zb-gw04-1v2', FIRMWARE_ZIGBEE_ROUTER),
-
-        "ROUTER - Nabu Casa SkyConnect": undefined, // findFirmware(NABUCASA_RELEASE, 'skyconnect', FIRMWARE_ZIGBEE_ROUTER),
-        "ROUTER - Nabu Casa Yellow": undefined, // findFirmware(NABUCASA_RELEASE, 'yellow', FIRMWARE_ZIGBEE_ROUTER),
-
-        "ROUTER - SMLight SLZB06-M": findFirmware(DARKXST_RELEASE, "slzb06m", FIRMWARE_ZIGBEE_ROUTER),
-        "ROUTER - SMLight SLZB06mg24": findFirmware(DARKXST_RELEASE, "slzb06Mg24", FIRMWARE_ZIGBEE_ROUTER),
-        // avoid matching on mg24 variant with `_`
-        "ROUTER - SMLight SLZB07": findFirmware(DARKXST_RELEASE, "slzb07_", FIRMWARE_ZIGBEE_ROUTER),
-        "ROUTER - SMLight SLZB07mg24": findFirmware(DARKXST_RELEASE, "slzb07Mg24", FIRMWARE_ZIGBEE_ROUTER),
-
-        "ROUTER - Sonoff ZBDongle-E": undefined, // findFirmware(DARKXST_RELEASE, 'zbdonglee', FIRMWARE_ZIGBEE_ROUTER),
-
-        "ROUTER - SparkFun MGM240p": undefined, // findFirmware(DARKXST_RELEASE, 'mgm240p', FIRMWARE_ZIGBEE_ROUTER),
-
-        // avoid matching on variants with `-`
-        "ROUTER - TubeZB MGM24": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-mgm24-', FIRMWARE_ZIGBEE_ROUTER),
-        "ROUTER - TubeZB MGM24PB": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-mgm24PB-', FIRMWARE_ZIGBEE_ROUTER),
-    },
     official: {
         //-- FIRMWARE_ZIGBEE_NCP
         "Aeotec Zi-Stick (ZGA008)": undefined,
@@ -141,7 +93,54 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         "ROUTER - TubeZB MGM24": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-mgm24-', FIRMWARE_ZIGBEE_ROUTER),
         "ROUTER - TubeZB MGM24PB": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-mgm24PB-', FIRMWARE_ZIGBEE_ROUTER),
     },
-    experimental: {
+    darkxst: {
+        //-- FIRMWARE_ZIGBEE_NCP
+        "Aeotec Zi-Stick (ZGA008)": findFirmware(DARKXST_RELEASE, "zga008", FIRMWARE_ZIGBEE_NCP),
+
+        "EasyIOT ZB-GW04 v1.1": findFirmware(DARKXST_RELEASE, "zb-gw04-1v1", FIRMWARE_ZIGBEE_NCP),
+        "EasyIOT ZB-GW04 v1.2": findFirmware(DARKXST_RELEASE, "zb-gw04-1v2", FIRMWARE_ZIGBEE_NCP),
+
+        "Nabu Casa SkyConnect": undefined,
+        "Nabu Casa Yellow": undefined,
+
+        "SMLight SLZB06-M": findFirmware(DARKXST_RELEASE, "slzb06m", FIRMWARE_ZIGBEE_NCP),
+        "SMLight SLZB06mg24": findFirmware(DARKXST_RELEASE, "slzb06Mg24", FIRMWARE_ZIGBEE_NCP),
+        // avoid matching on mg24 variant with `_`
+        "SMLight SLZB07": findFirmware(DARKXST_RELEASE, "slzb07_", FIRMWARE_ZIGBEE_NCP),
+        "SMLight SLZB07mg24": findFirmware(DARKXST_RELEASE, "slzb07Mg24", FIRMWARE_ZIGBEE_NCP),
+
+        "Sonoff ZBDongle-E": findFirmware(DARKXST_RELEASE, "zbdonglee", FIRMWARE_ZIGBEE_NCP),
+
+        "SparkFun MGM240p": findFirmware(DARKXST_RELEASE, "mgm240p", FIRMWARE_ZIGBEE_NCP),
+
+        // avoid matching on PB variant with `-`
+        "TubeZB MGM24": undefined,
+        "TubeZB MGM24PB": undefined,
+
+        //-- FIRMWARE_ZIGBEE_ROUTER
+        "ROUTER - Aeotec Zi-Stick (ZGA008)": undefined,
+
+        "ROUTER - EasyIOT ZB-GW04 v1.1": undefined,
+        "ROUTER - EasyIOT ZB-GW04 v1.2": undefined,
+
+        "ROUTER - Nabu Casa SkyConnect": undefined,
+        "ROUTER - Nabu Casa Yellow": undefined,
+
+        "ROUTER - SMLight SLZB06-M": findFirmware(DARKXST_RELEASE, "slzb06m", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - SMLight SLZB06mg24": findFirmware(DARKXST_RELEASE, "slzb06Mg24", FIRMWARE_ZIGBEE_ROUTER),
+        // avoid matching on mg24 variant with `_`
+        "ROUTER - SMLight SLZB07": findFirmware(DARKXST_RELEASE, "slzb07_", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - SMLight SLZB07mg24": findFirmware(DARKXST_RELEASE, "slzb07Mg24", FIRMWARE_ZIGBEE_ROUTER),
+
+        "ROUTER - Sonoff ZBDongle-E": undefined,
+
+        "ROUTER - SparkFun MGM240p": undefined,
+
+        // avoid matching on variants with `-`
+        "ROUTER - TubeZB MGM24": undefined,
+        "ROUTER - TubeZB MGM24PB": undefined,
+    },
+    nerivec: {
         //-- FIRMWARE_ZIGBEE_NCP
         "Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_RELEASE, "aeotec_zga008", FIRMWARE_ZIGBEE_NCP),
 
@@ -312,4 +311,4 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
     },
 };
 
-writeFileSync("firmware-links.json", JSON.stringify(firmwareLinks, undefined, 4), "utf8");
+writeFileSync("firmware-links-v3.json", JSON.stringify(firmwareLinks, undefined, 4), "utf8");

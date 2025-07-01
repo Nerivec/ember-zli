@@ -188,28 +188,28 @@ export default class Bootloader extends Command {
             case FirmwareSource.PRE_DEFINED: {
                 const firmwareLinks = await fetchJson<FirmwareLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL);
                 // valid adapterModel since select option disabled if not
-                const recommended = firmwareLinks.latest[gecko.adapterModel!];
                 const official = firmwareLinks.official[gecko.adapterModel!];
-                const experimental = firmwareLinks.experimental[gecko.adapterModel!];
+                const darkxst = firmwareLinks.darkxst[gecko.adapterModel!];
+                const nerivec = firmwareLinks.nerivec[gecko.adapterModel!];
                 const firmwareVariant = await select<FirmwareVariant>({
                     choices: [
                         {
-                            name: "Latest",
-                            value: "latest",
-                            description: recommended ? recommended : undefined,
-                            disabled: !recommended,
-                        },
-                        {
                             name: "Latest from manufacturer",
                             value: "official",
-                            description: official ? official : undefined,
+                            description: official,
                             disabled: !official,
                         },
                         {
-                            name: "Experimental",
-                            value: "experimental",
-                            description: experimental ? experimental : undefined,
-                            disabled: !experimental,
+                            name: "Latest from @darkxst",
+                            value: "darkxst",
+                            description: darkxst,
+                            disabled: !darkxst,
+                        },
+                        {
+                            name: "Latest from @Nerivec",
+                            value: "nerivec",
+                            description: nerivec,
+                            disabled: !nerivec,
                         },
                     ],
                     message: "Firmware version",
