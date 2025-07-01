@@ -133,8 +133,8 @@ export type GithubReleaseJson = {
     tag_name: string;
     target_commitish: string;
     name: string;
-    draft: false;
-    prerelease: false;
+    draft: boolean;
+    prerelease: boolean;
     created_at: string;
     published_at: string;
     assets: GithubReleaseAssetJson[];

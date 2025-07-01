@@ -25,8 +25,14 @@ const NERIVEC_RECOVERY_RELEASE = await getLatestGithubRelease(NERIVEC_RECOVERY_R
 
 async function getLatestGithubRelease(repo: string): Promise<GithubReleaseJson> {
     const response = await fetchJson<GithubReleaseJson[]>(GITHUB_REPOS_API + path.posix.join(repo, GITHUB_RELEASES_ENDPOINT));
+    let i = 0;
+    let release = response[i++];
 
-    return response[0];
+    while (release.prerelease || release.draft) {
+        release = response[i++];
+    }
+
+    return release;
 }
 
 function findFirmware(release: GithubReleaseJson, model: string, include: string | string[]): string | undefined {
