@@ -1,7 +1,7 @@
 import { EmberApsOption } from "zigbee-herdsman/dist/adapter/ember/enums.js";
 import type { AdapterModel } from "./types.js";
 
-export const PRE_DEFINED_FIRMWARE_LINKS_URL = "https://github.com/Nerivec/ember-zli/raw/refs/heads/main/firmware-links.json";
+export const PRE_DEFINED_FIRMWARE_LINKS_URL = "https://github.com/Nerivec/ember-zli/raw/refs/heads/main/firmware-links-v3.json";
 export const ADAPTER_MODELS: ReadonlyArray<AdapterModel> = [
     "Aeotec Zi-Stick (ZGA008)",
     "EasyIOT ZB-GW04 v1.1",
