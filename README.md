@@ -1,7 +1,7 @@
 Ember ZLI
 =================
 
-Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver
+Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver. Also supports bootloading to/from CPC and Spinel protocols.
 
 [![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
 [![Version](https://img.shields.io/npm/v/ember-zli.svg)](https://npmjs.org/package/ember-zli)
