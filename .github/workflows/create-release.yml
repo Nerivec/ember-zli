@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: 'Force update release if tag already exists (re-adds tarballs from scratch)'
+        description: "Force update release if tag already exists (re-adds tarballs from scratch)"
         required: false
         default: false
         type: boolean
@@ -55,7 +55,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: 'package.json'
+          node-version-file: "package.json"
 
       - run: npm install -g oclif
 
