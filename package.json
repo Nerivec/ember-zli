@@ -11,12 +11,12 @@
         "@inquirer/prompts": "^7.8.4",
         "@oclif/core": "^4.5.2",
         "@oclif/plugin-help": "^6.2.32",
-        "@oclif/plugin-not-found": "^3.2.66",
+        "@oclif/plugin-not-found": "^3.2.67",
         "@oclif/plugin-version": "^2.2.32",
         "bonjour-service": "^1.3.0",
         "cli-progress": "^3.12.0",
         "winston": "^3.17.0",
-        "zigbee-herdsman": "^6.0.1",
+        "zigbee-herdsman": "^6.0.2",
         "zigbee-on-host": "^0.1.13"
     },
     "devDependencies": {
