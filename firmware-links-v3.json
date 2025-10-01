@@ -1,7 +1,7 @@
 {
     "official": {
-        "Nabu Casa SkyConnect": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2025.04.04-1/skyconnect_zigbee_ncp_7.4.4.1.gbl",
-        "Nabu Casa Yellow": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2025.04.04-1/yellow_zigbee_ncp_7.4.4.1.gbl",
+        "Nabu Casa SkyConnect": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2025.09.30/skyconnect_zigbee_ncp_7.4.4.3.gbl",
+        "Nabu Casa Yellow": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2025.09.30/yellow_zigbee_ncp_7.4.4.3.gbl",
         "SMLight SLZB06-M": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20250627/slzb06m_zigbee_ncp_8.0.3.0_sw_flow_115200.gbl",
         "SMLight SLZB06mg24": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20250627/slzb06Mg24_zigbee_ncp_8.0.3.0_115200.gbl",
         "SMLight SLZB07": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20250627/slzb07_zigbee_ncp_8.0.3.0_115200.gbl",
