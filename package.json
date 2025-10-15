@@ -9,7 +9,7 @@
     "bugs": "https://github.com/Nerivec/ember-zli/issues",
     "dependencies": {
         "@inquirer/prompts": "^7.8.6",
-        "@oclif/core": "^4.5.4",
+        "@oclif/core": "^4.5.5",
         "@oclif/plugin-help": "^6.2.33",
         "@oclif/plugin-not-found": "^3.2.68",
         "@oclif/plugin-version": "^2.2.33",
