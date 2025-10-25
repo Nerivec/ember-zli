@@ -52,6 +52,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "Nabu Casa SkyConnect": findFirmware(NABUCASA_RELEASE, "skyconnect", FIRMWARE_ZIGBEE_NCP),
         "Nabu Casa Yellow": findFirmware(NABUCASA_RELEASE, "yellow", FIRMWARE_ZIGBEE_NCP),
+        "Nabu Casa ZBT-2": findFirmware(NABUCASA_RELEASE, "zbt2", FIRMWARE_ZIGBEE_NCP),
 
         "SMLight SLZB06-M": findFirmware(DARKXST_RELEASE, "slzb06m", FIRMWARE_ZIGBEE_NCP),
         "SMLight SLZB06mg24": findFirmware(DARKXST_RELEASE, "slzb06Mg24", FIRMWARE_ZIGBEE_NCP),
@@ -78,6 +79,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - Nabu Casa SkyConnect": undefined, // findFirmware(NABUCASA_RELEASE, 'skyconnect', FIRMWARE_ZIGBEE_ROUTER),
         "ROUTER - Nabu Casa Yellow": undefined, // findFirmware(NABUCASA_RELEASE, 'yellow', FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - Nabu Casa ZBT-2": undefined, // findFirmware(NABUCASA_RELEASE, 'zbt2', FIRMWARE_ZIGBEE_ROUTER),
 
         "ROUTER - SMLight SLZB06-M": findFirmware(DARKXST_RELEASE, "slzb06m", FIRMWARE_ZIGBEE_ROUTER),
         "ROUTER - SMLight SLZB06mg24": findFirmware(DARKXST_RELEASE, "slzb06Mg24", FIRMWARE_ZIGBEE_ROUTER),
@@ -104,6 +106,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "Nabu Casa SkyConnect": undefined,
         "Nabu Casa Yellow": undefined,
+        "Nabu Casa ZBT-2": undefined,
 
         "SMLight SLZB06-M": findFirmware(DARKXST_RELEASE, "slzb06m", FIRMWARE_ZIGBEE_NCP),
         "SMLight SLZB06mg24": findFirmware(DARKXST_RELEASE, "slzb06Mg24", FIRMWARE_ZIGBEE_NCP),
@@ -128,6 +131,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - Nabu Casa SkyConnect": undefined,
         "ROUTER - Nabu Casa Yellow": undefined,
+        "ROUTER - Nabu Casa ZBT-2": undefined,
 
         "ROUTER - SMLight SLZB06-M": findFirmware(DARKXST_RELEASE, "slzb06m", FIRMWARE_ZIGBEE_ROUTER),
         "ROUTER - SMLight SLZB06mg24": findFirmware(DARKXST_RELEASE, "slzb06Mg24", FIRMWARE_ZIGBEE_ROUTER),
@@ -153,6 +157,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "Nabu Casa SkyConnect": findFirmware(NERIVEC_RELEASE, "nabucasa_skyconnect", FIRMWARE_ZIGBEE_NCP),
         "Nabu Casa Yellow": findFirmware(NERIVEC_RELEASE, "nabucasa_yellow", FIRMWARE_ZIGBEE_NCP),
+        "Nabu Casa ZBT-2": findFirmware(NERIVEC_RELEASE, "nabucasa_zbt-2", FIRMWARE_ZIGBEE_NCP),
 
         "SMLight SLZB06-M": findFirmware(NERIVEC_RELEASE, "smlight_slzb06m", FIRMWARE_ZIGBEE_NCP),
         "SMLight SLZB06mg24": findFirmware(NERIVEC_RELEASE, "smlight_slzb06Mg24", FIRMWARE_ZIGBEE_NCP),
@@ -176,6 +181,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - Nabu Casa SkyConnect": findFirmware(NERIVEC_RELEASE, "nabucasa_skyconnect", FIRMWARE_ZIGBEE_ROUTER),
         "ROUTER - Nabu Casa Yellow": findFirmware(NERIVEC_RELEASE, "nabucasa_yellow", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - Nabu Casa ZBT-2": findFirmware(NERIVEC_RELEASE, "nabucasa_zbt-2", FIRMWARE_ZIGBEE_ROUTER),
 
         "ROUTER - SMLight SLZB06-M": findFirmware(NERIVEC_RELEASE, "smlight_slzb06m", FIRMWARE_ZIGBEE_ROUTER),
         "ROUTER - SMLight SLZB06mg24": findFirmware(NERIVEC_RELEASE, "smlight_slzb06Mg24", FIRMWARE_ZIGBEE_ROUTER),
@@ -200,6 +206,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "Nabu Casa SkyConnect": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F512IM32", ["nvm3_clear", "32768.gbl"]),
         "Nabu Casa Yellow": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM210PA32JIA", ["nvm3_clear", "32768.gbl"]),
+        "Nabu Casa ZBT-2": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM40", ["nvm3_clear", "32768.gbl"]),
 
         "SMLight SLZB06-M": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F768IM32", ["nvm3_clear", "32768.gbl"]),
         "SMLight SLZB06mg24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A020F1024IM40", ["nvm3_clear", "32768.gbl"]),
@@ -221,6 +228,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - Nabu Casa SkyConnect": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F512IM32", ["nvm3_clear", "32768.gbl"]),
         "ROUTER - Nabu Casa Yellow": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM210PA32JIA", ["nvm3_clear", "32768.gbl"]),
+        "ROUTER - Nabu Casa ZBT-2": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM40", ["nvm3_clear", "32768.gbl"]),
 
         "ROUTER - SMLight SLZB06-M": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F768IM32", ["nvm3_clear", "32768.gbl"]),
         "ROUTER - SMLight SLZB06mg24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A020F1024IM40", ["nvm3_clear", "32768.gbl"]),
@@ -243,6 +251,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "Nabu Casa SkyConnect": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F512IM32", ["nvm3_clear", "40960.gbl"]),
         "Nabu Casa Yellow": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM210PA32JIA", ["nvm3_clear", "40960.gbl"]),
+        "Nabu Casa ZBT-2": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM40", ["nvm3_clear", "40960.gbl"]),
 
         "SMLight SLZB06-M": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F768IM32", ["nvm3_clear", "40960.gbl"]),
         "SMLight SLZB06mg24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A020F1024IM40", ["nvm3_clear", "40960.gbl"]),
@@ -264,6 +273,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - Nabu Casa SkyConnect": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F512IM32", ["nvm3_clear", "40960.gbl"]),
         "ROUTER - Nabu Casa Yellow": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM210PA32JIA", ["nvm3_clear", "40960.gbl"]),
+        "ROUTER - Nabu Casa ZBT-2": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM40", ["nvm3_clear", "40960.gbl"]),
 
         "ROUTER - SMLight SLZB06-M": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F768IM32", ["nvm3_clear", "40960.gbl"]),
         "ROUTER - SMLight SLZB06mg24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A020F1024IM40", ["nvm3_clear", "40960.gbl"]),
@@ -286,6 +296,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "Nabu Casa SkyConnect": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F512IM32", "app_clear"),
         "Nabu Casa Yellow": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM210PA32JIA", "app_clear"),
+        "Nabu Casa ZBT-2": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM40", "app_clear"),
 
         "SMLight SLZB06-M": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F768IM32", "app_clear"),
         "SMLight SLZB06mg24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A020F1024IM40", "app_clear"),
@@ -307,6 +318,7 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - Nabu Casa SkyConnect": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F512IM32", "app_clear"),
         "ROUTER - Nabu Casa Yellow": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM210PA32JIA", "app_clear"),
+        "ROUTER - Nabu Casa ZBT-2": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM40", "app_clear"),
 
         "ROUTER - SMLight SLZB06-M": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F768IM32", "app_clear"),
         "ROUTER - SMLight SLZB06mg24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A020F1024IM40", "app_clear"),
