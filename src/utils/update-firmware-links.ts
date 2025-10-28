@@ -1,7 +1,7 @@
+import assert from "node:assert";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import type { AdapterModel, FirmwareVariant, GithubReleaseJson } from "./types.js";
-
 import { fetchJson } from "./utils.js";
 
 const GITHUB_REPOS_API = "https://api.github.com/repos/";
@@ -17,23 +17,28 @@ const NERIVEC_RECOVERY_REPO = "Nerivec/silabs-firmware-recovery";
 const FIRMWARE_ZIGBEE_NCP = "zigbee_ncp";
 const FIRMWARE_ZIGBEE_ROUTER = "zigbee_router";
 
-const NABUCASA_RELEASE = await getLatestGithubRelease(NABUCASA_REPO);
-const DARKXST_RELEASE = await getLatestGithubRelease(DARKXST_REPO);
-const NERIVEC_RELEASE = await getLatestGithubRelease(NERIVEC_REPO);
-const NERIVEC_RECOVERY_RELEASE = await getLatestGithubRelease(NERIVEC_RECOVERY_REPO);
-// const TUBE0013_REPO = await getLatestGithubRelease(TUBE0013_REPO)
-
-async function getLatestGithubRelease(repo: string): Promise<GithubReleaseJson> {
+async function getLatestGithubRelease(repo: string): Promise<[release: GithubReleaseJson, preRelease: GithubReleaseJson | undefined]> {
     const response = await fetchJson<GithubReleaseJson[]>(GITHUB_REPOS_API + path.posix.join(repo, GITHUB_RELEASES_ENDPOINT));
     let i = 0;
     let release = response[i++];
+    let preRelease: GithubReleaseJson | undefined;
 
     while (release.prerelease || release.draft) {
+        if (!preRelease && release.prerelease && !release.draft) {
+            preRelease = release;
+        }
+
         release = response[i++];
     }
 
-    return release;
+    return [release, preRelease];
 }
+
+const [NABUCASA_RELEASE] = await getLatestGithubRelease(NABUCASA_REPO);
+const [DARKXST_RELEASE] = await getLatestGithubRelease(DARKXST_REPO);
+const [NERIVEC_RELEASE, NERIVEC_PRE_RELEASE] = await getLatestGithubRelease(NERIVEC_REPO);
+const [NERIVEC_RECOVERY_RELEASE] = await getLatestGithubRelease(NERIVEC_RECOVERY_REPO);
+// const [TUBE0013_RELEASE] = await getLatestGithubRelease(TUBE0013_REPO)
 
 function findFirmware(release: GithubReleaseJson, model: string, include: string | string[]): string | undefined {
     const includeArr = Array.isArray(include) ? include : [include];
@@ -41,6 +46,13 @@ function findFirmware(release: GithubReleaseJson, model: string, include: string
 
     return firmware?.browser_download_url;
 }
+
+assert(NABUCASA_RELEASE);
+assert(DARKXST_RELEASE);
+assert(NERIVEC_RELEASE);
+assert(NERIVEC_PRE_RELEASE);
+assert(NERIVEC_RECOVERY_RELEASE);
+// assert(TUBE0013_RELEASE);
 
 const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undefined>> = {
     official: {
@@ -67,9 +79,9 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         "SparkFun MGM240p": undefined,
 
         // avoid matching on PB variant with `-`
+        "TubeZB BM24": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-bm24-', FIRMWARE_ZIGBEE_NCP),
         "TubeZB MGM24":
             "https://github.com/tube0013/tube_gateways/raw/refs/heads/main/models/current/tubeszb-efr32-MGM24/firmware/mgm24/ncp/4.4.4/tubeszb-mgm24-hw-max_ncp-uart-hw_7.4.4.0.gbl", // findFirmware(TUBE0013_RELEASE, 'tubeszb-mgm24-', FIRMWARE_ZIGBEE_NCP),
-        "TubeZB MGM24PB": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-mgm24pb-', FIRMWARE_ZIGBEE_NCP),
 
         //-- FIRMWARE_ZIGBEE_ROUTER
         "ROUTER - Aeotec Zi-Stick (ZGA008)": undefined,
@@ -94,8 +106,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         "ROUTER - SparkFun MGM240p": undefined,
 
         // avoid matching on variants with `-`
+        "ROUTER - TubeZB BM24": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-bm24-', FIRMWARE_ZIGBEE_ROUTER),
         "ROUTER - TubeZB MGM24": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-mgm24-', FIRMWARE_ZIGBEE_ROUTER),
-        "ROUTER - TubeZB MGM24PB": undefined, // findFirmware(TUBE0013_RELEASE, 'tubeszb-mgm24PB-', FIRMWARE_ZIGBEE_ROUTER),
     },
     darkxst: {
         //-- FIRMWARE_ZIGBEE_NCP
@@ -120,8 +132,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         "SparkFun MGM240p": findFirmware(DARKXST_RELEASE, "mgm240p", FIRMWARE_ZIGBEE_NCP),
 
         // avoid matching on PB variant with `-`
+        "TubeZB BM24": undefined,
         "TubeZB MGM24": undefined,
-        "TubeZB MGM24PB": undefined,
 
         //-- FIRMWARE_ZIGBEE_ROUTER
         "ROUTER - Aeotec Zi-Stick (ZGA008)": undefined,
@@ -145,8 +157,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         "ROUTER - SparkFun MGM240p": undefined,
 
         // avoid matching on variants with `-`
+        "ROUTER - TubeZB BM24": undefined,
         "ROUTER - TubeZB MGM24": undefined,
-        "ROUTER - TubeZB MGM24PB": undefined,
     },
     nerivec: {
         //-- FIRMWARE_ZIGBEE_NCP
@@ -169,9 +181,10 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         "Sonoff ZBDongle-E": findFirmware(NERIVEC_RELEASE, "sonoff_zbdonglee", FIRMWARE_ZIGBEE_NCP),
 
         "SparkFun MGM240p": findFirmware(NERIVEC_RELEASE, "sparkfun_mgm240p", FIRMWARE_ZIGBEE_NCP),
+
         // avoid matching on variants with `-`
+        "TubeZB BM24": findFirmware(NERIVEC_RELEASE, "tubeszb-bm24-", FIRMWARE_ZIGBEE_NCP),
         "TubeZB MGM24": findFirmware(NERIVEC_RELEASE, "tubeszb-mgm24-", FIRMWARE_ZIGBEE_NCP),
-        "TubeZB MGM24PB": findFirmware(NERIVEC_RELEASE, "tubeszb-mgm24PB-", FIRMWARE_ZIGBEE_NCP),
 
         //-- FIRMWARE_ZIGBEE_ROUTER
         "ROUTER - Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_RELEASE, "aeotec_zga008", FIRMWARE_ZIGBEE_ROUTER),
@@ -195,8 +208,59 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
         "ROUTER - SparkFun MGM240p": findFirmware(NERIVEC_RELEASE, "sparkfun_mgm240p", FIRMWARE_ZIGBEE_ROUTER),
 
         // avoid matching on variants with `-`
+        "ROUTER - TubeZB BM24": findFirmware(NERIVEC_RELEASE, "tubeszb-bm24-", FIRMWARE_ZIGBEE_ROUTER),
         "ROUTER - TubeZB MGM24": findFirmware(NERIVEC_RELEASE, "tubeszb-mgm24-", FIRMWARE_ZIGBEE_ROUTER),
-        "ROUTER - TubeZB MGM24PB": findFirmware(NERIVEC_RELEASE, "tubeszb-mgm24PB-", FIRMWARE_ZIGBEE_ROUTER),
+    },
+    nerivec_pre_release: {
+        //-- FIRMWARE_ZIGBEE_NCP
+        "Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_PRE_RELEASE, "aeotec_zga008", FIRMWARE_ZIGBEE_NCP),
+
+        "EasyIOT ZB-GW04 v1.1": findFirmware(NERIVEC_PRE_RELEASE, "easyiot_zb-gw04-1v1", FIRMWARE_ZIGBEE_NCP),
+        "EasyIOT ZB-GW04 v1.2": findFirmware(NERIVEC_PRE_RELEASE, "easyiot_zb-gw04-1v2", FIRMWARE_ZIGBEE_NCP),
+
+        "Nabu Casa SkyConnect": findFirmware(NERIVEC_PRE_RELEASE, "nabucasa_skyconnect", FIRMWARE_ZIGBEE_NCP),
+        "Nabu Casa Yellow": findFirmware(NERIVEC_PRE_RELEASE, "nabucasa_yellow", FIRMWARE_ZIGBEE_NCP),
+        "Nabu Casa ZBT-2": findFirmware(NERIVEC_PRE_RELEASE, "nabucasa_zbt-2", FIRMWARE_ZIGBEE_NCP),
+
+        "SMLight SLZB06-M": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb06m", FIRMWARE_ZIGBEE_NCP),
+        "SMLight SLZB06mg24": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb06Mg24", FIRMWARE_ZIGBEE_NCP),
+        "SMLight SLZB06mg26": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb06Mg26", FIRMWARE_ZIGBEE_NCP),
+        // avoid matching on mg24 variant with `_`
+        "SMLight SLZB07": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb07_", FIRMWARE_ZIGBEE_NCP),
+        "SMLight SLZB07mg24": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb07Mg24", FIRMWARE_ZIGBEE_NCP),
+
+        "Sonoff ZBDongle-E": findFirmware(NERIVEC_PRE_RELEASE, "sonoff_zbdonglee", FIRMWARE_ZIGBEE_NCP),
+
+        "SparkFun MGM240p": findFirmware(NERIVEC_PRE_RELEASE, "sparkfun_mgm240p", FIRMWARE_ZIGBEE_NCP),
+
+        // avoid matching on variants with `-`
+        "TubeZB BM24": findFirmware(NERIVEC_PRE_RELEASE, "tubeszb-bm24-", FIRMWARE_ZIGBEE_NCP),
+        "TubeZB MGM24": findFirmware(NERIVEC_PRE_RELEASE, "tubeszb-mgm24-", FIRMWARE_ZIGBEE_NCP),
+
+        //-- FIRMWARE_ZIGBEE_ROUTER
+        "ROUTER - Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_PRE_RELEASE, "aeotec_zga008", FIRMWARE_ZIGBEE_ROUTER),
+
+        "ROUTER - EasyIOT ZB-GW04 v1.1": findFirmware(NERIVEC_PRE_RELEASE, "easyiot_zb-gw04-1v1", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - EasyIOT ZB-GW04 v1.2": findFirmware(NERIVEC_PRE_RELEASE, "easyiot_zb-gw04-1v2", FIRMWARE_ZIGBEE_ROUTER),
+
+        "ROUTER - Nabu Casa SkyConnect": findFirmware(NERIVEC_PRE_RELEASE, "nabucasa_skyconnect", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - Nabu Casa Yellow": findFirmware(NERIVEC_PRE_RELEASE, "nabucasa_yellow", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - Nabu Casa ZBT-2": findFirmware(NERIVEC_PRE_RELEASE, "nabucasa_zbt-2", FIRMWARE_ZIGBEE_ROUTER),
+
+        "ROUTER - SMLight SLZB06-M": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb06m", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - SMLight SLZB06mg24": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb06Mg24", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - SMLight SLZB06mg26": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb06Mg26", FIRMWARE_ZIGBEE_ROUTER),
+        // avoid matching on mg24 variant with `_`
+        "ROUTER - SMLight SLZB07": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb07_", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - SMLight SLZB07mg24": findFirmware(NERIVEC_PRE_RELEASE, "smlight_slzb07Mg24", FIRMWARE_ZIGBEE_ROUTER),
+
+        "ROUTER - Sonoff ZBDongle-E": findFirmware(NERIVEC_PRE_RELEASE, "sonoff_zbdonglee", FIRMWARE_ZIGBEE_ROUTER),
+
+        "ROUTER - SparkFun MGM240p": findFirmware(NERIVEC_PRE_RELEASE, "sparkfun_mgm240p", FIRMWARE_ZIGBEE_ROUTER),
+
+        // avoid matching on variants with `-`
+        "ROUTER - TubeZB BM24": findFirmware(NERIVEC_PRE_RELEASE, "tubeszb-bm24-", FIRMWARE_ZIGBEE_ROUTER),
+        "ROUTER - TubeZB MGM24": findFirmware(NERIVEC_PRE_RELEASE, "tubeszb-mgm24-", FIRMWARE_ZIGBEE_ROUTER),
     },
     nvm3_32768_clear: {
         "Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F1024IM32", ["nvm3_clear", "32768.gbl"]),
@@ -218,8 +282,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "SparkFun MGM240p": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNA", ["nvm3_clear", "32768.gbl"]),
 
+        "TubeZB BM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM48", ["nvm3_clear", "32768.gbl"]),
         "TubeZB MGM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PA32VNN", ["nvm3_clear", "32768.gbl"]),
-        "TubeZB MGM24PB": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNN", ["nvm3_clear", "32768.gbl"]),
 
         "ROUTER - Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F1024IM32", ["nvm3_clear", "32768.gbl"]),
 
@@ -240,8 +304,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - SparkFun MGM240p": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNA", ["nvm3_clear", "32768.gbl"]),
 
+        "ROUTER - TubeZB BM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM48", ["nvm3_clear", "32768.gbl"]),
         "ROUTER - TubeZB MGM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PA32VNN", ["nvm3_clear", "32768.gbl"]),
-        "ROUTER - TubeZB MGM24PB": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNN", ["nvm3_clear", "32768.gbl"]),
     },
     nvm3_40960_clear: {
         "Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F1024IM32", ["nvm3_clear", "40960.gbl"]),
@@ -263,8 +327,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "SparkFun MGM240p": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNA", ["nvm3_clear", "40960.gbl"]),
 
+        "TubeZB BM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM48", ["nvm3_clear", "40960.gbl"]),
         "TubeZB MGM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PA32VNN", ["nvm3_clear", "40960.gbl"]),
-        "TubeZB MGM24PB": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNN", ["nvm3_clear", "40960.gbl"]),
 
         "ROUTER - Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F1024IM32", ["nvm3_clear", "40960.gbl"]),
 
@@ -285,8 +349,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - SparkFun MGM240p": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNA", ["nvm3_clear", "40960.gbl"]),
 
+        "ROUTER - TubeZB BM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM48", ["nvm3_clear", "40960.gbl"]),
         "ROUTER - TubeZB MGM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PA32VNN", ["nvm3_clear", "40960.gbl"]),
-        "ROUTER - TubeZB MGM24PB": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNN", ["nvm3_clear", "40960.gbl"]),
     },
     app_clear: {
         "Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F1024IM32", "app_clear"),
@@ -308,8 +372,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "SparkFun MGM240p": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNA", "app_clear"),
 
+        "TubeZB BM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM48", "app_clear"),
         "TubeZB MGM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PA32VNN", "app_clear"),
-        "TubeZB MGM24PB": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNN", "app_clear"),
 
         "ROUTER - Aeotec Zi-Stick (ZGA008)": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG21A020F1024IM32", "app_clear"),
 
@@ -330,8 +394,8 @@ const firmwareLinks: Record<FirmwareVariant, Record<AdapterModel, string | undef
 
         "ROUTER - SparkFun MGM240p": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNA", "app_clear"),
 
+        "ROUTER - TubeZB BM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "EFR32MG24A420F1536IM48", "app_clear"),
         "ROUTER - TubeZB MGM24": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PA32VNN", "app_clear"),
-        "ROUTER - TubeZB MGM24PB": findFirmware(NERIVEC_RECOVERY_RELEASE, "MGM240PB32VNN", "app_clear"),
     },
 };
 

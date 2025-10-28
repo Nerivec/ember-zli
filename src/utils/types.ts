@@ -28,8 +28,8 @@ export type AdapterModel =
     | "SMLight SLZB07mg24"
     | "Sonoff ZBDongle-E"
     | "SparkFun MGM240p"
+    | "TubeZB BM24"
     | "TubeZB MGM24"
-    | "TubeZB MGM24PB"
     | "ROUTER - Aeotec Zi-Stick (ZGA008)"
     | "ROUTER - EasyIOT ZB-GW04 v1.1"
     | "ROUTER - EasyIOT ZB-GW04 v1.2"
@@ -43,8 +43,8 @@ export type AdapterModel =
     | "ROUTER - SMLight SLZB07mg24"
     | "ROUTER - Sonoff ZBDongle-E"
     | "ROUTER - SparkFun MGM240p"
-    | "ROUTER - TubeZB MGM24"
-    | "ROUTER - TubeZB MGM24PB";
+    | "ROUTER - TubeZB BM24"
+    | "ROUTER - TubeZB MGM24";
 
 export type PortType = "serial" | "tcp";
 export type BaudRate = (typeof BAUDRATES)[number];
@@ -60,7 +60,7 @@ export type PortConf = {
 export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion;
 export type ConfigValue = { [key: string]: string };
 
-export type FirmwareVariant = "official" | "darkxst" | "nerivec" | "nvm3_32768_clear" | "nvm3_40960_clear" | "app_clear";
+export type FirmwareVariant = "official" | "darkxst" | "nerivec" | "nerivec_pre_release" | "nvm3_32768_clear" | "nvm3_40960_clear" | "app_clear";
 export type FirmwareVersion = `${number}.${number}.${number}.${number}`;
 export type FirmwareVersionShort = `${number}.${number}.${number}`;
 export type FirmwareFilename = `${string}.gbl`;

@@ -1,7 +1,7 @@
 {
     "name": "ember-zli",
     "description": "Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver",
-    "version": "3.2.0",
+    "version": "3.3.0",
     "author": "Nerivec",
     "bin": {
         "ember-zli": "bin/run.js"
@@ -9,7 +9,7 @@
     "bugs": "https://github.com/Nerivec/ember-zli/issues",
     "dependencies": {
         "@inquirer/prompts": "^7.9.0",
-        "@oclif/core": "^4.7.2",
+        "@oclif/core": "^4.8.0",
         "@oclif/plugin-help": "^6.2.34",
         "@oclif/plugin-not-found": "^3.2.71",
         "@oclif/plugin-version": "^2.2.35",
@@ -22,8 +22,8 @@
     "devDependencies": {
         "@biomejs/biome": "^2.3.1",
         "@types/cli-progress": "^3.11.6",
-        "@types/node": "^24.9.1",
-        "oclif": "^4.22.37",
+        "@types/node": "^24.9.2",
+        "oclif": "^4.22.38",
         "ts-node": "^10.9.2",
         "typescript": "^5.9.3"
     },

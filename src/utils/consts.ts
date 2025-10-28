@@ -16,8 +16,8 @@ export const ADAPTER_MODELS: ReadonlyArray<AdapterModel> = [
     "SMLight SLZB07mg24",
     "Sonoff ZBDongle-E",
     "SparkFun MGM240p",
+    "TubeZB BM24",
     "TubeZB MGM24",
-    "TubeZB MGM24PB",
     "ROUTER - Aeotec Zi-Stick (ZGA008)",
     "ROUTER - EasyIOT ZB-GW04 v1.1",
     "ROUTER - EasyIOT ZB-GW04 v1.2",
@@ -31,8 +31,8 @@ export const ADAPTER_MODELS: ReadonlyArray<AdapterModel> = [
     "ROUTER - SMLight SLZB07mg24",
     "ROUTER - Sonoff ZBDongle-E",
     "ROUTER - SparkFun MGM240p",
+    "ROUTER - TubeZB BM24",
     "ROUTER - TubeZB MGM24",
-    "ROUTER - TubeZB MGM24PB",
 ];
 export const TCP_REGEX = /^tcp:\/\/[\w.-]+:\d+$/;
 export const BAUDRATES = [115200, 230400, 460800, 921600];

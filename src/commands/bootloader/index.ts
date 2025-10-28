@@ -191,6 +191,7 @@ export default class Bootloader extends Command {
                 const official = firmwareLinks.official[gecko.adapterModel!];
                 const darkxst = firmwareLinks.darkxst[gecko.adapterModel!];
                 const nerivec = firmwareLinks.nerivec[gecko.adapterModel!];
+                const nerivecPreRelease = firmwareLinks.nerivec_pre_release[gecko.adapterModel!];
                 const firmwareVariant = await select<FirmwareVariant>({
                     choices: [
                         {
@@ -210,6 +211,12 @@ export default class Bootloader extends Command {
                             value: "nerivec",
                             description: nerivec,
                             disabled: !nerivec,
+                        },
+                        {
+                            name: "Latest pre-release from @Nerivec",
+                            value: "nerivec_pre_release",
+                            description: nerivecPreRelease,
+                            disabled: !nerivecPreRelease,
                         },
                     ],
                     message: "Firmware version",
