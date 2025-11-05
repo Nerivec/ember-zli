@@ -162,15 +162,19 @@ export class Transport extends EventEmitter<SerialEventMap> {
     }
 
     public async serialSet(options: SetOptions, afterDelayMS?: number): Promise<void> {
-        await new Promise<void>((resolve, reject) => {
-            const fn = (): void => this.portSerial?.set(options, (error) => (error ? reject(error) : resolve()));
+        try {
+            await new Promise<void>((resolve, reject) => {
+                const fn = (): void => this.portSerial?.set(options, (error) => (error ? reject(error) : resolve()));
 
-            if (afterDelayMS) {
-                setTimeout(fn, afterDelayMS);
-            } else {
-                fn();
-            }
-        });
+                if (afterDelayMS) {
+                    setTimeout(fn, afterDelayMS);
+                } else {
+                    fn();
+                }
+            });
+        } catch (error) {
+            logger.warning(`Failed to set serial: ${error}.`, NS);
+        }
     }
 
     public write(buffer: Buffer): void {
