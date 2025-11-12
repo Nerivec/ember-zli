@@ -22,6 +22,16 @@ export class MinimalSpinel extends EventEmitter<MinimalSpinelEventMap> {
         super();
 
         this.driver = new OTRCPDriver(
+            {
+                onFatalError: () => {},
+                onMACFrame: () => {},
+                onFrame: () => {},
+                onGPFrame: () => {},
+                onDeviceJoined: () => {},
+                onDeviceRejoined: () => {},
+                onDeviceLeft: () => {},
+                onDeviceAuthorized: () => {},
+            },
             // @ts-expect-error none of these params are needed for this minimal use
             {},
             {},
