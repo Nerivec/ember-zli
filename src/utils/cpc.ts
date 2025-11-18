@@ -220,7 +220,7 @@ export class Cpc extends EventEmitter<CpcEventMap> {
         await this.transport.close(false);
     }
 
-    private async onTransportData(received: Buffer): Promise<void> {
+    private onTransportData(received: Buffer): void {
         logger.debug(`Received transport data: ${received.toString("hex")}.`, NS);
 
         this.receiveSystemUFrame(received);

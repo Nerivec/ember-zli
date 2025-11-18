@@ -30,6 +30,8 @@
             "style": {
                 "noNonNullAssertion": "off",
                 "noParameterAssign": "off",
+                "useThrowNewError": "error",
+                "useThrowOnlyError": "error",
                 "useAsConstAssertion": "error",
                 "useDefaultParameterLast": "error",
                 "useEnumInitializers": "error",
@@ -40,7 +42,21 @@
                 "noInferrableTypes": "error",
                 "noUselessElse": "error"
             },
+            "correctness": {
+                "noUnusedImports": "error",
+                "noUnusedVariables": {
+                    "level": "warn",
+                    "fix": "none",
+                    "options": {}
+                }
+            },
+            "performance": {
+                "noBarrelFile": "error",
+                "noReExportAll": "error"
+            },
             "suspicious": {
+                "noConstEnum": "off",
+                "useAwait": "error",
                 "noAssignInExpressions": "off"
             }
         }

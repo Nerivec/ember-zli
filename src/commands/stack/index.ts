@@ -935,7 +935,7 @@ export default class Stack extends Command {
         return false;
     }
 
-    private async menuStackInfo(): Promise<boolean> {
+    private menuStackInfo(): boolean {
         logger.info(`EmberZNet: ${emberFullVersion.revision}. EZSP: ${emberFullVersion.ezsp}`);
         return false;
     }
@@ -1392,7 +1392,7 @@ homeassistant:
 
         switch (answer) {
             case StackMenu.STACK_INFO: {
-                return await this.menuStackInfo();
+                return this.menuStackInfo();
             }
 
             case StackMenu.STACK_CONFIG: {

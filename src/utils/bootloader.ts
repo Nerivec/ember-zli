@@ -33,7 +33,7 @@ export enum BootloaderState {
     GOT_INFO = 7,
 }
 
-export enum BootloaderMenu {
+export const enum BootloaderMenu {
     UPLOAD_GBL = 0x31,
     RUN = 0x32,
     INFO = 0x33,
@@ -77,7 +77,7 @@ const SUPPORTED_VERSIONS_REGEX = /(7\.4\.\d\.\d)|(8\.[0-2]\.\d\.\d)/;
 const FORCE_RESET_SUPPORT_ADAPTERS: ReadonlyArray<AdapterModel> = ["Sonoff ZBDongle-E", "ROUTER - Sonoff ZBDongle-E"];
 const ALWAYS_FORCE_RESET_ADAPTERS: ReadonlyArray<(typeof FORCE_RESET_SUPPORT_ADAPTERS)[number]> = ["ROUTER - Sonoff ZBDongle-E"];
 
-export enum BootloaderEvent {
+export const enum BootloaderEvent {
     FAILED = "failed",
     CLOSED = "closed",
     UPLOAD_START = "uploadStart",
@@ -85,7 +85,7 @@ export enum BootloaderEvent {
     UPLOAD_PROGRESS = "uploadProgress",
 }
 
-enum FirmwareType {
+const enum FirmwareType {
     EMBERZNET_NCP = 0,
     OPENTHREAD_RCP = 1,
     MULTIPROTOCOL_RCP = 2,
@@ -561,7 +561,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         return false;
     }
 
-    private async onTransportData(received: Buffer): Promise<void> {
+    private onTransportData(received: Buffer): void {
         logger.debug(`Received transport data: ${received.toString("hex")} while in state ${BootloaderState[this.state]}.`, NS);
 
         switch (this.state) {
@@ -587,7 +587,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
             case BootloaderState.UPLOADING: {
                 // just hand over to xmodem
-                return this.xmodem.process(received);
+                this.xmodem.process(received);
+
+                return;
             }
 
             case BootloaderState.UPLOADED: {
@@ -652,16 +654,16 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         this.emit(BootloaderEvent.FAILED);
     }
 
-    private async onXModemData(data: Buffer, progressPc: number): Promise<void> {
+    private onXModemData(data: Buffer, progressPc: number): void {
         this.emit(BootloaderEvent.UPLOAD_PROGRESS, progressPc);
         this.transport.write(data);
     }
 
-    private async onXModemStart(): Promise<void> {
+    private onXModemStart(): void {
         this.emit(BootloaderEvent.UPLOAD_START);
     }
 
-    private async onXModemStop(status: XExitStatus): Promise<void> {
+    private onXModemStop(status: XExitStatus): void {
         this.resolveState(BootloaderState.UPLOADED);
         this.emit(BootloaderEvent.UPLOAD_STOP, status);
     }

@@ -105,7 +105,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
             this.portSocket.on("data", this.emitData.bind(this));
 
             return await new Promise((resolve, reject): void => {
-                const openError = async (err: Error): Promise<void> => {
+                const openError = (err: Error): void => {
                     reject(err);
                 };
 

@@ -73,4 +73,5 @@ zhSetLogger({
 
 logger.info(`Data folder: ${DATA_FOLDER}.`);
 
+// biome-ignore lint/performance/noBarrelFile: oclif
 export { run } from "@oclif/core";
