@@ -43,8 +43,8 @@ export class Transport extends EventEmitter<SerialEventMap> {
     public connected: boolean;
     public readonly portConf: PortConf;
     public portWriter: TransportWriter | undefined;
-    private portSerial: SerialPort | undefined;
-    private portSocket: Socket | undefined;
+    #portSerial: SerialPort | undefined;
+    #portSocket: Socket | undefined;
 
     constructor(portConf: PortConf) {
         super();
@@ -54,18 +54,18 @@ export class Transport extends EventEmitter<SerialEventMap> {
     }
 
     get isSerial(): boolean {
-        return Boolean(this.portSerial);
+        return Boolean(this.#portSerial);
     }
 
     public async close(emitClosed: boolean, emitFailed = true): Promise<void> {
-        if (this.portSerial?.isOpen) {
+        if (this.#portSerial?.isOpen) {
             logger.info("Closing serial connection...", NS);
 
             try {
-                await this.portSerial.asyncFlushAndClose();
+                await this.#portSerial.asyncFlushAndClose();
             } catch (error) {
                 logger.error(`Failed to close port: ${error}.`, NS);
-                this.portSerial.removeAllListeners();
+                this.#portSerial.removeAllListeners();
 
                 if (emitFailed) {
                     this.emit(TransportEvent.FAILED);
@@ -74,11 +74,11 @@ export class Transport extends EventEmitter<SerialEventMap> {
                 return;
             }
 
-            this.portSerial.removeAllListeners();
-        } else if (this.portSocket !== undefined && !this.portSocket.closed) {
+            this.#portSerial.removeAllListeners();
+        } else if (this.#portSocket !== undefined && !this.#portSocket.closed) {
             logger.info("Closing socket connection...", NS);
-            this.portSocket.destroy();
-            this.portSocket.removeAllListeners();
+            this.#portSocket.destroy();
+            this.#portSocket.removeAllListeners();
         }
 
         if (emitClosed) {
@@ -94,41 +94,41 @@ export class Transport extends EventEmitter<SerialEventMap> {
             const info = new URL(this.portConf.path);
             logger.debug(`Opening TCP socket with ${info.hostname}:${info.port}`, NS);
 
-            this.portSocket = new Socket();
+            this.#portSocket = new Socket();
 
-            this.portSocket.setNoDelay(true);
-            this.portSocket.setKeepAlive(true, 15000);
+            this.#portSocket.setNoDelay(true);
+            this.#portSocket.setKeepAlive(true, 15000);
 
             this.portWriter = customPortWriter ?? new TransportWriter({ highWaterMark: CONFIG_HIGHWATER_MARK });
 
-            this.portWriter.pipe(this.portSocket);
-            this.portSocket.on("data", this.emitData.bind(this));
+            this.portWriter.pipe(this.#portSocket);
+            this.#portSocket.on("data", this.emitData.bind(this));
 
             return await new Promise((resolve, reject): void => {
                 const openError = (err: Error): void => {
                     reject(err);
                 };
 
-                if (this.portSocket === undefined) {
+                if (this.#portSocket === undefined) {
                     reject(new Error("Invalid socket"));
                     return;
                 }
 
-                this.portSocket.on("connect", () => {
+                this.#portSocket.on("connect", () => {
                     logger.debug("Socket connected", NS);
                 });
-                this.portSocket.on("ready", (): void => {
+                this.#portSocket.on("ready", (): void => {
                     logger.info("Socket ready", NS);
-                    this.portSocket!.removeListener("error", openError);
-                    this.portSocket!.once("close", this.onPortClose.bind(this));
-                    this.portSocket!.on("error", this.onPortError.bind(this));
+                    this.#portSocket!.removeListener("error", openError);
+                    this.#portSocket!.once("close", this.onPortClose.bind(this));
+                    this.#portSocket!.on("error", this.onPortError.bind(this));
 
                     this.connected = true;
 
                     resolve();
                 });
-                this.portSocket.once("error", openError);
-                this.portSocket.connect(Number.parseInt(info.port, 10), info.hostname);
+                this.#portSocket.once("error", openError);
+                this.#portSocket.connect(Number.parseInt(info.port, 10), info.hostname);
             });
         }
 
@@ -146,17 +146,17 @@ export class Transport extends EventEmitter<SerialEventMap> {
 
         logger.debug(`Opening serial port with ${JSON.stringify(serialOpts)}`, NS);
 
-        this.portSerial = new SerialPort(serialOpts);
+        this.#portSerial = new SerialPort(serialOpts);
         this.portWriter = customPortWriter ?? new TransportWriter({ highWaterMark: CONFIG_HIGHWATER_MARK });
 
-        this.portWriter.pipe(this.portSerial);
-        this.portSerial.on("data", this.emitData.bind(this));
+        this.portWriter.pipe(this.#portSerial);
+        this.#portSerial.on("data", this.emitData.bind(this));
 
-        await this.portSerial.asyncOpen();
+        await this.#portSerial.asyncOpen();
         logger.info("Serial port opened", NS);
 
-        this.portSerial.once("close", this.onPortClose.bind(this));
-        this.portSerial.on("error", this.onPortError.bind(this));
+        this.#portSerial.once("close", this.onPortClose.bind(this));
+        this.#portSerial.on("error", this.onPortError.bind(this));
 
         this.connected = true;
     }
@@ -164,7 +164,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
     public async serialSet(options: SetOptions, afterDelayMS?: number): Promise<void> {
         try {
             await new Promise<void>((resolve, reject) => {
-                const fn = (): void => this.portSerial?.set(options, (error) => (error ? reject(error) : resolve()));
+                const fn = (): void => this.#portSerial?.set(options, (error) => (error ? reject(error) : resolve()));
 
                 if (afterDelayMS) {
                     setTimeout(fn, afterDelayMS);

@@ -337,6 +337,27 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
             logger.info(`Firmware file metadata: ${JSON.stringify(recdMetadata)}`, NS);
 
+            if (recdMetadata.fw_type.includes("ncp") || recdMetadata.fw_type.includes("rcp")) {
+                if (
+                    this.portConf.metadata && // won't pass for non-serial
+                    recdMetadata.ezsp_version &&
+                    /8\.[1-2]\.\d\.\d/.test(recdMetadata.ezsp_version) &&
+                    this.portConf.metadata.vendorId === "1a86" &&
+                    this.portConf.metadata.productId === "55d4"
+                ) {
+                    const sure = /.*sonoff.*plus.*/.test(this.portConf.metadata.path) && this.portConf.metadata.manufacturer === "ITEAD";
+                    const proceed = await confirm({
+                        default: false,
+                        message: `Version: ${recdMetadata.ezsp_version}, Type: ${recdMetadata.fw_type}. Is known to${sure ? "" : " possibly"} cause issues with your adapter variant. Proceed with this firmware anyway?`,
+                    });
+
+                    if (!proceed) {
+                        logger.warning("Cancelling firmware update.", NS);
+                        return FirmwareValidation.CANCELLED;
+                    }
+                }
+            }
+
             // checks irrelevant for router firmware
             if (!recdMetadata.fw_type.includes("router")) {
                 if (!TCP_REGEX.test(this.portConf.path) && recdMetadata.baudrate !== this.portConf.baudRate) {
