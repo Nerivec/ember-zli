@@ -1,7 +1,7 @@
 import type { checkbox, select } from "@inquirer/prompts";
 import type { EmberKeyData, EmberVersion } from "zigbee-herdsman/dist/adapter/ember/types.js";
+import type { SerialPort } from "zigbee-herdsman/dist/adapter/serialPort.js";
 import type { Eui64 } from "zigbee-herdsman/dist/zspec/tstypes.js";
-
 import type { BAUDRATES } from "./consts.js";
 import type { CpcSystemCommandId } from "./enums.js";
 
@@ -55,6 +55,7 @@ export type PortConf = {
     rtscts: boolean;
     xon: boolean;
     xoff: boolean;
+    metadata?: Awaited<ReturnType<typeof SerialPort.list>>[number];
 };
 
 export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion;
@@ -69,7 +70,7 @@ export type FirmwareURL = `https://${string}/${FirmwareFilename}`;
 export type FirmwareFileMetadata = {
     metadata_version: number; // 1
     sdk_version: FirmwareVersionShort; // '5.0.1'
-    fw_type: "ncp-uart-hw" | "ncp-uart-sw" | "rcp-uart-802154" | "rcp-uart-802154-blehci";
+    fw_type: "zigbee_ncp" | "zigbee_router" | "openthread_rcp" | "ncp-uart-hw" | "ncp-uart-sw" | "rcp-uart-802154" | "rcp-uart-802154-blehci";
     baudrate: number; // 115200
     ezsp_version?: FirmwareVersion; // '8.0.1.0'
     ot_version?: FirmwareVersion; // '2.5.1.0'

@@ -59,10 +59,14 @@ export const getPortConfFile = async (): Promise<PortConf | undefined> => {
             return undefined;
         }
 
-        if (!portList.some((p) => p.path === conf.path)) {
+        const foundPort = portList.find((p) => p.path === conf.path);
+
+        if (!foundPort) {
             logger.error("Cached config path does not match a currently connected serial device.");
             return undefined;
         }
+
+        conf.metadata = foundPort;
 
         if (conf.rtscts !== true && conf.rtscts !== false) {
             logger.error("Cached config does not include a valid rtscts value.");
@@ -107,8 +111,9 @@ export const getPortConf = async (): Promise<PortConf> => {
     });
 
     let baudRate = BAUDRATES[0];
-    let path = null;
+    let path: string | undefined;
     let rtscts = false;
+    let metadata: Awaited<ReturnType<typeof SerialPort.list>>[number] | undefined;
 
     switch (type) {
         case "serial": {
@@ -137,6 +142,8 @@ export const getPortConf = async (): Promise<PortConf> => {
                 })),
                 message: "Serial port",
             });
+
+            metadata = portList.find((p) => p.path === path);
 
             const fcChoices = [
                 { name: "Software Flow Control (rtscts=false)", value: false },
@@ -184,5 +191,5 @@ export const getPortConf = async (): Promise<PortConf> => {
         logger.error(`Could not write port conf to ${CONF_PORT_PATH}.`);
     }
 
-    return conf;
+    return { ...conf, metadata };
 };
