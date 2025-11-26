@@ -74,8 +74,6 @@ const GBL_METADATA_TAG = Buffer.from([0xf6, 0x08, 0x08, 0xf6]);
 const VALID_FIRMWARE_CRC32 = 558161692;
 
 const SUPPORTED_VERSIONS_REGEX = /(7\.4\.\d\.\d)|(8\.[0-2]\.\d\.\d)/;
-const FORCE_RESET_SUPPORT_ADAPTERS: ReadonlyArray<AdapterModel> = ["Sonoff ZBDongle-E", "ROUTER - Sonoff ZBDongle-E"];
-const ALWAYS_FORCE_RESET_ADAPTERS: ReadonlyArray<(typeof FORCE_RESET_SUPPORT_ADAPTERS)[number]> = ["ROUTER - Sonoff ZBDongle-E"];
 
 export const enum BootloaderEvent {
     FAILED = "failed",
@@ -153,17 +151,20 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         // @ts-expect-error changed by received serial data
         if (this.state !== BootloaderState.IDLE) {
+            const isTcp = TCP_REGEX.test(this.portConf.path);
             // not already in bootloader, so launch it, then knock again
-            const currentFirmwareType = await select<FirmwareType>({
+            const resetType = await select<FirmwareType | 98 | 99>({
                 choices: [
                     { name: "EmberZNet NCP (a.k.a. zigbee_ncp, ncp-uart-hw, EZSP NCP)", value: FirmwareType.EMBERZNET_NCP },
                     { name: "OpenThread RCP (a.k.a. openthread_rcp, ot-rcp)", value: FirmwareType.OPENTHREAD_RCP },
                     { name: "Multiprotocol RCP (a.k.a. rcp-uart-802154)", value: FirmwareType.MULTIPROTOCOL_RCP },
+                    { name: "Reset via DTR/RTS flipping", value: 98, disabled: isTcp },
+                    { name: "Reset via baudrate flipping", value: 99, disabled: isTcp },
                 ],
-                message: "Currently installed firmware",
+                message: "Currently installed firmware or specific reset method",
             });
 
-            switch (currentFirmwareType) {
+            switch (resetType) {
                 case FirmwareType.EMBERZNET_NCP: {
                     await this.ezspLaunch();
                     break;
@@ -174,6 +175,14 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 }
                 case FirmwareType.MULTIPROTOCOL_RCP: {
                     await this.cpcLaunch();
+                    break;
+                }
+                case 98: {
+                    await this.dtrRtsReset(false, true);
+                    break;
+                }
+                case 99: {
+                    await this.baudrateReset();
                     break;
                 }
             }
@@ -261,27 +270,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
     }
 
-    public async forceReset(exit: boolean): Promise<void> {
-        switch (this.adapterModel) {
-            // TODO: support per adapter
-            case "Sonoff ZBDongle-E":
-            case "ROUTER - Sonoff ZBDongle-E": {
-                await this.transport.serialSet({ dtr: false, rts: true });
-                await this.transport.serialSet({ dtr: true, rts: false }, 100);
-
-                if (exit) {
-                    await this.transport.serialSet({ dtr: false }, 500);
-                }
-
-                break;
-            }
-
-            default: {
-                logger.debug(`Reset by pattern unavailable for ${this.adapterModel}.`, NS);
-            }
-        }
-    }
-
     public async validateFirmware(firmware: Buffer | undefined): Promise<FirmwareValidation> {
         if (!firmware) {
             logger.error("Cannot proceed without a firmware file.", NS);
@@ -362,7 +350,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             if (!recdMetadata.fw_type.includes("router")) {
                 if (!TCP_REGEX.test(this.portConf.path) && recdMetadata.baudrate !== this.portConf.baudRate) {
                     logger.warning(
-                        `Firmware file baudrate ${recdMetadata.baudrate} differs from your current port configuration of ${this.portConf.baudRate}.`,
+                        `Firmware file baudrate ${recdMetadata.baudrate} differs from your current port configuration of ${this.portConf.baudRate}. For TCP adapters, it will require support on the other chip.`,
                         NS,
                     );
                 }
@@ -387,6 +375,66 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
 
         return FirmwareValidation.VALID;
+    }
+
+    public async dtrRtsReset(exit: boolean, fail = false): Promise<boolean> {
+        if (!this.transport.isSerial) {
+            logger.debug("DTR/RTS reset unavailable for TCP.", NS);
+
+            return false;
+        }
+
+        if (exit) {
+            logger.debug("Exiting bootloader using DTR/RTS flipping...", NS);
+        } else {
+            logger.debug("Launching bootloader using DTR/RTS flipping...", NS);
+        }
+
+        try {
+            await this.transport.initPort();
+
+            await this.transport.serialSet({ dtr: false, rts: true });
+            await this.transport.serialSet({ dtr: true, rts: false }, 100);
+            await this.transport.serialSet({ dtr: false, rts: false }, 500);
+
+            return true;
+        } catch (error) {
+            logger.warning(`Unable to launch bootloader with DTR/RTS flipping: ${error}.`, NS);
+
+            if (fail) {
+                await this.transport.close(false, false); // force failed below
+                this.emit(BootloaderEvent.FAILED);
+            }
+
+            return false;
+        }
+    }
+
+    public async baudrateReset(fail = false): Promise<void> {
+        logger.debug("Launching bootloader using baudrate flipping...", NS);
+
+        if (!this.transport.isSerial) {
+            logger.debug("Baudrate reset unavailable for TCP.", NS);
+            return;
+        }
+
+        try {
+            await this.transport.initPort(undefined, 150);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            await this.transport.initPort(undefined, 300);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            await this.transport.initPort(undefined, 1200);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            this.transport.write(Buffer.from("BZ", "ascii"));
+            await new Promise((resolve) => setTimeout(resolve, 500));
+        } catch (error) {
+            logger.warning(`Unable to launch bootloader with baudrate flipping: ${error}.`, NS);
+
+            if (fail) {
+                await this.transport.close(false, false); // force failed below
+                this.emit(BootloaderEvent.FAILED);
+            }
+        }
     }
 
     private async cpcLaunch(): Promise<void> {
@@ -455,29 +503,15 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
     }
 
     private async knock(fail: boolean): Promise<void> {
+        if (this.state === BootloaderState.IDLE) {
+            // nothing else to do if already got the bl prompt
+            return;
+        }
+
         logger.info(fail ? "Entering bootloader..." : "Trying to enter bootloader...", NS);
 
         try {
             await this.transport.initPort();
-
-            // try force reset if supported (only on initial non-fail knock)
-            if (!fail && this.adapterModel && FORCE_RESET_SUPPORT_ADAPTERS.includes(this.adapterModel)) {
-                // XXX: always force reset Sonoff ZBDongle-E Router to prevent issues with EZSP 6.10.3 (can be removed once versions updated and no longer used)
-                const forceReset =
-                    ALWAYS_FORCE_RESET_ADAPTERS.includes(this.adapterModel) ||
-                    (await confirm({ message: "Force reset into bootloader?", default: true }));
-
-                if (forceReset) {
-                    logger.debug("Entering bootloader via force reset...", NS);
-
-                    await this.forceReset(false);
-
-                    if (this.state === BootloaderState.IDLE) {
-                        // nothing else to do if already got the bl prompt
-                        return;
-                    }
-                }
-            }
         } catch (error) {
             logger.error(`Failed to open port: ${error}.`, NS);
 
@@ -492,7 +526,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         for (let i = 1; i < 3; i++) {
             this.transport.write(BOOTLOADER_KNOCK);
 
-            res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, fail && i === 2);
+            res = await this.waitForState(BootloaderState.IDLE, BOOTLOADER_KNOCK_TIMEOUT, false);
 
             if (res) {
                 break;
@@ -500,7 +534,11 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
             if (i === 1 && this.transport.isSerial) {
                 // if failed first attempt, try second time with RTS/CTS enabled
-                await this.transport.serialSet({ rts: true, cts: true });
+                try {
+                    await this.transport.serialSet({ rts: true, cts: true });
+                } catch (error) {
+                    logger.debug(`Failed to set serial: ${error}.`, NS);
+                }
             }
         }
 
@@ -541,11 +579,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             // got menu back, failed to run
             logger.warning("Failed to exit bootloader and run firmware.", NS);
 
-            if (this.adapterModel && FORCE_RESET_SUPPORT_ADAPTERS.includes(this.adapterModel)) {
-                logger.warning("Trying force reset...", NS);
+            const dtrRtsResetSuccess = await this.dtrRtsReset(true);
 
-                await this.forceReset(true);
-            } else {
+            if (!dtrRtsResetSuccess) {
                 logger.warning("You may need to unplug/replug your adapter to run the firmware.", NS);
             }
         } else {
