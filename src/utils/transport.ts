@@ -86,7 +86,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
         }
     }
 
-    public async initPort(customPortWriter?: TransportWriter): Promise<void> {
+    public async initPort(customPortWriter?: TransportWriter, baudRate = this.portConf.baudRate): Promise<void> {
         // will do nothing if nothing's open
         await this.close(false);
 
@@ -134,7 +134,7 @@ export class Transport extends EventEmitter<SerialEventMap> {
 
         const serialOpts = {
             autoOpen: false,
-            baudRate: this.portConf.baudRate,
+            baudRate,
             dataBits: 8 as const,
             parity: "none" as const,
             path: this.portConf.path,
@@ -162,19 +162,15 @@ export class Transport extends EventEmitter<SerialEventMap> {
     }
 
     public async serialSet(options: SetOptions, afterDelayMS?: number): Promise<void> {
-        try {
-            await new Promise<void>((resolve, reject) => {
-                const fn = (): void => this.#portSerial?.set(options, (error) => (error ? reject(error) : resolve()));
+        await new Promise<void>((resolve, reject) => {
+            const fn = (): void => this.#portSerial?.set(options, (error) => (error ? reject(error) : resolve()));
 
-                if (afterDelayMS) {
-                    setTimeout(fn, afterDelayMS);
-                } else {
-                    fn();
-                }
-            });
-        } catch (error) {
-            logger.warning(`Failed to set serial: ${error}.`, NS);
-        }
+            if (afterDelayMS) {
+                setTimeout(fn, afterDelayMS);
+            } else {
+                fn();
+            }
+        });
     }
 
     public write(buffer: Buffer): void {
