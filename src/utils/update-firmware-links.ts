@@ -40,7 +40,11 @@ const [NERIVEC_RELEASE, NERIVEC_PRE_RELEASE] = await getLatestGithubRelease(NERI
 const [NERIVEC_RECOVERY_RELEASE] = await getLatestGithubRelease(NERIVEC_RECOVERY_REPO);
 // const [TUBE0013_RELEASE] = await getLatestGithubRelease(TUBE0013_REPO)
 
-function findFirmware(release: GithubReleaseJson, model: string, include: string | string[]): string | undefined {
+function findFirmware(release: GithubReleaseJson | undefined, model: string, include: string | string[]): string | undefined {
+    if (!release) {
+        return undefined;
+    }
+
     const includeArr = Array.isArray(include) ? include : [include];
     const firmware = release.assets.find((asset) => asset.name.startsWith(model) && includeArr.every((i) => asset.name.includes(i)));
 
@@ -50,7 +54,6 @@ function findFirmware(release: GithubReleaseJson, model: string, include: string
 assert(NABUCASA_RELEASE);
 assert(DARKXST_RELEASE);
 assert(NERIVEC_RELEASE);
-assert(NERIVEC_PRE_RELEASE);
 assert(NERIVEC_RECOVERY_RELEASE);
 // assert(TUBE0013_RELEASE);
 
