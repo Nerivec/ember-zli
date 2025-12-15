@@ -23,7 +23,7 @@
         "@biomejs/biome": "^2.3.8",
         "@types/cli-progress": "^3.11.6",
         "@types/node": "^24.10.1",
-        "oclif": "^4.22.54",
+        "oclif": "^4.22.56",
         "ts-node": "^10.9.2",
         "typescript": "^5.9.3"
     },
