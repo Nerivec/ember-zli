@@ -22,7 +22,7 @@
     "devDependencies": {
         "@biomejs/biome": "^2.3.11",
         "@types/cli-progress": "^3.11.6",
-        "@types/node": "^24.10.4",
+        "@types/node": "^25.0.3",
         "oclif": "^4.22.63",
         "ts-node": "^10.9.2",
         "typescript": "^5.9.3"
