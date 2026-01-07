@@ -1,4 +1,3 @@
-import type { checkbox, select } from "@inquirer/prompts";
 import type { EmberKeyData, EmberVersion } from "zigbee-herdsman/dist/adapter/ember/types.js";
 import type { SerialPort } from "zigbee-herdsman/dist/adapter/serialPort.js";
 import type { Eui64 } from "zigbee-herdsman/dist/zspec/tstypes.js";
@@ -11,8 +10,24 @@ export type Mutable<T> = {
 };
 
 // types from inquirer/prompts are not exported
-export type CheckboxChoices<Value> = Mutable<Parameters<typeof checkbox<Value>>[0]["choices"]>;
-export type SelectChoices<Value> = Mutable<Parameters<typeof select<Value>>[0]["choices"]>;
+export type CheckboxChoices<Value> = {
+    value: Value;
+    name?: string;
+    checkedName?: string;
+    description?: string;
+    short?: string;
+    disabled?: boolean | string;
+    checked?: boolean;
+    type?: never;
+}[];
+export type SelectChoices<Value> = {
+    value: Value;
+    name?: string;
+    description?: string;
+    short?: string;
+    disabled?: boolean | string;
+    type?: never;
+}[];
 
 export type AdapterModel =
     | "Aeotec Zi-Stick (ZGA008)"
