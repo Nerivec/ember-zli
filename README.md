@@ -29,7 +29,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/4.0.2 linux-x64 node-v24.9.0
+ember-zli/4.1.0 linux-x64 node-v24.13.0
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
@@ -62,7 +62,7 @@ EXAMPLES
   $ ember-zli bootloader
 ```
 
-_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.0.2/src/commands/bootloader/index.ts)_
+_See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.1.0/src/commands/bootloader/index.ts)_
 
 ## `ember-zli help [COMMAND]`
 
@@ -82,7 +82,7 @@ DESCRIPTION
   Display help for ember-zli.
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.36/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.37/src/commands/help.ts)_
 
 ## `ember-zli monitor`
 
@@ -99,7 +99,7 @@ EXAMPLES
   $ ember-zli monitor
 ```
 
-_See code: [src/commands/monitor/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.0.2/src/commands/monitor/index.ts)_
+_See code: [src/commands/monitor/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.1.0/src/commands/monitor/index.ts)_
 
 ## `ember-zli router`
 
@@ -116,7 +116,7 @@ EXAMPLES
   $ ember-zli router
 ```
 
-_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.0.2/src/commands/router/index.ts)_
+_See code: [src/commands/router/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.1.0/src/commands/router/index.ts)_
 
 ## `ember-zli sniff`
 
@@ -133,7 +133,7 @@ EXAMPLES
   $ ember-zli sniff
 ```
 
-_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.0.2/src/commands/sniff/index.ts)_
+_See code: [src/commands/sniff/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.1.0/src/commands/sniff/index.ts)_
 
 ## `ember-zli stack`
 
@@ -150,7 +150,7 @@ EXAMPLES
   $ ember-zli stack
 ```
 
-_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.0.2/src/commands/stack/index.ts)_
+_See code: [src/commands/stack/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.1.0/src/commands/stack/index.ts)_
 
 ## `ember-zli utils`
 
@@ -167,7 +167,7 @@ EXAMPLES
   $ ember-zli utils
 ```
 
-_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.0.2/src/commands/utils/index.ts)_
+_See code: [src/commands/utils/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.1.0/src/commands/utils/index.ts)_
 
 ## `ember-zli version`
 

@@ -33,6 +33,7 @@ export type AdapterModel =
     | "Aeotec Zi-Stick (ZGA008)"
     | "EasyIOT ZB-GW04 v1.1"
     | "EasyIOT ZB-GW04 v1.2"
+    | "Inswift ZBM-MG24"
     | "Nabu Casa SkyConnect"
     | "Nabu Casa Yellow"
     | "Nabu Casa ZBT-2"
@@ -42,12 +43,16 @@ export type AdapterModel =
     | "SMLight SLZB07"
     | "SMLight SLZB07mg24"
     | "Sonoff ZBDongle-E"
+    | "Sonoff Dongle-LMG21"
+    | "Sonoff Dongle-M"
+    | "Sonoff Dongle-PMG24"
     | "SparkFun MGM240p"
-    | "TubeZB BM24"
     | "TubeZB MGM24"
+    | "TubeZB BM24"
     | "ROUTER - Aeotec Zi-Stick (ZGA008)"
     | "ROUTER - EasyIOT ZB-GW04 v1.1"
     | "ROUTER - EasyIOT ZB-GW04 v1.2"
+    | "ROUTER - Inswift ZBM-MG24"
     | "ROUTER - Nabu Casa SkyConnect"
     | "ROUTER - Nabu Casa Yellow"
     | "ROUTER - Nabu Casa ZBT-2"
@@ -57,9 +62,12 @@ export type AdapterModel =
     | "ROUTER - SMLight SLZB07"
     | "ROUTER - SMLight SLZB07mg24"
     | "ROUTER - Sonoff ZBDongle-E"
+    | "ROUTER - Sonoff Dongle-LMG21"
+    | "ROUTER - Sonoff Dongle-M"
+    | "ROUTER - Sonoff Dongle-PMG24"
     | "ROUTER - SparkFun MGM240p"
-    | "ROUTER - TubeZB BM24"
-    | "ROUTER - TubeZB MGM24";
+    | "ROUTER - TubeZB MGM24"
+    | "ROUTER - TubeZB BM24";
 
 export type PortType = "serial" | "tcp";
 export type BaudRate = (typeof BAUDRATES)[number];
