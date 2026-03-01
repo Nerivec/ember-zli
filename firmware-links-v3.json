@@ -1,9 +1,9 @@
 {
     "official": {
         "Inswift ZBM-MG24": "https://github.com/Inswift-dev/inswift-eth/raw/refs/heads/main/ZBM-MG24/coordinator/zigbee_ncp_uart_1024kb_Inswift_8.2.1_20250813.gbl",
-        "Nabu Casa SkyConnect": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2025.11.24/skyconnect_zigbee_ncp_7.4.4.5.gbl",
-        "Nabu Casa Yellow": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2025.11.24/yellow_zigbee_ncp_7.4.4.5.gbl",
-        "Nabu Casa ZBT-2": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2025.11.24/zbt2_zigbee_ncp_7.4.4.6.gbl",
+        "Nabu Casa SkyConnect": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2026.02.23/skyconnect_zigbee_ncp_7.5.1.0.gbl",
+        "Nabu Casa Yellow": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2026.02.23/yellow_zigbee_ncp_7.5.1.0.gbl",
+        "Nabu Casa ZBT-2": "https://github.com/NabuCasa/silabs-firmware-builder/releases/download/v2026.02.23/zbt2_zigbee_ncp_7.5.1.0_None.gbl",
         "SMLight SLZB06-M": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20250627/slzb06m_zigbee_ncp_8.0.3.0_sw_flow_115200.gbl",
         "SMLight SLZB06mg24": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20250627/slzb06Mg24_zigbee_ncp_8.0.3.0_115200.gbl",
         "SMLight SLZB07": "https://github.com/darkxst/silabs-firmware-builder/releases/download/20250627/slzb07_zigbee_ncp_8.0.3.0_115200.gbl",
