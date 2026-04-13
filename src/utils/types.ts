@@ -91,14 +91,15 @@ export type FirmwareFilename = `${string}.gbl`;
 export type FirmwareURL = `https://${string}/${FirmwareFilename}`;
 
 export type FirmwareFileMetadata = {
-    metadata_version: number; // 1
-    sdk_version: FirmwareVersionShort; // '5.0.1'
-    fw_type: "zigbee_ncp" | "zigbee_router" | "openthread_rcp" | "ncp-uart-hw" | "ncp-uart-sw" | "rcp-uart-802154" | "rcp-uart-802154-blehci";
+    metadata_version: number; // 3
+    sdk_version: FirmwareVersionShort; // '2025.12.1'
+    fw_type: "zigbee_ncp" | "zigbee_router" | "openthread_rcp" | "gecko-bootloader";
+    fw_variant: "hw_flow" | "sw_flow" | "no_flow";
     baudrate: number; // 115200
     ezsp_version?: FirmwareVersion; // '8.0.1.0'
     ot_version?: FirmwareVersion; // '2.5.1.0'
-    ble_version?: FirmwareVersionShort; // '8.1.0'
     cpc_version?: FirmwareVersion; // '5.0.1'
+    fw_version?: FirmwareVersionShort; // '9.0.1'
 };
 
 export type FirmwareLinks = Record<FirmwareVariant, Partial<Record<AdapterModel, FirmwareURL>>>;

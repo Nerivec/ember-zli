@@ -73,7 +73,7 @@ const GBL_END_TAG = Buffer.from([0xfc, 0x04, 0x04, 0xfc]);
 const GBL_METADATA_TAG = Buffer.from([0xf6, 0x08, 0x08, 0xf6]);
 const VALID_FIRMWARE_CRC32 = 558161692;
 
-const SUPPORTED_VERSIONS_REGEX = /(7\.4\.\d\.\d)|(8\.[0-2]\.\d\.\d)/;
+const SUPPORTED_VERSIONS_REGEX = /^(7\.4)|(8\.[0-2])|(9\.0)/;
 
 export const enum BootloaderEvent {
     FAILED = "failed",
@@ -325,27 +325,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
             logger.info(`Firmware file metadata: ${JSON.stringify(recdMetadata)}`, NS);
 
-            if (recdMetadata.fw_type.includes("ncp") || recdMetadata.fw_type.includes("rcp")) {
-                if (
-                    this.portConf.metadata && // won't pass for non-serial
-                    recdMetadata.ezsp_version &&
-                    /8\.[1-2]\.\d\.\d/.test(recdMetadata.ezsp_version) &&
-                    this.portConf.metadata.vendorId === "1a86" &&
-                    this.portConf.metadata.productId === "55d4"
-                ) {
-                    const sure = /.*sonoff.*plus.*/.test(this.portConf.metadata.path) && this.portConf.metadata.manufacturer === "ITEAD";
-                    const proceed = await confirm({
-                        default: false,
-                        message: `Version: ${recdMetadata.ezsp_version}, Type: ${recdMetadata.fw_type}. Is known to${sure ? "" : " possibly"} cause issues with your adapter variant. Proceed with this firmware anyway?`,
-                    });
-
-                    if (!proceed) {
-                        logger.warning("Cancelling firmware update.", NS);
-                        return FirmwareValidation.CANCELLED;
-                    }
-                }
-            }
-
             // checks irrelevant for router firmware
             if (!recdMetadata.fw_type.includes("router")) {
                 if (!TCP_REGEX.test(this.portConf.path) && recdMetadata.baudrate !== this.portConf.baudRate) {
@@ -355,14 +334,24 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     );
                 }
 
-                if (!recdMetadata.ezsp_version || !SUPPORTED_VERSIONS_REGEX.test(recdMetadata.ezsp_version)) {
+                if (this.portConf.rtscts === true && (recdMetadata.fw_variant === "sw_flow" || recdMetadata.fw_variant === "no_flow")) {
+                    logger.warning(
+                        `Firmware file variant ${recdMetadata.fw_variant} differs from your current port configuration of rtscts=true. For TCP adapters, it will require support on the other chip.`,
+                        NS,
+                    );
+                }
+
+                if (
+                    !(recdMetadata.ezsp_version && SUPPORTED_VERSIONS_REGEX.test(recdMetadata.ezsp_version)) &&
+                    !(recdMetadata.fw_version && SUPPORTED_VERSIONS_REGEX.test(recdMetadata.fw_version))
+                ) {
                     logger.warning("Firmware file version is not recognized as currently supported by Zigbee2MQTT ember driver.", NS);
                 }
             }
 
             const proceed = await confirm({
                 default: false,
-                message: `Version: ${recdMetadata.ezsp_version}, Baudrate: ${recdMetadata.baudrate}. Proceed with this firmware?`,
+                message: `Version: ${recdMetadata.fw_version ?? recdMetadata.ezsp_version ?? recdMetadata.ot_version ?? recdMetadata.cpc_version}, Baudrate: ${recdMetadata.baudrate}. Proceed with this firmware?`,
             });
 
             if (!proceed) {
