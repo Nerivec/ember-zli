@@ -73,7 +73,7 @@ const GBL_END_TAG = Buffer.from([0xfc, 0x04, 0x04, 0xfc]);
 const GBL_METADATA_TAG = Buffer.from([0xf6, 0x08, 0x08, 0xf6]);
 const VALID_FIRMWARE_CRC32 = 558161692;
 
-const SUPPORTED_VERSIONS_REGEX = /^(7\.4)|(8\.[0-2])|(9\.0)/;
+const SUPPORTED_VERSIONS_REGEX = /^(7\.4)|(8\.[0-2])|(9\.[0-1])/;
 
 export const enum BootloaderEvent {
     FAILED = "failed",
