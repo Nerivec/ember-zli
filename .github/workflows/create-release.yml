@@ -3,13 +3,6 @@ name: Create tag and tarballs release
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      force:
-        description: "Force update release if tag already exists (re-adds tarballs from scratch)"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -18,7 +11,7 @@ jobs:
   check-version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Check if version already exists
         id: version-check
@@ -49,11 +42,11 @@ jobs:
       contents: write
     needs: [check-version]
     if: |
-      !fromJSON(needs.check-version.outputs.skip) || fromJSON(inputs.force || false)
+      !fromJSON(needs.check-version.outputs.skip)
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: "package.json"
 
@@ -65,13 +58,13 @@ jobs:
       - run: oclif pack tarballs -r . --prune-lockfiles
 
       - name: Create Github Release
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           name: ${{ needs.check-version.outputs.tag }}
           tag: ${{ needs.check-version.outputs.tag }}
           commit: ${{ github.ref_name }}
           generateReleaseNotes: true
           makeLatest: true
-          allowUpdates: true
-          removeArtifacts: true
+          immutableCreate: true
+          skipIfReleaseExists: true
           artifacts: "./dist/ember-zli-*"
