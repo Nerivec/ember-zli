@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { confirm, input, select } from "@inquirer/prompts";
-import Bonjour from "bonjour-service";
+import { Bonjour } from "bonjour-service";
 import { SerialPort } from "zigbee-herdsman/dist/adapter/serialPort.js";
 import { CONF_PORT_PATH, logger } from "../index.js";
 import { BAUDRATES, TCP_REGEX } from "./consts.js";
