@@ -911,16 +911,23 @@ export default class Stack extends Command {
             stackConfig[`LIBRARY.${EmberLibraryId[i]}`] = getLibraryStatus(i, status);
         }
 
-        for (const key of Object.keys(EzspMfgTokenId)) {
-            const tokenId = EzspMfgTokenId[key as keyof typeof EzspMfgTokenId];
+        // Note: others are either removed (legacy) or not useful
+        for (const tokenId of [
+            EzspMfgTokenId.CUSTOM_VERSION,
+            EzspMfgTokenId.BOARD_NAME,
+            EzspMfgTokenId.MANUF_ID,
+            EzspMfgTokenId.PHY_CONFIG,
+            EzspMfgTokenId.ASH_CONFIG,
+            EzspMfgTokenId.CBKE_DATA,
+            EzspMfgTokenId.INSTALLATION_CODE,
+            EzspMfgTokenId.CUSTOM_EUI_64,
+            EzspMfgTokenId.CTUNE,
+        ]) {
+            try {
+                const [, tokenData] = await ezsp.ezspGetMfgToken(tokenId);
 
-            if (typeof tokenId !== "number") {
-                continue;
-            }
-
-            const [, tokenData] = await ezsp.ezspGetMfgToken(tokenId);
-
-            stackConfig[`MFG_TOKEN.${key}`] = `${tokenData.join(",")}`;
+                stackConfig[`MFG_TOKEN.${EzspMfgTokenId[tokenId]}`] = `${tokenData.join(",")}`;
+            } catch {}
         }
 
         for (const key of Object.keys(stackConfig)) {
