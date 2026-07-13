@@ -13,10 +13,10 @@
         "@oclif/plugin-help": "^6.2.53",
         "@oclif/plugin-not-found": "^3.2.88",
         "@oclif/plugin-version": "^2.2.50",
-        "bonjour-service": "^1.4.2",
+        "bonjour-service": "^1.4.3",
         "cli-progress": "^3.12.0",
         "winston": "^3.19.0",
-        "zigbee-herdsman": "^10.6.1",
+        "zigbee-herdsman": "^10.6.2",
         "zigbee-on-host": "^0.2.4"
     },
     "devDependencies": {
