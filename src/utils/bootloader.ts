@@ -89,6 +89,15 @@ const enum FirmwareType {
     MULTIPROTOCOL_RCP = 2,
 }
 
+/** Reset methods selectable without prompting (for unattended runs). */
+export const BOOTLOADER_RESET_METHODS = ["ezsp", "spinel", "cpc", "dtr-rts", "baudrate"] as const;
+export type BootloaderResetMethod = (typeof BOOTLOADER_RESET_METHODS)[number];
+
+export type GeckoBootloaderOptions = {
+    /** Skip interactive confirmations (unattended runs). Default: false. */
+    skipConfirmations?: boolean;
+};
+
 interface GeckoBootloaderEventMap {
     [BootloaderEvent.CLOSED]: [];
     [BootloaderEvent.FAILED]: [];
@@ -113,13 +122,16 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
           }
         | undefined;
 
-    constructor(portConf: PortConf, adapterModel?: AdapterModel) {
+    private readonly skipConfirmations: boolean;
+
+    constructor(portConf: PortConf, adapterModel?: AdapterModel, options: GeckoBootloaderOptions = {}) {
         super();
 
         this.state = BootloaderState.NOT_CONNECTED;
         this.waiter = undefined;
         this.portConf = portConf;
         this.adapterModel = adapterModel;
+        this.skipConfirmations = options.skipConfirmations ?? false;
         // override config to default for serial gecko bootloader
         this.transport = new Transport({
             ...this.portConf,
@@ -138,7 +150,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         this.xmodem.on(XEvent.DATA, this.onXModemData.bind(this));
     }
 
-    public async connect(): Promise<void> {
+    public async connect(resetMethod?: BootloaderResetMethod): Promise<void> {
         if (this.state !== BootloaderState.NOT_CONNECTED) {
             logger.debug("Already connected to bootloader. Skipping connect attempt.", NS);
             return;
@@ -152,17 +164,36 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         // @ts-expect-error changed by received serial data
         if (this.state !== BootloaderState.IDLE) {
             const isTcp = TCP_REGEX.test(this.portConf.path);
-            // not already in bootloader, so launch it, then knock again
-            const resetType = await select<FirmwareType | 98 | 99>({
-                choices: [
-                    { name: "EmberZNet NCP (a.k.a. zigbee_ncp, ncp-uart-hw, EZSP NCP)", value: FirmwareType.EMBERZNET_NCP },
-                    { name: "OpenThread RCP (a.k.a. openthread_rcp, ot-rcp)", value: FirmwareType.OPENTHREAD_RCP },
-                    { name: "Multiprotocol RCP (a.k.a. rcp-uart-802154)", value: FirmwareType.MULTIPROTOCOL_RCP },
-                    { name: "Reset via DTR/RTS flipping", value: 98, disabled: isTcp },
-                    { name: "Reset via baudrate flipping", value: 99, disabled: isTcp },
-                ],
-                message: "Currently installed firmware or specific reset method",
-            });
+            let resetType: FirmwareType | 98 | 99;
+
+            if (resetMethod !== undefined) {
+                if (isTcp && (resetMethod === "dtr-rts" || resetMethod === "baudrate")) {
+                    logger.error(`Reset method '${resetMethod}' is not supported for TCP adapters.`, NS);
+                    this.emit(BootloaderEvent.FAILED);
+                    return;
+                }
+
+                const resetTypes: Record<BootloaderResetMethod, FirmwareType | 98 | 99> = {
+                    ezsp: FirmwareType.EMBERZNET_NCP,
+                    spinel: FirmwareType.OPENTHREAD_RCP,
+                    cpc: FirmwareType.MULTIPROTOCOL_RCP,
+                    "dtr-rts": 98,
+                    baudrate: 99,
+                };
+                resetType = resetTypes[resetMethod];
+            } else {
+                // not already in bootloader, so launch it, then knock again
+                resetType = await select<FirmwareType | 98 | 99>({
+                    choices: [
+                        { name: "EmberZNet NCP (a.k.a. zigbee_ncp, ncp-uart-hw, EZSP NCP)", value: FirmwareType.EMBERZNET_NCP },
+                        { name: "OpenThread RCP (a.k.a. openthread_rcp, ot-rcp)", value: FirmwareType.OPENTHREAD_RCP },
+                        { name: "Multiprotocol RCP (a.k.a. rcp-uart-802154)", value: FirmwareType.MULTIPROTOCOL_RCP },
+                        { name: "Reset via DTR/RTS flipping", value: 98, disabled: isTcp },
+                        { name: "Reset via baudrate flipping", value: 99, disabled: isTcp },
+                    ],
+                    message: "Currently installed firmware or specific reset method",
+                });
+            }
 
             switch (resetType) {
                 case FirmwareType.EMBERZNET_NCP: {
@@ -233,11 +264,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     return true;
                 }
 
-                const confirmed = await confirm({
-                    default: false,
-                    message:
-                        "Confirm APP clearing? (Cannot be undone; will erase the entire firmware (including NVM3). You MUST flash a new one afterwards.)",
-                });
+                const confirmed = await this.confirmOrSkip(
+                    "Confirm APP clearing? (Cannot be undone; will erase the entire firmware (including NVM3). You MUST flash a new one afterwards.)",
+                );
 
                 if (!confirmed) {
                     logger.warning("Cancelled APP clearing.", NS);
@@ -255,10 +284,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     return true;
                 }
 
-                const confirmed = await confirm({
-                    default: false,
-                    message: "Confirm NVM3 clearing? (Cannot be undone; will reset the adapter to factory defaults.)",
-                });
+                const confirmed = await this.confirmOrSkip("Confirm NVM3 clearing? (Cannot be undone; will reset the adapter to factory defaults.)");
 
                 if (!confirmed) {
                     logger.warning("Cancelled NVM3 clearing.", NS);
@@ -268,6 +294,16 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 return await this.menuUploadGBL(firmware);
             }
         }
+    }
+
+    /** Prompt for confirmation, or auto-accept (with a log line) in unattended runs. */
+    private async confirmOrSkip(message: string): Promise<boolean> {
+        if (this.skipConfirmations) {
+            logger.info(`Skipping confirmation: ${message}`, NS);
+            return true;
+        }
+
+        return await confirm({ default: false, message });
     }
 
     public async validateFirmware(firmware: Buffer | undefined): Promise<FirmwareValidation> {
@@ -298,10 +334,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         const metaTagStart = firmware.lastIndexOf(GBL_METADATA_TAG);
 
         if (metaTagStart === -1) {
-            const proceed = await confirm({
-                default: false,
-                message: "Firmware file does not contain metadata. Cannot validate it. Proceed with this firmware?",
-            });
+            const proceed = await this.confirmOrSkip("Firmware file does not contain metadata. Cannot validate it. Proceed with this firmware?");
 
             if (!proceed) {
                 logger.warning("Cancelling firmware update.", NS);
@@ -349,10 +382,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 }
             }
 
-            const proceed = await confirm({
-                default: false,
-                message: `Version: ${recdMetadata.fw_version ?? recdMetadata.ezsp_version ?? recdMetadata.ot_version ?? recdMetadata.cpc_version}, Baudrate: ${recdMetadata.baudrate}. Proceed with this firmware?`,
-            });
+            const proceed = await this.confirmOrSkip(
+                `Version: ${recdMetadata.fw_version ?? recdMetadata.ezsp_version ?? recdMetadata.ot_version ?? recdMetadata.cpc_version}, Baudrate: ${recdMetadata.baudrate}. Proceed with this firmware?`,
+            );
 
             if (!proceed) {
                 logger.warning("Cancelling firmware update.", NS);

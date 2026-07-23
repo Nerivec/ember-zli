@@ -53,13 +53,66 @@ Interact with the Gecko bootloader in the adapter.
 
 ```
 USAGE
-  $ ember-zli bootloader
+  $ ember-zli bootloader [--port <value>] [--baudrate <value>] [--flow hardware|software] [--adapter Aeotec
+    Zi-Stick (ZGA008)|EasyIOT ZB-GW04 v1.1|EasyIOT ZB-GW04 v1.2|Inswift ZBM-MG24|Nabu Casa SkyConnect|Nabu Casa
+    Yellow|Nabu Casa ZBT-2|SMLight SLZB06-M|SMLight SLZB06mg24|SMLight SLZB06mg26|SMLight SLZB07|SMLight
+    SLZB07mg24|Sonoff ZBDongle-E|Sonoff Dongle-LMG21|Sonoff Dongle-M|Sonoff Dongle-PMG24|SparkFun MGM240p|TubeZB
+    MGM24|TubeZB BM24|ROUTER - Aeotec Zi-Stick (ZGA008)|ROUTER - EasyIOT ZB-GW04 v1.1|ROUTER - EasyIOT ZB-GW04
+    v1.2|ROUTER - Inswift ZBM-MG24|ROUTER - Nabu Casa SkyConnect|ROUTER - Nabu Casa Yellow|ROUTER - Nabu Casa
+    ZBT-2|ROUTER - SMLight SLZB06-M|ROUTER - SMLight SLZB06mg24|ROUTER - SMLight SLZB06mg26|ROUTER - SMLight
+    SLZB07|ROUTER - SMLight SLZB07mg24|ROUTER - Sonoff ZBDongle-E|ROUTER - Sonoff Dongle-LMG21|ROUTER - Sonoff
+    Dongle-M|ROUTER - Sonoff Dongle-PMG24|ROUTER - SparkFun MGM240p|ROUTER - TubeZB MGM24|ROUTER - TubeZB BM24] [--reset
+    ezsp|spinel|cpc|dtr-rts|baudrate] [--action info|update|clear-nvm3|clear-app|run] [--firmware <value>] [--nvm3-size
+    <value>] [--yes]
+
+FLAGS
+  --action=<option>
+      Execute a single bootloader action without the interactive menu, then exit the bootloader.
+      <options: info|update|clear-nvm3|clear-app|run>
+
+  --adapter=<option>
+      Adapter model (skips the interactive model prompt). Required for --action clear-nvm3/clear-app.
+      <options: Aeotec Zi-Stick (ZGA008)|EasyIOT ZB-GW04 v1.1|EasyIOT ZB-GW04 v1.2|Inswift ZBM-MG24|Nabu Casa
+      SkyConnect|Nabu Casa Yellow|Nabu Casa ZBT-2|SMLight SLZB06-M|SMLight SLZB06mg24|SMLight SLZB06mg26|SMLight
+      SLZB07|SMLight SLZB07mg24|Sonoff ZBDongle-E|Sonoff Dongle-LMG21|Sonoff Dongle-M|Sonoff Dongle-PMG24|SparkFun
+      MGM240p|TubeZB MGM24|TubeZB BM24|ROUTER - Aeotec Zi-Stick (ZGA008)|ROUTER - EasyIOT ZB-GW04 v1.1|ROUTER - EasyIOT
+      ZB-GW04 v1.2|ROUTER - Inswift ZBM-MG24|ROUTER - Nabu Casa SkyConnect|ROUTER - Nabu Casa Yellow|ROUTER - Nabu Casa
+      ZBT-2|ROUTER - SMLight SLZB06-M|ROUTER - SMLight SLZB06mg24|ROUTER - SMLight SLZB06mg26|ROUTER - SMLight
+      SLZB07|ROUTER - SMLight SLZB07mg24|ROUTER - Sonoff ZBDongle-E|ROUTER - Sonoff Dongle-LMG21|ROUTER - Sonoff
+      Dongle-M|ROUTER - Sonoff Dongle-PMG24|ROUTER - SparkFun MGM240p|ROUTER - TubeZB MGM24|ROUTER - TubeZB BM24>
+
+  --baudrate=<value>
+      [default: 115200] Baudrate the installed firmware runs at (with --port). One of: 115200, 230400, 460800, 921600.
+
+  --firmware=<value>
+      Firmware file path or URL (with --action update).
+
+  --flow=<option>
+      [default: software] Flow control (with --port).
+      <options: hardware|software>
+
+  --nvm3-size=<value>
+      NVM3 size in bytes (with --action clear-nvm3). One of: 32768, 40960.
+
+  --port=<value>
+      Serial port path (or tcp://host:port). Enables unattended mode for the connection (no prompts).
+
+  --reset=<option>
+      How to launch the bootloader when the adapter is running firmware (skips the interactive prompt).
+      <options: ezsp|spinel|cpc|dtr-rts|baudrate>
+
+  --yes
+      Skip confirmations (required for unattended --action runs).
 
 DESCRIPTION
   Interact with the Gecko bootloader in the adapter.
 
 EXAMPLES
   $ ember-zli bootloader
+
+  $ ember-zli bootloader --port /dev/serial/by-id/usb-... --baudrate 115200 --adapter "Sonoff Dongle-PMG24" --reset dtr-rts --action update --firmware ./fw.gbl --yes
+
+  $ ember-zli bootloader --port /dev/ttyUSB0 --adapter "Sonoff Dongle-PMG24" --reset dtr-rts --action clear-nvm3 --nvm3-size 32768 --yes
 ```
 
 _See code: [src/commands/bootloader/index.ts](https://github.com/Nerivec/ember-zli/blob/v4.2.3/src/commands/bootloader/index.ts)_
