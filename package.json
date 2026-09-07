@@ -8,7 +8,7 @@
     },
     "bugs": "https://github.com/Nerivec/ember-zli/issues",
     "dependencies": {
-        "@inquirer/prompts": "^8.7.0",
+        "@inquirer/prompts": "^8.7.1",
         "@oclif/core": "^4.14.0",
         "@oclif/plugin-help": "^6.3.0",
         "@oclif/plugin-not-found": "^3.3.0",
@@ -16,7 +16,7 @@
         "bonjour-service": "^1.4.4",
         "cli-progress": "^3.12.0",
         "winston": "^3.19.0",
-        "zigbee-herdsman": "^10.9.0",
+        "zigbee-herdsman": "^10.9.2",
         "zigbee-on-host": "^0.2.4"
     },
     "devDependencies": {
