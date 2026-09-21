@@ -20,9 +20,9 @@
         "zigbee-on-host": "^0.2.4"
     },
     "devDependencies": {
-        "@biomejs/biome": "^2.5.13",
+        "@biomejs/biome": "^2.5.14",
         "@types/cli-progress": "^3.11.6",
-        "@types/node": "^26.5.1",
+        "@types/node": "^26.6.1",
         "oclif": "^6.0.0",
         "ts-node": "^10.9.2",
         "typescript": "^7.0.2"
