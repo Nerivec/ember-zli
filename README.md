@@ -29,7 +29,7 @@ $ npm install -g ember-zli
 $ ember-zli COMMAND
 running command...
 $ ember-zli (--version)
-ember-zli/5.0.0 linux-x64 node-v26.2.0
+ember-zli/5.0.0 linux-x64 node-v26.8.1
 $ ember-zli --help [COMMAND]
 USAGE
   $ ember-zli COMMAND
