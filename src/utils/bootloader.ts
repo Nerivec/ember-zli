@@ -9,7 +9,7 @@ import { emberStart, emberStop } from "./ember.js";
 import { CpcSystemStatus, FirmwareValidation } from "./enums.js";
 import { MinimalSpinel } from "./spinel.js";
 import { Transport, TransportEvent } from "./transport.js";
-import type { AdapterModel, FirmwareFileMetadata, PortConf } from "./types.js";
+import type { FirmwareFileMetadata, PortConf } from "./types.js";
 import { XEvent, type XExitStatus, XModemCRC } from "./xmodem.js";
 
 const NS = { namespace: "gecko" };
@@ -37,8 +37,7 @@ export const enum BootloaderMenu {
     UPLOAD_GBL = 0x31,
     RUN = 0x32,
     INFO = 0x33,
-    CLEAR_APP = 0xfe,
-    CLEAR_NVM3 = 0xff,
+    UPLOAD_RECOVERY_GBL = 0xff,
 }
 
 const CARRIAGE_RETURN = 0x0d;
@@ -98,7 +97,6 @@ interface GeckoBootloaderEventMap {
 }
 
 export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
-    public readonly adapterModel?: AdapterModel;
     public readonly portConf: PortConf;
     public readonly transport: Transport;
     public readonly xmodem: XModemCRC;
@@ -113,13 +111,12 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
           }
         | undefined;
 
-    constructor(portConf: PortConf, adapterModel?: AdapterModel) {
+    constructor(portConf: PortConf) {
         super();
 
         this.state = BootloaderState.NOT_CONNECTED;
         this.waiter = undefined;
         this.portConf = portConf;
-        this.adapterModel = adapterModel;
         // override config to default for serial gecko bootloader
         this.transport = new Transport({
             ...this.portConf,
@@ -225,9 +222,9 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 return await this.menuGetInfo();
             }
 
-            case BootloaderMenu.CLEAR_APP: {
+            case BootloaderMenu.UPLOAD_RECOVERY_GBL: {
                 if (firmware === undefined) {
-                    logger.error("Navigating to clear APP requires a valid firmware.", NS);
+                    logger.error("Navigating to upload recovery GBL requires a valid firmware.", NS);
                     await this.transport.close(false); // don't emit closed since we're returning true which will close anyway
 
                     return true;
@@ -235,33 +232,11 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
                 const confirmed = await confirm({
                     default: false,
-                    message:
-                        "Confirm APP clearing? (Cannot be undone; will erase the entire firmware (including NVM3). You MUST flash a new one afterwards.)",
+                    message: "Confirm recovery? (Cannot be undone)",
                 });
 
                 if (!confirmed) {
-                    logger.warning("Cancelled APP clearing.", NS);
-                    return false;
-                }
-
-                return await this.menuUploadGBL(firmware);
-            }
-
-            case BootloaderMenu.CLEAR_NVM3: {
-                if (firmware === undefined) {
-                    logger.error("Navigating to clear NVM3 requires a valid firmware.", NS);
-                    await this.transport.close(false); // don't emit closed since we're returning true which will close anyway
-
-                    return true;
-                }
-
-                const confirmed = await confirm({
-                    default: false,
-                    message: "Confirm NVM3 clearing? (Cannot be undone; will reset the adapter to factory defaults.)",
-                });
-
-                if (!confirmed) {
-                    logger.warning("Cancelled NVM3 clearing.", NS);
+                    logger.warning("Cancelled recovery.", NS);
                     return false;
                 }
 

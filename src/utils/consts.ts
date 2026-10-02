@@ -1,47 +1,6 @@
 import { EmberApsOption } from "zigbee-herdsman/dist/adapter/ember/enums.js";
-import type { AdapterModel } from "./types.js";
 
-export const PRE_DEFINED_FIRMWARE_LINKS_URL = "https://github.com/Nerivec/ember-zli/raw/refs/heads/main/firmware-links-v3.json";
-export const ADAPTER_MODELS: ReadonlyArray<AdapterModel> = [
-    "Aeotec Zi-Stick (ZGA008)",
-    "EasyIOT ZB-GW04 v1.1",
-    "EasyIOT ZB-GW04 v1.2",
-    "Inswift ZBM-MG24",
-    "Nabu Casa SkyConnect",
-    "Nabu Casa Yellow",
-    "Nabu Casa ZBT-2",
-    "SMLight SLZB06-M",
-    "SMLight SLZB06mg24",
-    "SMLight SLZB06mg26",
-    "SMLight SLZB07",
-    "SMLight SLZB07mg24",
-    "Sonoff ZBDongle-E",
-    "Sonoff Dongle-LMG21",
-    "Sonoff Dongle-M",
-    "Sonoff Dongle-PMG24",
-    "SparkFun MGM240p",
-    "TubeZB MGM24",
-    "TubeZB BM24",
-    "ROUTER - Aeotec Zi-Stick (ZGA008)",
-    "ROUTER - EasyIOT ZB-GW04 v1.1",
-    "ROUTER - EasyIOT ZB-GW04 v1.2",
-    "ROUTER - Inswift ZBM-MG24",
-    "ROUTER - Nabu Casa SkyConnect",
-    "ROUTER - Nabu Casa Yellow",
-    "ROUTER - Nabu Casa ZBT-2",
-    "ROUTER - SMLight SLZB06-M",
-    "ROUTER - SMLight SLZB06mg24",
-    "ROUTER - SMLight SLZB06mg26",
-    "ROUTER - SMLight SLZB07",
-    "ROUTER - SMLight SLZB07mg24",
-    "ROUTER - Sonoff ZBDongle-E",
-    "ROUTER - Sonoff Dongle-LMG21",
-    "ROUTER - Sonoff Dongle-M",
-    "ROUTER - Sonoff Dongle-PMG24",
-    "ROUTER - SparkFun MGM240p",
-    "ROUTER - TubeZB MGM24",
-    "ROUTER - TubeZB BM24",
-];
+export const PRE_DEFINED_FIRMWARE_LINKS_URL = "https://github.com/Nerivec/ember-zli/raw/refs/heads/main/firmware-links-v6.json";
 export const TCP_REGEX = /^tcp:\/\/[\w.-]+:\d+$/;
 export const BAUDRATES = [115200, 230400, 460800, 921600];
 /** Read/write max bytes count at stream level */

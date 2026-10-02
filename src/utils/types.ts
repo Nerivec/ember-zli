@@ -29,46 +29,6 @@ export type SelectChoices<Value> = {
     type?: never;
 }[];
 
-export type AdapterModel =
-    | "Aeotec Zi-Stick (ZGA008)"
-    | "EasyIOT ZB-GW04 v1.1"
-    | "EasyIOT ZB-GW04 v1.2"
-    | "Inswift ZBM-MG24"
-    | "Nabu Casa SkyConnect"
-    | "Nabu Casa Yellow"
-    | "Nabu Casa ZBT-2"
-    | "SMLight SLZB06-M"
-    | "SMLight SLZB06mg24"
-    | "SMLight SLZB06mg26"
-    | "SMLight SLZB07"
-    | "SMLight SLZB07mg24"
-    | "Sonoff ZBDongle-E"
-    | "Sonoff Dongle-LMG21"
-    | "Sonoff Dongle-M"
-    | "Sonoff Dongle-PMG24"
-    | "SparkFun MGM240p"
-    | "TubeZB MGM24"
-    | "TubeZB BM24"
-    | "ROUTER - Aeotec Zi-Stick (ZGA008)"
-    | "ROUTER - EasyIOT ZB-GW04 v1.1"
-    | "ROUTER - EasyIOT ZB-GW04 v1.2"
-    | "ROUTER - Inswift ZBM-MG24"
-    | "ROUTER - Nabu Casa SkyConnect"
-    | "ROUTER - Nabu Casa Yellow"
-    | "ROUTER - Nabu Casa ZBT-2"
-    | "ROUTER - SMLight SLZB06-M"
-    | "ROUTER - SMLight SLZB06mg24"
-    | "ROUTER - SMLight SLZB06mg26"
-    | "ROUTER - SMLight SLZB07"
-    | "ROUTER - SMLight SLZB07mg24"
-    | "ROUTER - Sonoff ZBDongle-E"
-    | "ROUTER - Sonoff Dongle-LMG21"
-    | "ROUTER - Sonoff Dongle-M"
-    | "ROUTER - Sonoff Dongle-PMG24"
-    | "ROUTER - SparkFun MGM240p"
-    | "ROUTER - TubeZB MGM24"
-    | "ROUTER - TubeZB BM24";
-
 export type PortType = "serial" | "tcp";
 export type BaudRate = (typeof BAUDRATES)[number];
 
@@ -84,7 +44,7 @@ export type PortConf = {
 export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion;
 export type ConfigValue = { [key: string]: string };
 
-export type FirmwareVariant = "official" | "darkxst" | "nerivec" | "nerivec_pre_release" | "nvm3_32768_clear" | "nvm3_40960_clear" | "app_clear";
+export type FirmwareVariant = "latest" | "pre_release" | "recovery";
 export type FirmwareVersion = `${number}.${number}.${number}.${number}`;
 export type FirmwareVersionShort = `${number}.${number}.${number}`;
 export type FirmwareFilename = `${string}.gbl`;
@@ -102,7 +62,25 @@ export type FirmwareFileMetadata = {
     fw_version?: FirmwareVersionShort; // '9.0.1'
 };
 
-export type FirmwareLinks = Record<FirmwareVariant, Partial<Record<AdapterModel, FirmwareURL>>>;
+export type FirmwareMetadata = {
+    name: string;
+    type: string;
+    version: string;
+    baudrate: number;
+    variant: string;
+};
+export type RecoveryFirmwareMetadata = {
+    chip: string;
+    type: string;
+    flashBase: number;
+    flashSize: number;
+    flashPageSize: number;
+    btlAppBase: number;
+    nvm3Size: number;
+};
+
+export type FirmwareLinks = Record<string, FirmwareURL>;
+export type FirmwareVariantLinks = Partial<Record<FirmwareVariant, FirmwareLinks>>;
 
 export type TokensInfo = {
     nvm3Key: string; // keyof typeof NVM3ObjectKey
