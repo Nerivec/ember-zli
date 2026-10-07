@@ -8,7 +8,7 @@ import type { Backup } from "zigbee-herdsman/dist/models/backup.js";
 import type { UnifiedBackupStorage } from "zigbee-herdsman/dist/models/backup-storage-unified.js";
 import { fromUnifiedBackup } from "zigbee-herdsman/dist/utils/backup.js";
 import { CONF_STACK, DATA_FOLDER, logger } from "../index.js";
-import type { SelectChoices } from "./types.js";
+import type { FirmwareMetadata, RecoveryFirmwareMetadata, SelectChoices } from "./types.js";
 
 // @from zigbee2mqtt-frontend
 export const toHex = (input: number, padding = 4): string => {
@@ -217,4 +217,44 @@ export async function fetchJson<T>(pageUrl: string): Promise<T> {
     }
 
     return (await response.json()) as T;
+}
+
+/**
+ * Expected format: `<brand>_<model>_<firmware-type>_<sdk-version>_<version>_<baudrate>_<flow-control>.gbl`
+ */
+export function metadataFromFirmwareName(firmwareName: string): FirmwareMetadata {
+    const parts = firmwareName.split("_");
+    const name = `${parts[0]} ${parts[1]}`;
+    const type = `${parts[2]} ${parts[3]}`;
+    const isOtRcp = type === "openthread rcp";
+    const version = isOtRcp ? `${parts[4]} ${parts[5]}` : parts[4];
+    const baudrate = isOtRcp ? Number(parts[6]) : Number(parts[5]);
+    const variant = (isOtRcp ? `${parts[7]} ${parts[8]}` : `${parts[6]} ${parts[7]}`).replace(".gbl", "");
+
+    return {
+        name,
+        type,
+        version,
+        baudrate,
+        variant,
+    };
+}
+
+/**
+ * Expected format:
+ * - app_clear: `<CHIP_NAME>_<GBL_TYPE>_<FLASH_BASE>_<FLASH_SIZE>_<FLASH_PAGE_SIZE>_<BTL_APPLICATION_BASE>.gbl`
+ * - nvm3_clear: `<CHIP_NAME>_<GBL_TYPE>_<FLASH_BASE>_<FLASH_SIZE>_<FLASH_PAGE_SIZE>_<BTL_APPLICATION_BASE>_<NVM3_DEFAULT_NVM_SIZE>.gbl`
+ */
+export function metadataFromRecoveryFirmwareName(firmwareName: string): RecoveryFirmwareMetadata {
+    const parts = firmwareName.split("_");
+    const chip = parts[0];
+    const type = `${parts[1]} ${parts[2]}`;
+    const flashBase = Number(parts[3]);
+    const flashSize = Number(parts[4]);
+    const flashPageSize = Number(parts[5]);
+    const isAppClear = type === "app clear";
+    const btlAppBase = Number(isAppClear ? parts[6].replace(".gbl", "") : parts[6]);
+    const nvm3Size = Number(isAppClear ? "" : parts[7].replace(".gbl", ""));
+
+    return { chip, type, flashBase, flashSize, flashPageSize, btlAppBase, nvm3Size };
 }

@@ -1,5 +1,6 @@
 import EventEmitter from "node:events";
 import { EzspBuffalo } from "zigbee-herdsman/dist/adapter/ember/ezsp/buffalo.js";
+import { AdapterTransport } from "zigbee-herdsman/dist/adapter/transport.js";
 import { logger } from "../index.js";
 import {
     CPC_DEFAULT_COMMAND_TIMEOUT,
@@ -24,7 +25,6 @@ import {
     CPC_SYSTEM_REBOOT_MODE_BOOTLOADER,
 } from "./consts.js";
 import { CpcSystemCommandId, CpcSystemStatus } from "./enums.js";
-import { Transport, TransportEvent } from "./transport.js";
 import type { CpcSystemCommand, FirmwareVersionShort, PortConf } from "./types.js";
 import { computeCRC16 } from "./utils.js";
 
@@ -39,7 +39,7 @@ interface CpcEventMap {
 }
 
 export class Cpc extends EventEmitter<CpcEventMap> {
-    public readonly transport: Transport;
+    public readonly transport: AdapterTransport;
     private buffalo: EzspBuffalo;
     private sequence: number;
     private waiter:
@@ -56,11 +56,11 @@ export class Cpc extends EventEmitter<CpcEventMap> {
 
         this.sequence = 0;
         this.waiter = undefined;
-        this.transport = new Transport(portConf);
+        this.transport = new AdapterTransport(portConf);
         this.buffalo = new EzspBuffalo(Buffer.alloc(CPC_PAYLOAD_LENGTH_MAX), 0);
 
-        this.transport.on(TransportEvent.FAILED, this.onTransportFailed.bind(this));
-        this.transport.on(TransportEvent.DATA, this.onTransportData.bind(this));
+        this.transport.on("close", this.onTransportFailed.bind(this));
+        this.transport.on("data", this.onTransportData.bind(this));
     }
 
     public async cpcGetVersion(): Promise<FirmwareVersionShort> {
@@ -105,7 +105,7 @@ export class Cpc extends EventEmitter<CpcEventMap> {
 
         this.buffalo.setPosition(0);
         // don't want to parse anything coming in after RESET is sent
-        this.transport.removeAllListeners(TransportEvent.DATA);
+        this.transport.removeAllListeners("data");
         // req: 14 00 0300 90 b557 06 c660
         await this.sendSystemUFrame(CpcSystemCommandId.RESET, true);
         await new Promise((resolve) => {
@@ -213,11 +213,11 @@ export class Cpc extends EventEmitter<CpcEventMap> {
     }
 
     public async start(): Promise<void> {
-        return await this.transport.initPort();
+        return await this.transport.open();
     }
 
     public async stop(): Promise<void> {
-        await this.transport.close(false);
+        await this.transport.close();
     }
 
     private onTransportData(received: Buffer): void {

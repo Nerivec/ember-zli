@@ -30,10 +30,10 @@ import type {
     EmberMulticastTableEntry,
     EmberZigbeeNetwork,
 } from "zigbee-herdsman/dist/adapter/ember/types.js";
+import { AdapterTransport } from "zigbee-herdsman/dist/adapter/transport.js";
 import type { Eui64, NodeId, PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
 import type { DataType } from "zigbee-herdsman/dist/zspec/zcl/index.js";
 import { BuffaloZdo } from "zigbee-herdsman/dist/zspec/zdo/buffaloZdo.js";
-
 import { DATA_FOLDER, DEFAULT_ROUTER_SCRIPT_MJS_PATH, DEFAULT_ROUTER_TOKENS_BACKUP_PATH, logger } from "../../index.js";
 import { APPLICATION_ZDO_SEQUENCE_MASK, DEFAULT_APS_OPTIONS, DEFAULT_ZDO_REQUEST_RADIUS } from "../../utils/consts.js";
 import {
@@ -133,8 +133,9 @@ export default class Router extends Command {
         // const {flags} = await this.parse(Router)
         const portConf = await getPortConf();
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`);
+        const transport = new AdapterTransport(portConf);
 
-        this.ezsp = await emberStart(portConf);
+        this.ezsp = await emberStart(transport);
 
         this.ezsp.on("ncpNeedsResetAndInit", (status: EzspStatus): void => {
             logger.error(`Adapter needs restarting: status=${EzspStatus[status]}`);

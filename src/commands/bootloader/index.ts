@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
-import { confirm, input, select } from "@inquirer/prompts";
+import { input, select } from "@inquirer/prompts";
 import { Command } from "@oclif/core";
 import { Presets, SingleBar } from "cli-progress";
 import { DEFAULT_FIRMWARE_GBL_PATH, logger } from "../../index.js";
 import { BootloaderEvent, BootloaderMenu, GeckoBootloader } from "../../utils/bootloader.js";
-import { ADAPTER_MODELS, PRE_DEFINED_FIRMWARE_LINKS_URL } from "../../utils/consts.js";
+import { PRE_DEFINED_FIRMWARE_LINKS_URL } from "../../utils/consts.js";
 import { FirmwareValidation } from "../../utils/enums.js";
 import { getPortConf } from "../../utils/port.js";
-import type { AdapterModel, FirmwareLinks, FirmwareVariant, SelectChoices } from "../../utils/types.js";
-import { browseToFile, fetchJson } from "../../utils/utils.js";
+import type { FirmwareURL, FirmwareVariant, FirmwareVariantLinks } from "../../utils/types.js";
+import { browseToFile, fetchJson, metadataFromFirmwareName } from "../../utils/utils.js";
 
 export default class Bootloader extends Command {
     static override args = {};
@@ -19,18 +19,7 @@ export default class Bootloader extends Command {
         const portConf = await getPortConf();
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`);
 
-        const adapterModelChoices: SelectChoices<AdapterModel | undefined> = [{ name: "Not in this list", value: undefined }];
-
-        for (const model of ADAPTER_MODELS) {
-            adapterModelChoices.push({ name: model, value: model });
-        }
-
-        const adapterModel = await select<AdapterModel | undefined>({
-            choices: adapterModelChoices,
-            message: "Adapter model",
-        });
-
-        const gecko = new GeckoBootloader(portConf, adapterModel);
+        const gecko = new GeckoBootloader(portConf);
         const progressBar = new SingleBar({ clearOnComplete: true, format: "{bar} {percentage}%" }, Presets.shades_classic);
 
         gecko.on(BootloaderEvent.FAILED, () => {
@@ -61,7 +50,7 @@ export default class Bootloader extends Command {
             exit = await this.navigateMenu(gecko);
         }
 
-        await gecko.transport.close(false);
+        await gecko.transport.close();
 
         return this.exit(0);
     }
@@ -72,14 +61,8 @@ export default class Bootloader extends Command {
                 { name: "Get info", value: BootloaderMenu.INFO },
                 { name: "Update firmware", value: BootloaderMenu.UPLOAD_GBL },
                 {
-                    name: "Clear NVM3 (https://github.com/Nerivec/silabs-firmware-recovery?tab=readme-ov-file#nvm3-clear)",
-                    value: BootloaderMenu.CLEAR_NVM3,
-                    disabled: !gecko.adapterModel,
-                },
-                {
-                    name: "Clear APP (https://github.com/Nerivec/silabs-firmware-recovery?tab=readme-ov-file#app-clear)",
-                    value: BootloaderMenu.CLEAR_APP,
-                    disabled: !gecko.adapterModel,
+                    name: "Recovery (https://github.com/Nerivec/silabs-firmware-recovery?tab=readme-ov-file#recovery)",
+                    value: BootloaderMenu.UPLOAD_RECOVERY_GBL,
                 },
                 { name: "Exit bootloader (run firmware)", value: BootloaderMenu.RUN },
                 { name: "Force close", value: -1 },
@@ -98,7 +81,7 @@ export default class Bootloader extends Command {
             let validFirmware: FirmwareValidation = FirmwareValidation.INVALID;
 
             while (validFirmware !== FirmwareValidation.VALID) {
-                firmware = await this.selectFirmware(gecko);
+                firmware = await this.selectFirmware();
 
                 validFirmware = await gecko.validateFirmware(firmware);
 
@@ -106,40 +89,21 @@ export default class Bootloader extends Command {
                     return false;
                 }
             }
-        } else if (answer === BootloaderMenu.CLEAR_NVM3) {
-            const confirmed = await confirm({
-                default: false,
-                message: `Confirm adapter is: ${gecko.adapterModel}?`,
-            });
+        } else if (answer === BootloaderMenu.UPLOAD_RECOVERY_GBL) {
+            const firmwareLinks = await fetchJson<FirmwareVariantLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL);
+            const recovery = firmwareLinks.recovery;
 
-            if (!confirmed) {
-                logger.warning("Cancelled NVM3 clearing.");
-                return false;
+            if (!recovery) {
+                logger.error("Unable to find recovery firmware");
+                return true;
             }
 
-            const nvm3Size = await select<number>({
-                choices: [
-                    { name: "32768", value: 32768 },
-                    { name: "40960", value: 40960 },
-                ],
-                message: "NVM3 Size (https://github.com/Nerivec/silabs-firmware-recovery?tab=readme-ov-file#nvm3-clear)",
-            });
-            const firmwareLinks = await fetchJson<FirmwareLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL);
-            const variant = nvm3Size === 32768 ? "nvm3_32768_clear" : "nvm3_40960_clear";
-            firmware = await this.downloadFirmware(firmwareLinks[variant][gecko.adapterModel!]!);
-        } else if (answer === BootloaderMenu.CLEAR_APP) {
-            const confirmed = await confirm({
-                default: false,
-                message: `Confirm adapter is: ${gecko.adapterModel}?`,
+            const choice = await select<string>({
+                choices: Object.keys(recovery).map((name) => ({ name, value: recovery[name] })),
+                message: "Adapter model",
             });
 
-            if (!confirmed) {
-                logger.warning("Cancelled APP clearing.");
-                return false;
-            }
-
-            const firmwareLinks = await fetchJson<FirmwareLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL);
-            firmware = await this.downloadFirmware(firmwareLinks.app_clear[gecko.adapterModel!]!);
+            firmware = await this.downloadFirmware(choice);
         }
 
         return await gecko.navigate(answer, firmware);
@@ -165,7 +129,7 @@ export default class Bootloader extends Command {
         return undefined;
     }
 
-    private async selectFirmware(gecko: GeckoBootloader): Promise<Buffer | undefined> {
+    private async selectFirmware(): Promise<Buffer | undefined> {
         enum FirmwareSource {
             PRE_DEFINED = 0,
             URL = 1,
@@ -176,7 +140,6 @@ export default class Bootloader extends Command {
                 {
                     name: `Use pre-defined firmware (using ${PRE_DEFINED_FIRMWARE_LINKS_URL})`,
                     value: FirmwareSource.PRE_DEFINED,
-                    disabled: gecko.adapterModel === undefined,
                 },
                 { name: "Provide URL", value: FirmwareSource.URL },
                 { name: "Browse to file", value: FirmwareSource.FILE },
@@ -186,42 +149,52 @@ export default class Bootloader extends Command {
 
         switch (firmwareSource) {
             case FirmwareSource.PRE_DEFINED: {
-                const firmwareLinks = await fetchJson<FirmwareLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL);
+                const firmwareLinks = await fetchJson<FirmwareVariantLinks>(PRE_DEFINED_FIRMWARE_LINKS_URL);
                 // valid adapterModel since select option disabled if not
-                const official = firmwareLinks.official[gecko.adapterModel!];
-                const darkxst = firmwareLinks.darkxst[gecko.adapterModel!];
-                const nerivec = firmwareLinks.nerivec[gecko.adapterModel!];
-                const nerivecPreRelease = firmwareLinks.nerivec_pre_release[gecko.adapterModel!];
+                const latest = firmwareLinks.latest;
+                const preRelease = firmwareLinks.pre_release;
                 const firmwareVariant = await select<FirmwareVariant>({
                     choices: [
                         {
-                            name: "Latest from manufacturer",
-                            value: "official",
-                            description: official,
-                            disabled: !official,
-                        },
-                        {
-                            name: "Latest from @darkxst",
-                            value: "darkxst",
-                            description: darkxst,
-                            disabled: !darkxst,
-                        },
-                        {
                             name: "Latest from @Nerivec",
-                            value: "nerivec",
-                            description: nerivec,
-                            disabled: !nerivec,
+                            value: "latest",
+                            disabled: !latest,
                         },
                         {
                             name: "Latest pre-release from @Nerivec",
-                            value: "nerivec_pre_release",
-                            description: nerivecPreRelease,
-                            disabled: !nerivecPreRelease,
+                            value: "pre_release",
+                            disabled: !preRelease,
                         },
                     ],
                     message: "Firmware version",
                 });
-                const firmwareUrl = firmwareLinks[firmwareVariant][gecko.adapterModel!];
+                const firmwareVariantLinks = firmwareLinks[firmwareVariant];
+
+                if (!firmwareVariantLinks) {
+                    logger.error("Unable to find recovery firmware");
+                    return undefined;
+                }
+
+                const firmwareUrl = await select<FirmwareURL>({
+                    choices: Object.keys(firmwareVariantLinks).map((name) => {
+                        try {
+                            const url = firmwareVariantLinks[name];
+                            const fileName = url.substring(url.lastIndexOf("/") + 1);
+                            const metadata = metadataFromFirmwareName(fileName);
+
+                            return {
+                                name,
+                                value: url,
+                                description: `Version: ${metadata.version} | Baudrate: ${metadata.baudrate} | Variant: ${metadata.variant}`,
+                            };
+                        } catch (error) {
+                            logger.warning(`Unable to parse firmware metadata from name: ${error}`);
+
+                            return { name, value: firmwareVariantLinks[name] };
+                        }
+                    }),
+                    message: "Firmware version",
+                });
 
                 // just in case (and to pass linter)
                 if (!firmwareUrl) {

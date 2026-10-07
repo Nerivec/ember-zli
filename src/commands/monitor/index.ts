@@ -1,10 +1,8 @@
 import { Command } from "@oclif/core";
-
 import { SLStatus } from "zigbee-herdsman/dist/adapter/ember/enums.js";
-
+import { AdapterTransport } from "zigbee-herdsman/dist/adapter/transport.js";
 import { logger } from "../../index.js";
 import { getPortConf } from "../../utils/port.js";
-import { Transport, TransportEvent } from "../../utils/transport.js";
 
 export default class Monitor extends Command {
     static override args = {};
@@ -17,22 +15,22 @@ export default class Monitor extends Command {
         const portConf = await getPortConf();
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`);
 
-        const transport = new Transport(portConf);
+        const transport = new AdapterTransport(portConf);
 
         try {
-            await transport.initPort();
+            await transport.open();
         } catch (error) {
             logger.error(`Failed to open port: ${error}.`);
 
-            await transport.close(false, false); // force failed below
+            await transport.close();
 
             return this.exit(1);
         }
 
         logger.info("Started monitoring. Press any key to stop.");
 
-        transport.on(TransportEvent.FAILED, () => this.exit(1));
-        transport.on(TransportEvent.DATA, this.onTransportData.bind(this));
+        transport.on("close", () => this.exit(1));
+        transport.on("data", this.onTransportData.bind(this));
 
         process.stdin.setRawMode(true);
         process.stdin.resume();
