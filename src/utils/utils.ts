@@ -226,10 +226,9 @@ export function metadataFromFirmwareName(firmwareName: string): FirmwareMetadata
     const parts = firmwareName.split("_");
     const name = `${parts[0]} ${parts[1]}`;
     const type = `${parts[2]} ${parts[3]}`;
-    const isOtRcp = type === "openthread rcp";
-    const version = isOtRcp ? `${parts[4]} ${parts[5]}` : parts[4];
-    const baudrate = isOtRcp ? Number(parts[6]) : Number(parts[5]);
-    const variant = (isOtRcp ? `${parts[7]} ${parts[8]}` : `${parts[6]} ${parts[7]}`).replace(".gbl", "");
+    const version = `${parts[5]} (SDK ${parts[4]})`;
+    const baudrate = Number(parts[6]);
+    const variant = `${parts[7]} ${parts[8]}`.replace(".gbl", "");
 
     return {
         name,
