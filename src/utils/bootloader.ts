@@ -507,6 +507,10 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.GETTING_INFO;
 
+        if (!this.transport.isOpen) {
+            await this.transport.open(true);
+        }
+
         this.transport.write(BOOTLOADER_MENU_INFO);
 
         await this.waitForState(BootloaderState.GOT_INFO, BOOTLOADER_CMD_EXEC_TIMEOUT);
@@ -551,6 +555,10 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
     private async menuUploadGBL(firmware: Buffer): Promise<boolean> {
         logger.debug(`Entering 'Upload GBL' menu...`, NS);
+
+        if (!this.transport.isOpen) {
+            await this.transport.open(true);
+        }
 
         this.xmodem.init(firmware);
 

@@ -1,7 +1,7 @@
 {
     "name": "ember-zli",
     "description": "Interact with EmberZNet-based adapters using zigbee-herdsman 'ember' driver",
-    "version": "6.0.0",
+    "version": "6.0.1",
     "author": "Nerivec",
     "bin": {
         "ember-zli": "bin/run.js"
@@ -16,7 +16,7 @@
         "bonjour-service": "^1.4.4",
         "cli-progress": "^3.12.0",
         "winston": "^3.19.0",
-        "zigbee-herdsman": "^11.0.0",
+        "zigbee-herdsman": "^11.0.2",
         "zigbee-on-host": "^0.3.1"
     },
     "devDependencies": {
