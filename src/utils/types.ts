@@ -1,5 +1,4 @@
 import type { EmberKeyData, EmberVersion } from "zigbee-herdsman/dist/adapter/ember/types.js";
-import type { SerialPort } from "zigbee-herdsman/dist/adapter/serialPort.js";
 import type { Eui64 } from "zigbee-herdsman/dist/zspec/tstypes.js";
 import type { BAUDRATES } from "./consts.js";
 import type { CpcSystemCommandId } from "./enums.js";
@@ -29,8 +28,8 @@ export type SelectChoices<Value> = {
     type?: never;
 }[];
 
-export type PortType = "serial" | "tcp";
 export type BaudRate = (typeof BAUDRATES)[number];
+export type FlowControl = "no" | "sw" | "hw";
 
 export type PortConf = {
     baudRate: number;
@@ -38,7 +37,6 @@ export type PortConf = {
     rtscts: boolean;
     xon: boolean;
     xoff: boolean;
-    metadata?: Awaited<ReturnType<typeof SerialPort.list>>[number];
 };
 
 export type EmberFullVersion = { ezsp: number; revision: string } & EmberVersion;

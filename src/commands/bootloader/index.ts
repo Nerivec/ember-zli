@@ -50,7 +50,7 @@ export default class Bootloader extends Command {
             exit = await this.navigateMenu(gecko);
         }
 
-        await gecko.transport.close(false);
+        await gecko.transport.close();
 
         return this.exit(0);
     }

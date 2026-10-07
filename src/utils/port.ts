@@ -1,38 +1,31 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { confirm, input, select } from "@inquirer/prompts";
-import { Bonjour } from "bonjour-service";
-import { SerialPort } from "zigbee-herdsman/dist/adapter/serialPort.js";
+import { confirm, select } from "@inquirer/prompts";
+import { findAllDevices } from "zigbee-herdsman/dist/adapter/adapterDiscovery.js";
 import { CONF_PORT_PATH, logger } from "../index.js";
 import { BAUDRATES, TCP_REGEX } from "./consts.js";
-import type { BaudRate, PortConf, PortType, SelectChoices } from "./types.js";
+import type { BaudRate, FlowControl, PortConf } from "./types.js";
 
-async function findmDNSAdapters(): Promise<SelectChoices<string | undefined>> {
-    logger.info("Starting mDNS discovery...");
-
-    const bonjour = new Bonjour();
-    const adapters: SelectChoices<string | undefined> = [{ name: "Not in this list", value: undefined }];
-    const browser = bonjour.find(null, (service) => {
-        if (service.txt && service.txt.radio_type === "ezsp") {
-            logger.debug(`Found matching service: ${JSON.stringify(service)}`);
-
-            const path = `tcp://${service.addresses?.[0] ?? service.host}:${service.port}`;
-
-            adapters.push({ name: `${service.name ?? service.txt.name ?? "Unknown"} (${path})`, value: path });
-        }
-    });
-
-    browser.start();
-
-    return await new Promise((resolve) => {
-        setTimeout(() => {
-            browser.stop();
-            bonjour.destroy();
-            resolve(adapters);
-        }, 2000);
+async function pickBaudrate(initial?: BaudRate): Promise<BaudRate> {
+    return await select({
+        choices: BAUDRATES.map((b) => ({ name: b.toString(), value: b })),
+        default: initial,
+        message: "Adapter firmware baudrate",
     });
 }
 
-export const getPortConfFile = async (): Promise<PortConf | undefined> => {
+async function pickFlowCtrl(initial?: FlowControl): Promise<FlowControl> {
+    return await select({
+        choices: [
+            { name: "Software Flow Control (rtscts=false)", value: "sw" },
+            { name: "Hardware Flow Control (rtscts=true)", value: "hw" },
+            { name: "No Flow Control", value: "no" },
+        ],
+        default: initial,
+        message: "Adapter flow control",
+    });
+}
+
+function getPortConfFile(): PortConf | undefined {
     if (!existsSync(CONF_PORT_PATH)) {
         return undefined;
     }
@@ -45,50 +38,11 @@ export const getPortConfFile = async (): Promise<PortConf | undefined> => {
         return undefined;
     }
 
-    if (!TCP_REGEX.test(conf.path)) {
-        // serial-only validation
-        if (!conf.baudRate || !BAUDRATES.includes(conf.baudRate)) {
-            logger.error("Cached config does not include a valid baudrate value.");
-            return undefined;
-        }
-
-        const portList = await SerialPort.list();
-
-        if (portList.length === 0) {
-            logger.error("Cached config is using serial, no serial device currently connected.");
-            return undefined;
-        }
-
-        const foundPort = portList.find((p) => p.path === conf.path);
-
-        if (!foundPort) {
-            logger.error("Cached config path does not match a currently connected serial device.");
-            return undefined;
-        }
-
-        conf.metadata = foundPort;
-
-        if (conf.rtscts !== true && conf.rtscts !== false) {
-            logger.error("Cached config does not include a valid rtscts value.");
-            return undefined;
-        }
-
-        if (conf.xon !== true && conf.xon !== false) {
-            conf.xon = !conf.rtscts;
-            logger.debug(`Cached config does not include a valid xon value. Derived from rtscts (will be ${conf.xon}).`);
-        }
-
-        if (conf.xoff !== true && conf.xoff !== false) {
-            conf.xoff = !conf.rtscts;
-            logger.debug(`Cached config does not include a valid xoff value. Derived from rtscts (will be ${conf.xoff}).`);
-        }
-    }
-
     return conf;
-};
+}
 
 export const getPortConf = async (): Promise<PortConf> => {
-    const portConfFile = await getPortConfFile();
+    const portConfFile = getPortConfFile();
 
     if (portConfFile !== undefined) {
         const isTcp = TCP_REGEX.test(portConfFile.path);
@@ -102,88 +56,29 @@ export const getPortConf = async (): Promise<PortConf> => {
         }
     }
 
-    const type = await select<PortType>({
-        choices: [
-            { name: "Serial", value: "serial" },
-            { name: "TCP", value: "tcp" },
-        ],
-        message: "Adapter connection type",
+    logger.info("Scanning for adapters...");
+
+    const allDevices = await findAllDevices();
+
+    if (allDevices.length === 0) {
+        throw new Error("No adapter found.");
+    }
+
+    const device = await select<(typeof allDevices)[number]>({
+        choices: allDevices.map((d) => ({ name: `${d.name} - ${d.path}`, value: d })),
+        message: "Adapter",
     });
+    let baudRate = device.baudRate ?? BAUDRATES[0];
+    let rtscts = device.rtscts ?? false;
+    let flowCtrl: FlowControl = rtscts ? "hw" : "sw";
 
-    let baudRate = BAUDRATES[0];
-    let path: string | undefined;
-    let rtscts = false;
-    let metadata: Awaited<ReturnType<typeof SerialPort.list>>[number] | undefined;
-
-    switch (type) {
-        case "serial": {
-            const baudrateChoices = [];
-
-            for (const v of BAUDRATES) {
-                baudrateChoices.push({ name: v.toString(), value: v });
-            }
-
-            baudRate = await select<BaudRate>({
-                choices: baudrateChoices,
-                message: "Adapter firmware baudrate",
-            });
-
-            const portList = await SerialPort.list();
-
-            if (portList.length === 0) {
-                throw new Error("No serial device found.");
-            }
-
-            path = await select<string>({
-                choices: portList.map((p) => ({
-                    // @ts-expect-error friendlyName windows only
-                    name: `${p.manufacturer} ${p.friendlyName ?? ""} ${p.pnpId} (${p.path})`,
-                    value: p.path,
-                })),
-                message: "Serial port",
-            });
-
-            metadata = portList.find((p) => p.path === path);
-
-            const fcChoices = [
-                { name: "Software Flow Control (rtscts=false)", value: false },
-                { name: "Hardware Flow Control (rtscts=true)", value: true },
-            ];
-            rtscts = await select<boolean>({
-                choices: fcChoices,
-                message: "Flow control",
-            });
-
-            break;
-        }
-
-        case "tcp": {
-            const discover = await confirm({ message: "Try to discover adapter?", default: true });
-
-            if (discover) {
-                const choices = await findmDNSAdapters();
-
-                path = await select({ message: "Select adapter", choices });
-            }
-
-            if (!discover || !path) {
-                path = await input({
-                    message: `TCP path ('tcp://<host>:<port>')`,
-                    validate(value) {
-                        return TCP_REGEX.test(value);
-                    },
-                });
-            }
-
-            break;
-        }
+    if (!TCP_REGEX.test(device.path)) {
+        baudRate = await pickBaudrate(baudRate);
+        flowCtrl = await pickFlowCtrl(flowCtrl);
+        rtscts = flowCtrl === "hw";
     }
 
-    if (!path) {
-        throw new Error("Invalid port path.");
-    }
-
-    const conf = { baudRate, path, rtscts, xon: !rtscts, xoff: !rtscts };
+    const conf = { baudRate, path: device.path, rtscts, xon: flowCtrl === "sw", xoff: flowCtrl === "sw" };
 
     try {
         writeFileSync(CONF_PORT_PATH, JSON.stringify(conf, null, 2), "utf8");
@@ -191,5 +86,5 @@ export const getPortConf = async (): Promise<PortConf> => {
         logger.error(`Could not write port conf to ${CONF_PORT_PATH}.`);
     }
 
-    return { ...conf, metadata };
+    return conf;
 };

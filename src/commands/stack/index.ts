@@ -25,6 +25,7 @@ import type {
     SecManContext,
 } from "zigbee-herdsman/dist/adapter/ember/types.js";
 import { initSecurityManagerContext } from "zigbee-herdsman/dist/adapter/ember/utils/initters.js";
+import { AdapterTransport } from "zigbee-herdsman/dist/adapter/transport.js";
 import { toUnifiedBackup } from "zigbee-herdsman/dist/utils/backup.js";
 import type { PanId } from "zigbee-herdsman/dist/zspec/tstypes.js";
 import { eui64LEBufferToHex } from "zigbee-herdsman/dist/zspec/utils.js";
@@ -85,8 +86,9 @@ export default class Stack extends Command {
         // const {flags} = await this.parse(Stack)
         const portConf = await getPortConf();
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`);
+        const transport = new AdapterTransport(portConf);
 
-        let ezsp = await emberStart(portConf);
+        let ezsp = await emberStart(transport);
         let exit = false;
 
         while (!exit) {
@@ -100,7 +102,7 @@ export default class Stack extends Command {
 
                 if (restart) {
                     await emberStop(ezsp);
-                    ezsp = await emberStart(portConf);
+                    ezsp = await emberStart(transport);
                     exit = false;
                 }
             }

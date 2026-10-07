@@ -23,10 +23,11 @@ import { EzspConfigId, EzspDecisionId, EzspPolicyId, EzspValueId } from "zigbee-
 import { Ezsp } from "zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js";
 import type { EmberMulticastId, EmberMulticastTableEntry, EmberNetworkInitStruct } from "zigbee-herdsman/dist/adapter/ember/types.js";
 import { lowHighBytes } from "zigbee-herdsman/dist/adapter/ember/utils/math.js";
+import type { AdapterTransport } from "zigbee-herdsman/dist/adapter/transport.js";
 import { logger } from "../index.js";
 import { NVM3ObjectKey } from "./enums.js";
 import { ROUTER_FIXED_ENDPOINTS } from "./router-endpoints.js";
-import type { EmberFullVersion, PortConf } from "./types.js";
+import type { EmberFullVersion } from "./types.js";
 
 const NS = { namespace: "ember" };
 export let emberFullVersion: EmberFullVersion = {
@@ -59,8 +60,8 @@ export const waitForStackStatus = async (ezsp: Ezsp, status: SLStatus, timeout =
         ezsp.on("stackStatus", onStackStatus);
     });
 
-export const emberStart = async (portConf: PortConf): Promise<Ezsp> => {
-    const ezsp = new Ezsp({ adapter: "ember", ...portConf });
+export const emberStart = async (transport: AdapterTransport): Promise<Ezsp> => {
+    const ezsp = new Ezsp(transport);
 
     // NOTE: something deep in this call can throw too
     const startResult = await ezsp.start();

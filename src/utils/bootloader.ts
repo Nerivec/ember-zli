@@ -1,14 +1,13 @@
 import EventEmitter from "node:events";
 import { crc32 } from "node:zlib";
 import { confirm, select } from "@inquirer/prompts";
-import { SLStatus } from "zigbee-herdsman/dist/adapter/ember/enums.js";
+import { AdapterTransport } from "zigbee-herdsman/dist/adapter/transport.js";
 import { logger } from "../index.js";
 import { TCP_REGEX } from "./consts.js";
 import { Cpc, CpcEvent } from "./cpc.js";
 import { emberStart, emberStop } from "./ember.js";
 import { CpcSystemStatus, FirmwareValidation } from "./enums.js";
 import { MinimalSpinel } from "./spinel.js";
-import { Transport, TransportEvent } from "./transport.js";
 import type { FirmwareFileMetadata, PortConf } from "./types.js";
 import { XEvent, type XExitStatus, XModemCRC } from "./xmodem.js";
 
@@ -98,7 +97,7 @@ interface GeckoBootloaderEventMap {
 
 export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
     public readonly portConf: PortConf;
-    public readonly transport: Transport;
+    public readonly transport: AdapterTransport;
     public readonly xmodem: XModemCRC;
     private state: BootloaderState;
 
@@ -118,17 +117,15 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         this.waiter = undefined;
         this.portConf = portConf;
         // override config to default for serial gecko bootloader
-        this.transport = new Transport({
+        this.transport = new AdapterTransport({
             ...this.portConf,
             baudRate: 115200,
             rtscts: false,
-            xon: false,
-            xoff: false,
         });
         this.xmodem = new XModemCRC();
 
-        this.transport.on(TransportEvent.FAILED, this.onTransportFailed.bind(this));
-        this.transport.on(TransportEvent.DATA, this.onTransportData.bind(this));
+        this.transport.on("close", this.onTransportFailed.bind(this));
+        this.transport.on("data", this.onTransportData.bind(this));
 
         this.xmodem.on(XEvent.START, this.onXModemStart.bind(this));
         this.xmodem.on(XEvent.STOP, this.onXModemStop.bind(this));
@@ -175,7 +172,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                     break;
                 }
                 case 98: {
-                    await this.dtrRtsReset(false, true);
+                    await this.dtrRtsReset(false);
                     break;
                 }
                 case 99: {
@@ -206,7 +203,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             case BootloaderMenu.UPLOAD_GBL: {
                 if (firmware === undefined) {
                     logger.error("Navigating to upload GBL requires a valid firmware.", NS);
-                    await this.transport.close(false); // don't emit closed since we're returning true which will close anyway
+                    await this.transport.close();
 
                     return true;
                 }
@@ -225,7 +222,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
             case BootloaderMenu.UPLOAD_RECOVERY_GBL: {
                 if (firmware === undefined) {
                     logger.error("Navigating to upload recovery GBL requires a valid firmware.", NS);
-                    await this.transport.close(false); // don't emit closed since we're returning true which will close anyway
+                    await this.transport.close();
 
                     return true;
                 }
@@ -341,8 +338,8 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         return FirmwareValidation.VALID;
     }
 
-    public async dtrRtsReset(exit: boolean, fail = false): Promise<boolean> {
-        if (!this.transport.isSerial) {
+    public async dtrRtsReset(exit: boolean): Promise<boolean> {
+        if (TCP_REGEX.test(this.transport.options.path!)) {
             logger.debug("DTR/RTS reset unavailable for TCP.", NS);
 
             return false;
@@ -355,49 +352,46 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
 
         try {
-            await this.transport.initPort();
+            await this.transport.open(true);
 
-            await this.transport.serialSet({ dtr: false, rts: true });
-            await this.transport.serialSet({ dtr: true, rts: false }, 100);
-            await this.transport.serialSet({ dtr: false, rts: false }, 500);
+            await this.transport.set({ dtr: false, rts: true });
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            await this.transport.set({ dtr: true, rts: false });
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            await this.transport.set({ dtr: false, rts: false });
 
             return true;
         } catch (error) {
             logger.warning(`Unable to launch bootloader with DTR/RTS flipping: ${error}.`, NS);
 
-            if (fail) {
-                await this.transport.close(false, false); // force failed below
-                this.emit(BootloaderEvent.FAILED);
-            }
-
             return false;
         }
     }
 
-    public async baudrateReset(fail = false): Promise<void> {
+    public async baudrateReset(): Promise<void> {
         logger.debug("Launching bootloader using baudrate flipping...", NS);
 
-        if (!this.transport.isSerial) {
+        if (TCP_REGEX.test(this.transport.options.path!)) {
             logger.debug("Baudrate reset unavailable for TCP.", NS);
             return;
         }
 
         try {
-            await this.transport.initPort(undefined, 150);
+            this.transport.options.baudRate = 150;
+            await this.transport.open();
             await new Promise((resolve) => setTimeout(resolve, 100));
-            await this.transport.initPort(undefined, 300);
+            this.transport.options.baudRate = 300;
+            await this.transport.open();
             await new Promise((resolve) => setTimeout(resolve, 100));
-            await this.transport.initPort(undefined, 1200);
+            this.transport.options.baudRate = 1200;
+            await this.transport.open();
             await new Promise((resolve) => setTimeout(resolve, 100));
             this.transport.write(Buffer.from("BZ", "ascii"));
             await new Promise((resolve) => setTimeout(resolve, 500));
         } catch (error) {
             logger.warning(`Unable to launch bootloader with baudrate flipping: ${error}.`, NS);
-
-            if (fail) {
-                await this.transport.close(false, false); // force failed below
-                this.emit(BootloaderEvent.FAILED);
-            }
+        } finally {
+            this.transport.options.baudRate = 115200;
         }
     }
 
@@ -428,21 +422,12 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
     private async ezspLaunch(): Promise<void> {
         logger.debug("Launching bootloader from EZSP...", NS);
 
-        const ezsp = await emberStart(this.portConf);
+        const ezsp = await emberStart(this.transport);
 
-        try {
-            const status = await ezsp.ezspLaunchStandaloneBootloader(true);
-
-            if (status !== SLStatus.OK) {
-                throw new Error(SLStatus[status]);
-            }
-        } catch (error) {
-            logger.error(`Unable to launch bootloader from EZSP: ${error}`, NS);
-            this.emit(BootloaderEvent.FAILED);
-            return;
-        }
-
-        // free serial
+        // XXX: recent firmware appear to stop responding after this (reset too fast?),
+        //      can't await it else misidentified as failure
+        ezsp.ezspLaunchStandaloneBootloader(true).catch(() => {});
+        await new Promise((resolve) => setTimeout(resolve, 250));
         await emberStop(ezsp);
     }
 
@@ -475,11 +460,11 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         logger.info(fail ? "Entering bootloader..." : "Trying to enter bootloader...", NS);
 
         try {
-            await this.transport.initPort();
+            await this.transport.open();
         } catch (error) {
             logger.error(`Failed to open port: ${error}.`, NS);
 
-            await this.transport.close(false, false); // force failed below
+            await this.transport.close();
             this.emit(BootloaderEvent.FAILED);
 
             return;
@@ -496,10 +481,10 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
                 break;
             }
 
-            if (i === 1 && this.transport.isSerial) {
+            if (i === 1 && !TCP_REGEX.test(this.transport.options.path!)) {
                 // if failed first attempt, try second time with RTS/CTS enabled
                 try {
-                    await this.transport.serialSet({ rts: true, cts: true });
+                    await this.transport.set({ rts: true, cts: true });
                 } catch (error) {
                     logger.debug(`Failed to set serial: ${error}.`, NS);
                 }
@@ -507,7 +492,7 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         }
 
         if (!res) {
-            await this.transport.close(fail); // emit closed based on if we want to fail on unsuccessful knock
+            await this.transport.close();
 
             if (fail) {
                 logger.error("Unable to enter bootloader.", NS);
@@ -533,6 +518,10 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         logger.debug(`Entering 'Run' menu...`, NS);
 
         this.state = BootloaderState.RUNNING;
+
+        if (!this.transport.isOpen) {
+            await this.transport.open(true);
+        }
 
         this.transport.write(BOOTLOADER_MENU_RUN);
 

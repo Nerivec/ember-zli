@@ -10,7 +10,7 @@ import type { Logger } from "winston";
 import { ZSpec } from "zigbee-herdsman";
 import { SLStatus } from "zigbee-herdsman/dist/adapter/ember/enums.js";
 import type { Ezsp } from "zigbee-herdsman/dist/adapter/ember/ezsp/ezsp.js";
-
+import { AdapterTransport } from "zigbee-herdsman/dist/adapter/transport.js";
 import { DATA_FOLDER, DEFAULT_PCAP_PATH, logger } from "../../index.js";
 import { emberStart, emberStop } from "../../utils/ember.js";
 import { getPortConf } from "../../utils/port.js";
@@ -44,8 +44,9 @@ export default class Sniff extends Command {
         // const { args, flags } = await this.parse(Sniff)
         const portConf = await getPortConf();
         logger.debug(`Using port conf: ${JSON.stringify(portConf)}`);
+        const transport = new AdapterTransport(portConf);
 
-        this.ezsp = await emberStart(portConf);
+        this.ezsp = await emberStart(transport);
         let exit = false;
 
         while (!exit) {
