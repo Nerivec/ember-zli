@@ -422,7 +422,8 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
     private async ezspLaunch(): Promise<void> {
         logger.debug("Launching bootloader from EZSP...", NS);
 
-        const ezsp = await emberStart(this.transport);
+        const transport = new AdapterTransport(this.portConf);
+        const ezsp = await emberStart(transport);
 
         // XXX: recent firmware appear to stop responding after this (reset too fast?),
         //      can't await it else misidentified as failure
@@ -507,10 +508,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
         this.state = BootloaderState.GETTING_INFO;
 
-        if (!this.transport.isOpen) {
-            await this.transport.open(true);
-        }
-
         this.transport.write(BOOTLOADER_MENU_INFO);
 
         await this.waitForState(BootloaderState.GOT_INFO, BOOTLOADER_CMD_EXEC_TIMEOUT);
@@ -522,10 +519,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
         logger.debug(`Entering 'Run' menu...`, NS);
 
         this.state = BootloaderState.RUNNING;
-
-        if (!this.transport.isOpen) {
-            await this.transport.open(true);
-        }
 
         this.transport.write(BOOTLOADER_MENU_RUN);
 
@@ -555,10 +548,6 @@ export class GeckoBootloader extends EventEmitter<GeckoBootloaderEventMap> {
 
     private async menuUploadGBL(firmware: Buffer): Promise<boolean> {
         logger.debug(`Entering 'Upload GBL' menu...`, NS);
-
-        if (!this.transport.isOpen) {
-            await this.transport.open(true);
-        }
 
         this.xmodem.init(firmware);
 
