@@ -1,33 +1,33 @@
 name: Update firmware links
 
 on:
-  schedule:
-    - cron: "0 12 1 * *"
-  workflow_dispatch:
+    schedule:
+        - cron: "0 12 1 * *"
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  update-fw-links:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    update-fw-links:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: "package.json"
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: "package.json"
 
-      - run: npm ci
-      - run: npm run build
-      - run: npm run update-fw-links
+            - run: npm ci
+            - run: npm run build
+            - run: npm run update-fw-links
 
-      - name: Commit changes
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add .
-          git commit -m "Update firmware links" || echo 'Nothing to commit'
-          git push
+            - name: Commit changes
+              run: |
+                  git config --global user.name 'github-actions[bot]'
+                  git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+                  git add .
+                  git commit -m "Update firmware links" || echo 'Nothing to commit'
+                  git push

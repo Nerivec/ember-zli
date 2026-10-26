@@ -1,28 +1,28 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    commit-message:
-      prefix: fix
-    versioning-strategy: increase
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    groups:
-      production-dependencies:
-        applies-to: version-updates
-        dependency-type: "production"
-        update-types:
-          - "minor"
-          - "patch"
-      development-dependencies:
-        applies-to: version-updates
-        dependency-type: "development"
-        update-types:
-          - "minor"
-          - "patch"
-  - package-ecosystem: github-actions
-    commit-message:
-      prefix: chore
-    directory: "/"
-    schedule:
-      interval: weekly
+    - package-ecosystem: "npm"
+      commit-message:
+          prefix: fix
+      versioning-strategy: increase
+      directory: "/"
+      schedule:
+          interval: "weekly"
+      groups:
+          production-dependencies:
+              applies-to: version-updates
+              dependency-type: "production"
+              update-types:
+                  - "minor"
+                  - "patch"
+          development-dependencies:
+              applies-to: version-updates
+              dependency-type: "development"
+              update-types:
+                  - "minor"
+                  - "patch"
+    - package-ecosystem: github-actions
+      commit-message:
+          prefix: chore
+      directory: "/"
+      schedule:
+          interval: weekly
