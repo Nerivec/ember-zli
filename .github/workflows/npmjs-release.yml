@@ -1,35 +1,35 @@
 name: Publish package to npmjs
 
 on:
-  # workflow_run:
-  #   workflows: [Create tag and tarballs release]
-  #   types:
-  #     - completed
-  workflow_dispatch:
+    # workflow_run:
+    #   workflows: [Create tag and tarballs release]
+    #   types:
+    #     - completed
+    workflow_dispatch:
 
 permissions:
-  contents: read
-  id-token: write
+    contents: read
+    id-token: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    build:
+        runs-on: ubuntu-latest
+        if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+        permissions:
+            contents: read
+            id-token: write
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Setup .npmrc file to publish to npm
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          registry-url: "https://registry.npmjs.org"
+            # Setup .npmrc file to publish to npm
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 24
+                  registry-url: "https://registry.npmjs.org"
 
-      - name: Update NPM
-        run: npm install -g npm@latest
+            - name: Update NPM
+              run: npm install -g npm@latest
 
-      - run: npm ci
+            - run: npm ci
 
-      - run: npm publish --provenance --access public
+            - run: npm publish --provenance --access public
