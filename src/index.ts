@@ -6,7 +6,7 @@ import { config, createLogger, format, transports } from "winston";
 
 import { setLogger as zhSetLogger } from "zigbee-herdsman";
 
-export const DATA_FOLDER = join(homedir(), "ember-zli");
+export const DATA_FOLDER = process.env.EMBER_ZLI_DATA_DIR || join(homedir(), "ember-zli");
 export const LOGS_FOLDER = join(DATA_FOLDER, "logs");
 
 export const CONF_PORT_PATH = join(DATA_FOLDER, "conf_port.json");
